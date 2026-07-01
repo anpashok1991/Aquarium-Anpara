@@ -1,0 +1,47 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/coupons"><i class="fas fa-ticket-alt"></i> Coupons</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold mb-0">Coupons</h3>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#couponModal" onclick="resetCouponForm()"><i class="fas fa-plus me-1"></i>Add Coupon</button>
+    </div>
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <table class="table table-hover mb-0"><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Used</th><th>Limit</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="couponTable"></tbody></table>
+    </div></div>
+  </div>
+</div>
+<div class="modal fade" id="couponModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="couponModalTitle">Add Coupon</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="couponId">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Code *</label><input type="text" class="form-control" id="cCode" required style="text-transform:uppercase"></div>
+      <div class="col-md-6"><label class="form-label">Type *</label><select class="form-select" id="cType"><option value="percentage">Percentage</option><option value="fixed">Fixed Amount</option></select></div>
+      <div class="col-md-6"><label class="form-label">Discount Value *</label><input type="number" class="form-control" id="cValue" step="0.01" required></div>
+      <div class="col-md-6"><label class="form-label">Min Order</label><input type="number" class="form-control" id="cMinOrder" value="0"></div>
+      <div class="col-md-6"><label class="form-label">Max Discount</label><input type="number" class="form-control" id="cMaxDiscount" value="0"></div>
+      <div class="col-md-6"><label class="form-label">Usage Limit</label><input type="number" class="form-control" id="cLimit" value="0"></div>
+      <div class="col-12"><label class="form-label">Description</label><input type="text" class="form-control" id="cDesc"></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="cActive" checked><label class="form-check-label">Active</label></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveCoupon()">Save</button></div>
+</div></div></div>
+<script>
+function resetCouponForm(){document.getElementById('couponId').value='';document.getElementById('cCode').value='';document.getElementById('cValue').value='';document.getElementById('cMinOrder').value='0';document.getElementById('cMaxDiscount').value='0';document.getElementById('cLimit').value='0';document.getElementById('cDesc').value='';document.getElementById('cActive').checked=true;document.getElementById('couponModalTitle').textContent='Add Coupon';}
+async function loadCoupons(){try{const d=await api('/coupons');document.getElementById('couponTable').innerHTML=d.coupons.map(c=>`<tr><td><strong>${c.code}</strong></td><td>${c.discount_type}</td><td>${c.discount_type==='percentage'?c.discount_value+'%':'₹'+c.discount_value}</td><td>₹${c.min_order}</td><td>${c.used_count}</td><td>${c.usage_limit||'∞'}</td><td><span class="badge bg-${c.is_active?'success':'secondary'}">${c.is_active?'Active':'Inactive'}</span></td><td><button class="btn btn-sm btn-outline-primary" onclick="editCoupon(${c.id})"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteCoupon(${c.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');}catch(e){}}
+function editCoupon(id){api('/coupons').then(d=>{const c=d.coupons.find(x=>x.id===id);if(c){document.getElementById('couponId').value=c.id;document.getElementById('cCode').value=c.code;document.getElementById('cType').value=c.discount_type;document.getElementById('cValue').value=c.discount_value;document.getElementById('cMinOrder').value=c.min_order;document.getElementById('cMaxDiscount').value=c.max_discount;document.getElementById('cLimit').value=c.usage_limit;document.getElementById('cDesc').value=c.description||'';document.getElementById('cActive').checked=!!c.is_active;document.getElementById('couponModalTitle').textContent='Edit Coupon';new bootstrap.Modal(document.getElementById('couponModal')).show();}});}
+async function saveCoupon(){const id=document.getElementById('couponId').value;const body={code:document.getElementById('cCode').value,discount_type:document.getElementById('cType').value,discount_value:parseFloat(document.getElementById('cValue').value),min_order:parseFloat(document.getElementById('cMinOrder').value),max_discount:parseFloat(document.getElementById('cMaxDiscount').value),usage_limit:parseInt(document.getElementById('cLimit').value),description:document.getElementById('cDesc').value,is_active:document.getElementById('cActive').checked};try{if(id)await api(`/coupons/${id}`,{method:'PUT',body:JSON.stringify(body)});else await api('/coupons',{method:'POST',body:JSON.stringify(body)});bootstrap.Modal.getInstance(document.getElementById('couponModal')).hide();showToast('Coupon saved!');loadCoupons();}catch(e){showToast(e.message,'error');}}
+async function deleteCoupon(id){if(!confirm('Delete?'))return;try{await api(`/coupons/${id}`,{method:'DELETE'});showToast('Deleted');loadCoupons();}catch(e){showToast(e.message,'error');}}
+document.addEventListener('DOMContentLoaded',loadCoupons);
+</script>
+<%- include('../partials/footer') %>

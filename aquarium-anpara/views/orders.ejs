@@ -1,0 +1,28 @@
+<%- include('partials/header') %>
+<div class="container py-4">
+  <h2 class="fw-bold mb-4"><i class="fas fa-box me-2"></i>My Orders</h2>
+  <div id="ordersList"></div>
+</div>
+<script>
+async function loadOrders() {
+  const container = document.getElementById('ordersList');
+  if (!isLoggedIn()) { container.innerHTML = '<div class="text-center py-5"><p>Please <a href="/login">login</a> to view orders.</p></div>'; return; }
+  try {
+    const data = await api('/orders');
+    if (!data.orders.length) { container.innerHTML = '<div class="text-center py-5"><i class="fas fa-box-open fa-3x text-muted mb-3"></i><h5>No orders yet</h5><a href="/shop" class="btn btn-primary mt-3">Start Shopping</a></div>'; return; }
+    container.innerHTML = data.orders.map(o => `
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div><h6 class="mb-1">Order #${o.order_number}</h6><small class="text-muted">${new Date(o.created_at).toLocaleDateString()}</small></div>
+            <div><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></div>
+            <div class="fw-bold">₹${o.total.toLocaleString()}</div>
+            <a href="/orders" class="btn btn-outline-primary btn-sm">View Details</a>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<p class="text-center text-muted py-5">Error loading orders</p>'; }
+}
+document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+<%- include('partials/footer') %>

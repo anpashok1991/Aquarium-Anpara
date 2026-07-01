@@ -1,0 +1,110 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4">
+      <h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin Panel</h5>
+      <small class="text-muted">Aquarium Anpara</small>
+    </div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link active" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/brands"><i class="fas fa-star"></i> Brands</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/customers"><i class="fas fa-users"></i> Customers</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/coupons"><i class="fas fa-ticket-alt"></i> Coupons</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/reviews"><i class="fas fa-star-half-alt"></i> Reviews</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/banners"><i class="fas fa-image"></i> Banners</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/gallery"><i class="fas fa-images"></i> Gallery</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/messages"><i class="fas fa-envelope"></i> Messages</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/users"><i class="fas fa-user-cog"></i> Users</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/settings"><i class="fas fa-cog"></i> Settings</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back to Site</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h3 class="fw-bold mb-0">Dashboard</h3>
+        <small class="text-muted">Welcome back, Admin</small>
+      </div>
+      <div>
+        <button class="btn btn-primary btn-sm" onclick="loadDashboard()"><i class="fas fa-sync me-1"></i>Refresh</button>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-primary"><i class="fas fa-shopping-bag"></i></div><h3 id="totalOrders">-</h3><p>Total Orders</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-success"><i class="fas fa-indian-rupee-sign"></i></div><h3 id="totalRevenue">-</h3><p>Revenue</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-info"><i class="fas fa-box"></i></div><h3 id="totalProducts">-</h3><p>Products</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-warning"><i class="fas fa-users"></i></div><h3 id="totalCustomers">-</h3><p>Customers</p></div></div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-danger"><i class="fas fa-clock"></i></div><h3 id="todayOrders">-</h3><p>Today's Orders</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-success"><i class="fas fa-calendar"></i></div><h3 id="monthlyRevenue">-</h3><p>Monthly Revenue</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-warning"><i class="fas fa-exclamation-triangle"></i></div><h3 id="lowStock">-</h3><p>Low Stock</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-danger"><i class="fas fa-times-circle"></i></div><h3 id="outOfStock">-</h3><p>Out of Stock</p></div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h5 class="fw-bold mb-3">Recent Orders</h5>
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody id="recentOrders"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h5 class="fw-bold mb-3">Top Products</h5>
+            <div id="topProducts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadDashboard() {
+  try {
+    const data = await api('/reports/dashboard');
+    document.getElementById('totalOrders').textContent = data.totalOrders;
+    document.getElementById('totalRevenue').textContent = '₹' + data.totalRevenue.toLocaleString();
+    document.getElementById('totalProducts').textContent = data.totalProducts;
+    document.getElementById('totalCustomers').textContent = data.totalCustomers;
+    document.getElementById('todayOrders').textContent = data.todayOrders;
+    document.getElementById('monthlyRevenue').textContent = '₹' + data.monthlyRevenue.toLocaleString();
+    document.getElementById('lowStock').textContent = data.lowStockProducts;
+    document.getElementById('outOfStock').textContent = data.outOfStockProducts;
+
+    document.getElementById('recentOrders').innerHTML = data.recentOrders.map(o => `
+      <tr><td><strong>${o.order_number}</strong></td><td>${o.customer_name}</td><td>₹${o.total.toLocaleString()}</td>
+      <td><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></td>
+      <td>${new Date(o.created_at).toLocaleDateString()}</td></tr>`).join('');
+
+    document.getElementById('topProducts').innerHTML = data.topProducts.map((p,i) => `
+      <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded">
+        <span class="badge bg-primary">${i+1}</span>
+        <div class="flex-grow-1"><small class="fw-semibold">${p.name}</small><br><small class="text-muted">${p.sold_count} sold</small></div>
+        <span class="fw-bold">₹${p.price.toLocaleString()}</span>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+
+<%- include('../partials/footer') %>

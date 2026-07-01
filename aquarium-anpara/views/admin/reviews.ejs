@@ -1,0 +1,22 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/reviews"><i class="fas fa-star"></i> Reviews</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <h3 class="fw-bold mb-4">Pending Reviews</h3>
+    <div id="reviewsList"></div>
+  </div>
+</div>
+<script>
+async function loadReviews(){try{const d=await api('/reviews/pending');if(!d.reviews.length){document.getElementById('reviewsList').innerHTML='<p class="text-muted">No pending reviews</p>';return;}document.getElementById('reviewsList').innerHTML=d.reviews.map(r=>`<div class="card border-0 shadow-sm mb-3 p-3"><div class="d-flex justify-content-between"><div><h6>${r.product_name||'Unknown Product'}</h6><div style="color:#ffc107">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div><p class="mb-1"><strong>${r.customer_name}</strong>: ${r.title?'<em>'+r.title+'</em> ':''}${r.comment}</p></div><div class="d-flex gap-2"><button class="btn btn-sm btn-success" onclick="approveReview(${r.id})"><i class="fas fa-check"></i> Approve</button><button class="btn btn-sm btn-danger" onclick="deleteReview(${r.id})"><i class="fas fa-trash"></i></button></div></div></div>`).join('');}catch(e){}}
+async function approveReview(id){try{await api(`/reviews/${id}/approve`,{method:'PUT'});showToast('Approved');loadReviews();}catch(e){showToast(e.message,'error');}}
+async function deleteReview(id){if(!confirm('Delete?'))return;try{await api(`/reviews/${id}`,{method:'DELETE'});showToast('Deleted');loadReviews();}catch(e){showToast(e.message,'error');}}
+document.addEventListener('DOMContentLoaded',loadReviews);
+</script>
+<%- include('../partials/footer') %>

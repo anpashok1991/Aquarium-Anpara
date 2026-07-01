@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card border-0 shadow-sm p-4">
+        <div class="text-center mb-4">
+          <i class="fas fa-fish fa-3x text-primary mb-3"></i>
+          <h3 class="fw-bold">Welcome Back</h3>
+          <p class="text-muted">Login to your account</p>
+        </div>
+        <form id="loginForm">
+          <div class="mb-3">
+            <label class="form-label">Email or Phone</label>
+            <input type="text" class="form-control" id="login" required placeholder="Enter email or phone">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 btn-lg">Login</button>
+        </form>
+        <div class="text-center mt-3">
+          <p class="mb-0">Don't have an account? <a href="/register" class="text-primary fw-semibold">Register</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async(e) => {
+  e.preventDefault();
+  try {
+    const data = await api('/auth/login', { method:'POST', body: JSON.stringify({ login: document.getElementById('login').value, password: document.getElementById('password').value }) });
+    setAuth(data);
+    showToast('Login successful!');
+    setTimeout(() => window.location.href = data.user.role === 'admin' ? '/admin' : '/', 500);
+  } catch(e) { showToast(e.message, 'error'); }
+});
+</script>
+<%- include('partials/footer') %>

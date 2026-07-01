@@ -1,0 +1,35 @@
+<%- include('partials/header') %>
+<div class="container py-4">
+  <h2 class="fw-bold mb-4">Gallery</h2>
+  <div class="d-flex gap-2 mb-4 flex-wrap">
+    <button class="btn btn-outline-primary active filter-btn" onclick="filterGallery('', this)">All</button>
+    <button class="btn btn-outline-primary filter-btn" onclick="filterGallery('aquarium', this)">Aquarium</button>
+    <button class="btn btn-outline-primary filter-btn" onclick="filterGallery('dogs', this)">Dogs</button>
+    <button class="btn btn-outline-primary filter-btn" onclick="filterGallery('cats', this)">Cats</button>
+    <button class="btn btn-outline-primary filter-btn" onclick="filterGallery('birds', this)">Birds</button>
+    <button class="btn btn-outline-primary filter-btn" onclick="filterGallery('store', this)">Store</button>
+  </div>
+  <div class="row g-3" id="galleryGrid"></div>
+</div>
+<script>
+async function filterGallery(cat, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  try {
+    const url = cat ? `/gallery?category=${cat}` : '/gallery';
+    const data = await api(url);
+    const grid = document.getElementById('galleryGrid');
+    grid.innerHTML = data.images.map(img => `
+      <div class="col-6 col-md-4 col-lg-3 fade-in">
+        <a href="${img.image}" target="_blank" class="text-decoration-none">
+          <div class="position-relative rounded overflow-hidden" style="height:200px">
+            <img src="${img.image}" class="w-100 h-100" style="object-fit:cover" alt="${img.title||''}" onerror="this.src='/images/no-image.png'">
+            ${img.title ? `<div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-2 text-center"><small>${img.title}</small></div>` : ''}
+          </div>
+        </a>
+      </div>`).join('');
+  } catch(e) { document.getElementById('galleryGrid').innerHTML = '<p class="text-muted">No images found</p>'; }
+}
+document.addEventListener('DOMContentLoaded', () => filterGallery('', null));
+</script>
+<%- include('partials/footer') %>

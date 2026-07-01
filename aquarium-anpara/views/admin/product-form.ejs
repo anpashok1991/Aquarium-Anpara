@@ -1,0 +1,101 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <h3 class="fw-bold mb-4" id="formTitle">Add Product</h3>
+    <form id="productForm" class="card border-0 shadow-sm p-4">
+      <div class="row g-3">
+        <div class="col-md-8"><label class="form-label">Product Name *</label><input type="text" class="form-control" id="name" required></div>
+        <div class="col-md-4"><label class="form-label">SKU</label><input type="text" class="form-control" id="sku"></div>
+        <div class="col-12"><label class="form-label">Short Description</label><input type="text" class="form-control" id="shortDesc"></div>
+        <div class="col-12"><label class="form-label">Full Description</label><textarea class="form-control" id="description" rows="4"></textarea></div>
+        <div class="col-md-3"><label class="form-label">Price *</label><input type="number" class="form-control" id="price" step="0.01" required></div>
+        <div class="col-md-3"><label class="form-label">Discount Price</label><input type="number" class="form-control" id="discountPrice" step="0.01"></div>
+        <div class="col-md-3"><label class="form-label">Cost Price</label><input type="number" class="form-control" id="costPrice" step="0.01"></div>
+        <div class="col-md-3"><label class="form-label">Stock *</label><input type="number" class="form-control" id="stock" value="0" required></div>
+        <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="category"></select></div>
+        <div class="col-md-4"><label class="form-label">Brand</label><select class="form-select" id="brand"></select></div>
+        <div class="col-md-4"><label class="form-label">Barcode</label><input type="text" class="form-control" id="barcode"></div>
+        <div class="col-md-4"><label class="form-label">Low Stock Threshold</label><input type="number" class="form-control" id="lowStock" value="5"></div>
+        <div class="col-md-4"><label class="form-label">Weight (kg)</label><input type="number" class="form-control" id="weight" step="0.01" value="0"></div>
+        <div class="col-md-4"><label class="form-label">Product Image</label><input type="file" class="form-control" id="imageFile" accept="image/*"><div id="imagePreview" class="mt-2"></div><input type="hidden" id="imageUrl"></div>
+        <div class="col-12">
+          <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="isFeatured"><label class="form-check-label">Featured</label></div>
+          <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="isBestSeller"><label class="form-check-label">Best Seller</label></div>
+          <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="isNewArrival"><label class="form-check-label">New Arrival</label></div>
+          <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="isActive" checked><label class="form-check-label">Active</label></div>
+        </div>
+        <div class="col-12"><label class="form-label">Meta Title</label><input type="text" class="form-control" id="metaTitle"></div>
+        <div class="col-12"><label class="form-label">Meta Description</label><textarea class="form-control" id="metaDesc" rows="2"></textarea></div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-1"></i>Save Product</button>
+        <a href="/admin/products" class="btn btn-outline-secondary btn-lg">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+const productId = '<%= typeof productId !== "undefined" ? productId : "" %>';
+async function loadForm() {
+  const [cData, bData] = await Promise.all([api('/categories'), api('/brands')]);
+  const catSel = document.getElementById('category');
+  const brandSel = document.getElementById('brand');
+  cData.flat.forEach(c => catSel.add(new Option(c.name, c.id)));
+  bData.brands.forEach(b => brandSel.add(new Option(b.name, b.id)));
+  if (productId) {
+    document.getElementById('formTitle').textContent = 'Edit Product';
+    const pData = await api(`/products/slug-or-id-${productId}`);
+    // fallback: try loading by searching
+  }
+}
+document.getElementById('productForm').addEventListener('submit', async(e) => {
+  e.preventDefault();
+  const body = {
+    name: document.getElementById('name').value,
+    description: document.getElementById('description').value,
+    short_description: document.getElementById('shortDesc').value,
+    sku: document.getElementById('sku').value,
+    barcode: document.getElementById('barcode').value,
+    price: parseFloat(document.getElementById('price').value),
+    discount_price: parseFloat(document.getElementById('discountPrice').value) || 0,
+    cost_price: parseFloat(document.getElementById('costPrice').value) || 0,
+    category_id: parseInt(document.getElementById('category').value) || null,
+    brand_id: parseInt(document.getElementById('brand').value) || null,
+    stock_quantity: parseInt(document.getElementById('stock').value),
+    low_stock_threshold: parseInt(document.getElementById('lowStock').value),
+    weight: parseFloat(document.getElementById('weight').value) || 0,
+    is_featured: document.getElementById('isFeatured').checked,
+    is_best_seller: document.getElementById('isBestSeller').checked,
+    is_new_arrival: document.getElementById('isNewArrival').checked,
+    is_active: document.getElementById('isActive').checked,
+    meta_title: document.getElementById('metaTitle').value,
+    meta_description: document.getElementById('metaDesc').value,
+  };
+  try {
+    const fileInput = document.getElementById('imageFile');
+    if (fileInput.files.length > 0) {
+      const url = await uploadFile(fileInput.files[0], 'products');
+      body.images = [{ url }];
+    } else {
+      const imgUrl = document.getElementById('imageUrl').value;
+      if (imgUrl) body.images = [{ url: imgUrl }];
+    }
+    if (productId) { await api(`/products/${productId}`, { method: 'PUT', body: JSON.stringify(body) }); }
+    else { await api('/products', { method: 'POST', body: JSON.stringify(body) }); }
+    showToast('Product saved!');
+    window.location.href = '/admin/products';
+  } catch(e) { showToast(e.message, 'error'); }
+});
+document.addEventListener('DOMContentLoaded', loadForm);
+</script>
+<%- include('../partials/footer') %>

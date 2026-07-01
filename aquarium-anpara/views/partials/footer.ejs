@@ -1,0 +1,69 @@
+  <footer class="footer">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+          <h5><i class="fas fa-fish me-2"></i><%= shopName %></h5>
+          <p>Your one-stop destination for premium aquarium supplies, pet food, and live pets. Quality products with doorstep delivery.</p>
+          <div class="d-flex gap-3 mt-3">
+            <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="fab fa-youtube"></i></a>
+            <a href="https://wa.me/<%= whatsappNumber %>" class="btn btn-outline-light btn-sm rounded-circle" target="_blank"><i class="fab fa-whatsapp"></i></a>
+          </div>
+        </div>
+        <div class="col-lg-2 col-md-6">
+          <h5>Quick Links</h5>
+          <ul class="list-unstyled">
+            <li class="mb-2"><a href="/shop">Shop</a></li>
+            <li class="mb-2"><a href="/about">About Us</a></li>
+            <li class="mb-2"><a href="/gallery">Gallery</a></li>
+            <li class="mb-2"><a href="/contact">Contact</a></li>
+            <li class="mb-2"><a href="/track-order">Track Order</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <h5>Categories</h5>
+          <ul class="list-unstyled">
+            <li class="mb-2"><a href="/category/aquarium">Aquarium Fish</a></li>
+            <li class="mb-2"><a href="/category/dogs">Dogs</a></li>
+            <li class="mb-2"><a href="/category/cats">Cats</a></li>
+            <li class="mb-2"><a href="/category/birds">Birds</a></li>
+            <li class="mb-2"><a href="/category/aquarium-equipment">Aquarium Equipment</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <h5>Contact Info</h5>
+          <ul class="list-unstyled">
+            <li class="mb-2"><i class="fas fa-map-marker-alt me-2 text-accent"></i><%= shopAddress %></li>
+            <li class="mb-2"><i class="fas fa-phone me-2 text-accent"></i><a href="tel:<%= shopPhone %>"><%= shopPhone %></a></li>
+            <li class="mb-2"><i class="fas fa-envelope me-2 text-accent"></i><a href="mailto:<%= shopEmail %>"><%= shopEmail %></a></li>
+            <li class="mb-2"><i class="fas fa-clock me-2 text-accent"></i>Mon-Sat: 9AM - 9PM</li>
+          </ul>
+          <a href="https://wa.me/<%= whatsappNumber %>?text=Hi! I have a query." class="btn btn-success btn-sm mt-2" target="_blank">
+            <i class="fab fa-whatsapp me-1"></i> WhatsApp Us
+          </a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="mb-0">&copy; <%= new Date().getFullYear() %> <%= shopName %>. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <a href="https://wa.me/<%= whatsappNumber %>?text=Hi! I'm interested in your products." class="whatsapp-float" target="_blank" title="WhatsApp Us">
+    <i class="fab fa-whatsapp"></i>
+  </a>
+  <a href="tel:<%= shopPhone %>" class="call-float" title="Call Us">
+    <i class="fas fa-phone-alt"></i>
+  </a>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    const user = getUser();
+    if (user && user.role === 'admin') {
+      document.querySelectorAll('#admin-link').forEach(el => el.style.display = '');
+    }
+  </script>
+</body>
+</html>

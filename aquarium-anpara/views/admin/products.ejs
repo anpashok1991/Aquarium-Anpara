@@ -1,0 +1,71 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/customers"><i class="fas fa-users"></i> Customers</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/coupons"><i class="fas fa-ticket-alt"></i> Coupons</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/settings"><i class="fas fa-cog"></i> Settings</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back to Site</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold mb-0">Products</h3>
+      <a href="/admin/products/new" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add Product</a>
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex gap-2 mb-3">
+          <input type="text" class="form-control" id="searchProduct" placeholder="Search products..." style="max-width:300px" onkeyup="loadAdminProducts()">
+          <select class="form-select" id="filterCategory" style="max-width:200px" onchange="loadAdminProducts()"></select>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="productsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+async function loadAdminProducts() {
+  const search = document.getElementById('searchProduct').value;
+  const cat = document.getElementById('filterCategory').value;
+  const params = new URLSearchParams({ limit: 100 });
+  if (search) params.set('search', search);
+  if (cat) params.set('category', cat);
+  try {
+    const [pData, cData] = await Promise.all([api(`/products?${params}`), api('/categories')]);
+    const catSelect = document.getElementById('filterCategory');
+    if (catSelect.options.length <= 1) cData.flat.forEach(c => { catSelect.add(new Option(c.name, c.slug)); });
+    document.getElementById('productsTable').innerHTML = pData.products.map(p => `
+      <tr>
+        <td><img src="${p.primary_image || '/images/no-image.png'}" style="width:50px;height:50px;object-fit:cover;border-radius:8px" onerror="this.src='/images/no-image.png'"></td>
+        <td><strong>${p.name}</strong><br><small class="text-muted">${p.sku || ''}</small></td>
+        <td>${p.category_name || '-'}</td>
+        <td>₹${p.price.toLocaleString()}${p.discount_price > 0 ? `<br><small class="text-danger">${p.discount_price}</small>` : ''}</td>
+        <td><span class="badge bg-${p.stock_quantity <= 0 ? 'danger' : p.stock_quantity <= 5 ? 'warning' : 'success'}">${p.stock_quantity}</span></td>
+        <td><span class="badge bg-${p.is_active ? 'success' : 'secondary'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <a href="/admin/products/edit/${p.id}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`).join('');
+  } catch(e) { console.error(e); }
+}
+async function deleteProduct(id) {
+  if (!confirm('Delete this product?')) return;
+  try { await api(`/products/${id}`, { method: 'DELETE' }); showToast('Product deleted'); loadAdminProducts(); } catch(e) { showToast(e.message, 'error'); }
+}
+document.addEventListener('DOMContentLoaded', loadAdminProducts);
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,62 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold mb-0">Inventory</h3>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adjustModal"><i class="fas fa-plus me-1"></i>Stock Adjustment</button>
+    </div>
+    <div class="d-flex gap-2 mb-3">
+      <input type="text" class="form-control" id="searchInv" placeholder="Search..." style="max-width:250px" onkeyup="loadInventory()">
+      <div class="form-check form-check-inline ms-3"><input class="form-check-input" type="checkbox" id="lowStockOnly" onchange="loadInventory()"><label class="form-check-label">Low Stock Only</label></div>
+    </div>
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <table class="table table-hover mb-0"><thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Threshold</th><th>Cost Price</th><th>Value</th><th>Status</th></tr></thead>
+      <tbody id="invTable"></tbody></table>
+    </div></div>
+  </div>
+</div>
+<div class="modal fade" id="adjustModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Stock Adjustment</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-3"><label class="form-label">Product *</label><select class="form-select" id="adjProduct" required></select></div>
+    <div class="mb-3"><label class="form-label">Type *</label><select class="form-select" id="adjType"><option value="purchase">Purchase</option><option value="sale">Sale</option><option value="return">Return</option><option value="damage">Damage</option><option value="adjustment">Adjustment</option></select></div>
+    <div class="mb-3"><label class="form-label">Quantity *</label><input type="number" class="form-control" id="adjQty" required></div>
+    <div class="mb-3"><label class="form-label">Reference</label><input type="text" class="form-control" id="adjRef"></div>
+    <div class="mb-3"><label class="form-label">Notes</label><textarea class="form-control" id="adjNotes" rows="2"></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveAdjustment()">Save</button></div>
+</div></div></div>
+<script>
+async function loadInventory() {
+  const search = document.getElementById('searchInv').value;
+  const low = document.getElementById('lowStockOnly').checked;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (low) params.set('low_stock', '1');
+  try {
+    const data = await api(`/inventory?${params}`);
+    const prodSel = document.getElementById('adjProduct');
+    if (prodSel.options.length <= 1) data.products.forEach(p => prodSel.add(new Option(`${p.name} (${p.stock_quantity} in stock)`, p.id)));
+    document.getElementById('invTable').innerHTML = data.products.map(p => `
+      <tr><td><strong>${p.name}</strong></td><td>${p.sku||'-'}</td>
+      <td><span class="badge bg-${p.stock_quantity<=0?'danger':p.stock_quantity<=p.low_stock_threshold?'warning':'success'} fs-6">${p.stock_quantity}</span></td>
+      <td>${p.low_stock_threshold}</td><td>₹${p.cost_price}</td><td>₹${(p.stock_quantity*p.cost_price).toLocaleString()}</td>
+      <td>${p.stock_quantity<=0?'Out of Stock':p.stock_quantity<=p.low_stock_threshold?'Low Stock':'OK'}</td></tr>`).join('');
+  } catch(e) {}
+}
+async function saveAdjustment() {
+  const body = { product_id: parseInt(document.getElementById('adjProduct').value), type: document.getElementById('adjType').value, quantity: parseInt(document.getElementById('adjQty').value), reference: document.getElementById('adjRef').value, notes: document.getElementById('adjNotes').value };
+  try { await api('/inventory/adjust', { method: 'POST', body: JSON.stringify(body) }); bootstrap.Modal.getInstance(document.getElementById('adjustModal')).hide(); showToast('Stock adjusted'); loadInventory(); } catch(e) { showToast(e.message, 'error'); }
+}
+document.addEventListener('DOMContentLoaded', loadInventory);
+</script>
+<%- include('../partials/footer') %>

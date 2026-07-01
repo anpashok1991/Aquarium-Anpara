@@ -1,0 +1,195 @@
+<%- include('partials/header') %>
+
+<section class="hero-section">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <span class="badge bg-warning text-dark mb-3 px-3 py-2">🐠 Premium Pet & Aquarium Store</span>
+        <h1>Your Complete Pet & Aquarium Destination</h1>
+        <p>Premium aquarium fishes, pets, pet food, accessories and expert setup services. Quality products with doorstep delivery across India.</p>
+        <div class="d-flex gap-3 flex-wrap">
+          <a href="/shop" class="btn btn-light btn-lg"><i class="fas fa-shopping-bag me-2"></i>Shop Now</a>
+          <a href="https://wa.me/<%= whatsappNumber %>" class="btn btn-success btn-lg" target="_blank"><i class="fab fa-whatsapp me-2"></i>WhatsApp Us</a>
+        </div>
+        <div class="d-flex gap-4 mt-4">
+          <div><h4 class="mb-0 fw-bold">500+</h4><small class="opacity-75">Products</small></div>
+          <div><h4 class="mb-0 fw-bold">2000+</h4><small class="opacity-75">Happy Customers</small></div>
+          <div><h4 class="mb-0 fw-bold">5+</h4><small class="opacity-75">Years Experience</small></div>
+        </div>
+      </div>
+      <div class="col-lg-6 text-center d-none d-lg-block">
+        <img src="/images/hero-pet.png" alt="Pets" class="img-fluid" style="max-height:400px;">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Shop by Category</h2>
+      <p class="section-subtitle">Explore our wide range of products</p>
+    </div>
+    <div class="row g-4">
+      <% const catIcons = {'aquarium':'fa-fish','dogs':'fa-dog','cats':'fa-cat','birds':'fa-dove','fish-foods':'fa-bowl-food','dog-foods':'fa-bone','cat-foods':'fa-paw','accessories':'fa-tag','medicines':'fa-pills','decorations':'fa-star','plants':'fa-leaf','aquarium-equipment':'fa-gear','bird-foods':'fa-seedling'}; %>
+      <% categories.forEach(cat => { %>
+      <div class="col-6 col-md-4 col-lg-3 fade-in">
+        <a href="/category/<%= cat.slug %>" class="text-decoration-none">
+          <div class="category-card">
+            <i class="fas <%= catIcons[cat.slug] || 'fa-box' %>"></i>
+            <h5><%= cat.name %></h5>
+            <span><%= cat.product_count %> Products</span>
+          </div>
+        </a>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<% if (featured.length) { %>
+<section class="section bg-white">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Featured Products</h2>
+      <p class="section-subtitle">Handpicked products just for you</p>
+    </div>
+    <div class="row g-4">
+      <% featured.forEach(p => { %>
+      <div class="col-6 col-md-4 col-lg-3 fade-in">
+        <div class="product-card position-relative">
+          <div class="product-badge"><span class="badge-featured">Featured</span></div>
+          <a href="/product/<%= p.slug %>">
+            <div style="overflow:hidden">
+              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy">
+            </div>
+          </a>
+          <div class="card-body">
+            <a href="/product/<%= p.slug %>" class="text-decoration-none">
+              <h6 class="card-title text-dark"><%= p.name %></h6>
+            </a>
+            <div class="mb-1" style="color:#ffc107;font-size:0.8rem">
+              <%= '★'.repeat(Math.round(p.rating)) %><span class="text-muted ms-1">(<%= p.review_count %>)</span>
+            </div>
+            <div class="product-price">
+              ₹<%= p.discount_price > 0 ? p.discount_price.toLocaleString() : p.price.toLocaleString() %>
+              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><% } %>
+            </div>
+            <div class="btn-group mt-2">
+              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus"></i> Add</button>
+              <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/<%= p.slug %>'">View</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (bestSellers.length) { %>
+<section class="section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Best Sellers</h2>
+      <p class="section-subtitle">Most popular products among our customers</p>
+    </div>
+    <div class="row g-4">
+      <% bestSellers.forEach(p => { %>
+      <div class="col-6 col-md-4 col-lg-3 fade-in">
+        <div class="product-card position-relative">
+          <div class="product-badge"><span class="badge-sale">Best Seller</span></div>
+          <a href="/product/<%= p.slug %>">
+            <div style="overflow:hidden">
+              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy">
+            </div>
+          </a>
+          <div class="card-body">
+            <a href="/product/<%= p.slug %>" class="text-decoration-none">
+              <h6 class="card-title text-dark"><%= p.name %></h6>
+            </a>
+            <div class="product-price">
+              ₹<%= p.discount_price > 0 ? p.discount_price.toLocaleString() : p.price.toLocaleString() %>
+              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><% } %>
+            </div>
+            <div class="btn-group mt-2">
+              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus"></i> Add</button>
+              <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/<%= p.slug %>'">View</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<section class="section bg-primary text-white">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6 mb-4 mb-lg-0">
+        <h2 class="fw-bold">Why Choose <%= shopName %>?</h2>
+        <p class="mb-0 opacity-75">We are committed to providing the best products and services for your beloved pets.</p>
+      </div>
+      <div class="col-lg-6">
+        <div class="row g-3">
+          <div class="col-6"><div class="text-center p-3"><i class="fas fa-truck fa-2x mb-2 opacity-75"></i><h6>Free Delivery</h6><small class="opacity-75">On orders above ₹500</small></div></div>
+          <div class="col-6"><div class="text-center p-3"><i class="fas fa-shield-alt fa-2x mb-2 opacity-75"></i><h6>Quality Assured</h6><small class="opacity-75">100% genuine products</small></div></div>
+          <div class="col-6"><div class="text-center p-3"><i class="fas fa-headset fa-2x mb-2 opacity-75"></i><h6>Expert Support</h6><small class="opacity-75">Pet care guidance</small></div></div>
+          <div class="col-6"><div class="text-center p-3"><i class="fas fa-undo fa-2x mb-2 opacity-75"></i><h6>Easy Returns</h6><small class="opacity-75">Hassle-free policy</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<% if (reviews.length) { %>
+<section class="section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Customer Reviews</h2>
+      <p class="section-subtitle">What our customers say about us</p>
+    </div>
+    <div class="row g-4">
+      <% reviews.forEach(r => { %>
+      <div class="col-md-4 fade-in">
+        <div class="review-card h-100">
+          <div class="stars mb-2" style="color:#ffc107"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5-r.rating) %></div>
+          <h6 class="fw-bold"><%= r.title %></h6>
+          <p class="text-muted small"><%= r.comment %></p>
+          <div class="reviewer mt-auto">
+            <i class="fas fa-user-circle me-1 text-primary"></i> <%= r.customer_name %>
+            <% if (r.product_name) { %><br><small class="text-muted">on <%= r.product_name %></small><% } %>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<section class="section bg-white">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6 mb-4 mb-lg-0">
+        <h2 class="fw-bold">Need Aquarium Setup Services?</h2>
+        <p class="text-muted">We offer custom aquarium design, installation, and maintenance services. Let our experts create the perfect aquatic environment for you.</p>
+        <div class="d-flex gap-3">
+          <a href="https://wa.me/<%= whatsappNumber %>?text=Hi! I need aquarium setup service." class="btn btn-success" target="_blank"><i class="fab fa-whatsapp me-2"></i>Get Quote</a>
+          <a href="/contact" class="btn btn-outline-primary">Contact Us</a>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="row g-3">
+          <div class="col-6"><img src="/images/service1.png" class="img-fluid rounded" alt="Setup" onerror="this.src='/images/no-image.png'"></div>
+          <div class="col-6"><img src="/images/service2.png" class="img-fluid rounded" alt="Maintenance" onerror="this.src='/images/no-image.png'"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

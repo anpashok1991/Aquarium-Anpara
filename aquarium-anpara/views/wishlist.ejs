@@ -1,0 +1,32 @@
+<%- include('partials/header') %>
+<div class="container py-4">
+  <h2 class="fw-bold mb-4"><i class="fas fa-heart me-2 text-danger"></i>My Wishlist</h2>
+  <div class="row g-4" id="wishlistGrid"></div>
+  <div id="emptyWish" class="text-center py-5" style="display:none">
+    <i class="far fa-heart fa-4x text-muted mb-3"></i><h4>Your wishlist is empty</h4><a href="/shop" class="btn btn-primary mt-3">Browse Products</a>
+  </div>
+</div>
+<script>
+async function loadWishlist() {
+  const grid = document.getElementById('wishlistGrid');
+  if (!isLoggedIn()) { grid.innerHTML = ''; document.getElementById('emptyWish').style.display = ''; document.getElementById('emptyWish').innerHTML = '<p>Please <a href="/login">login</a> to view wishlist.</p>'; return; }
+  try {
+    const data = await api('/wishlist');
+    if (!data.items.length) { grid.innerHTML = ''; document.getElementById('emptyWish').style.display = ''; return; }
+    document.getElementById('emptyWish').style.display = 'none';
+    grid.innerHTML = data.items.map(p => `
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="product-card h-100">
+          <a href="/product/${p.slug}"><div style="overflow:hidden"><img src="${p.image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" onerror="this.src='/images/no-image.png'"></div></a>
+          <div class="card-body">
+            <a href="/product/${p.slug}" class="text-decoration-none"><h6 class="card-title text-dark">${p.name}</h6></a>
+            <div class="product-price">₹${(p.discount_price > 0 ? p.discount_price : p.price).toLocaleString()}</div>
+            <button class="btn btn-danger btn-sm w-100 mt-2" onclick="toggleWishlist(${p.product_id})"><i class="fas fa-trash me-1"></i>Remove</button>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', loadWishlist);
+</script>
+<%- include('partials/footer') %>

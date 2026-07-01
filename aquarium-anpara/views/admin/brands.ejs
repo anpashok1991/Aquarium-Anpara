@@ -1,0 +1,55 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/brands"><i class="fas fa-star"></i> Brands</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold mb-0">Brands</h3>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#brandModal" onclick="document.getElementById('brandId').value='';document.getElementById('brandName').value='';document.getElementById('brandDesc').value=''"><i class="fas fa-plus me-1"></i>Add Brand</button>
+    </div>
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <table class="table table-hover mb-0"><thead><tr><th>Name</th><th>Slug</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="brandTable"></tbody></table>
+    </div></div>
+  </div>
+</div>
+<div class="modal fade" id="brandModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Add Brand</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="brandId">
+    <div class="mb-3"><label class="form-label">Name *</label><input type="text" class="form-control" id="brandName" required></div>
+    <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" id="brandDesc" rows="2"></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveBrand()">Save</button></div>
+</div></div></div>
+<script>
+async function loadBrands() {
+  const data = await api('/brands');
+  document.getElementById('brandTable').innerHTML = data.brands.map(b => `
+    <tr><td><strong>${b.name}</strong></td><td>${b.slug}</td><td>${b.product_count || 0}</td>
+    <td><span class="badge bg-${b.is_active?'success':'secondary'}">${b.is_active?'Active':'Inactive'}</span></td>
+    <td><button class="btn btn-sm btn-outline-primary" onclick="editBrand(${b.id},'${b.name}','${(b.description||'').replace(/'/g,"\\'")}')"><i class="fas fa-edit"></i></button>
+    <button class="btn btn-sm btn-outline-danger" onclick="deleteBrand(${b.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+}
+function editBrand(id,name,desc){document.getElementById('brandId').value=id;document.getElementById('brandName').value=name;document.getElementById('brandDesc').value=desc;new bootstrap.Modal(document.getElementById('brandModal')).show();}
+async function saveBrand() {
+  const id = document.getElementById('brandId').value;
+  const body = { name: document.getElementById('brandName').value, description: document.getElementById('brandDesc').value };
+  try {
+    if (id) await api(`/brands/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    else await api('/brands', { method: 'POST', body: JSON.stringify(body) });
+    bootstrap.Modal.getInstance(document.getElementById('brandModal')).hide();
+    showToast('Brand saved!'); loadBrands();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function deleteBrand(id) { if(!confirm('Delete?'))return; try{await api(`/brands/${id}`,{method:'DELETE'});showToast('Deleted');loadBrands();}catch(e){showToast(e.message,'error');} }
+document.addEventListener('DOMContentLoaded', loadBrands);
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,224 @@
+<%- include('partials/header') %>
+
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">Home</a></li>
+      <li class="breadcrumb-item active">Shop</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-lg-3 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">Filters</h5>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Search</label>
+            <input type="text" class="form-control" id="searchInput" placeholder="Search products..." onkeyup="handleSearch(event)">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Category</label>
+            <select class="form-select" id="categoryFilter" onchange="loadShopProducts()">
+              <option value="">All Categories</option>
+              <% categories.forEach(cat => { %>
+              <option value="<%= cat.slug %>"><%= cat.name %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Brand</label>
+            <select class="form-select" id="brandFilter" onchange="loadShopProducts()">
+              <option value="">All Brands</option>
+              <% brands.forEach(b => { %>
+              <option value="<%= b.slug %>"><%= b.name %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Price Range</label>
+            <div class="d-flex gap-2">
+              <input type="number" class="form-control" id="minPrice" placeholder="Min">
+              <input type="number" class="form-control" id="maxPrice" placeholder="Max">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Sort By</label>
+            <select class="form-select" id="sortFilter" onchange="loadShopProducts()">
+              <option value="newest">Newest</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="popular">Most Popular</option>
+              <option value="rating">Top Rated</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="inStock" onchange="loadShopProducts()">
+              <label class="form-check-label">In Stock Only</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="onSale" onchange="loadShopProducts()">
+              <label class="form-check-label">On Sale</label>
+            </div>
+          </div>
+
+          <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">Clear Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-9">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Products <span id="productCount" class="text-muted fs-6"></span></h4>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm active" id="gridBtn" onclick="setView('grid')"><i class="fas fa-th"></i></button>
+          <button class="btn btn-outline-secondary btn-sm" id="listBtn" onclick="setView('list')"><i class="fas fa-list"></i></button>
+        </div>
+      </div>
+      <div class="row g-4" id="productsGrid"></div>
+      <div id="loading" class="text-center py-5"><div class="spinner-custom mx-auto"></div></div>
+      <nav id="pagination" class="mt-4"></nav>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentPage = 1;
+let currentView = 'grid';
+
+function setView(view) {
+  currentView = view;
+  document.getElementById('gridBtn').classList.toggle('active', view === 'grid');
+  document.getElementById('listBtn').classList.toggle('active', view === 'list');
+  loadShopProducts();
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('categoryFilter').value = '<%= selectedCategory || "" %>';
+  document.getElementById('brandFilter').value = '';
+  document.getElementById('minPrice').value = '';
+  document.getElementById('maxPrice').value = '';
+  document.getElementById('sortFilter').value = 'newest';
+  document.getElementById('inStock').checked = false;
+  document.getElementById('onSale').checked = false;
+  currentPage = 1;
+  loadShopProducts();
+}
+
+async function loadShopProducts() {
+  const grid = document.getElementById('productsGrid');
+  const loading = document.getElementById('loading');
+  loading.style.display = 'block';
+  grid.innerHTML = '';
+
+  const params = new URLSearchParams();
+  const search = document.getElementById('searchInput').value;
+  const category = document.getElementById('categoryFilter').value;
+  const brand = document.getElementById('brandFilter').value;
+  const minPrice = document.getElementById('minPrice').value;
+  const maxPrice = document.getElementById('maxPrice').value;
+  const sort = document.getElementById('sortFilter').value;
+  const inStock = document.getElementById('inStock').checked;
+
+  if (search) params.set('search', search);
+  if (category) params.set('category', category);
+  if (brand) params.set('brand', brand);
+  if (minPrice) params.set('min_price', minPrice);
+  if (maxPrice) params.set('max_price', maxPrice);
+  if (sort) params.set('sort', sort);
+  if (inStock) params.set('in_stock', '1');
+  params.set('page', currentPage);
+  params.set('limit', 12);
+
+  try {
+    const data = await api(`/products?${params.toString()}`);
+    loading.style.display = 'none';
+    document.getElementById('productCount').textContent = `(${data.total} products)`;
+
+    if (!data.products.length) {
+      grid.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-search fa-3x text-muted mb-3"></i><h5>No products found</h5><p class="text-muted">Try adjusting your filters</p></div>';
+      return;
+    }
+
+    data.products.forEach(p => {
+      const discount = p.discount_price > 0 ? Math.round((p.price - p.discount_price) / p.price * 100) : 0;
+      const colClass = currentView === 'grid' ? 'col-6 col-md-4' : 'col-12';
+      grid.innerHTML += `
+        <div class="${colClass} fade-in">
+          <div class="product-card position-relative ${currentView === 'list' ? 'd-flex' : ''}">
+            ${discount > 0 ? `<div class="product-badge"><span class="badge-sale">-${discount}%</span></div>` : ''}
+            ${p.is_new_arrival ? '<div class="product-badge" style="left:auto;right:10px"><span class="badge-new">New</span></div>' : ''}
+            <a href="/product/${p.slug}" class="${currentView === 'list' ? 'w-25' : ''}" style="${currentView === 'list' ? 'min-width:200px' : ''}">
+              <div style="overflow:hidden">
+                <img src="${p.primary_image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" loading="lazy"
+                  onerror="this.src='/images/no-image.png'">
+              </div>
+            </a>
+            <div class="card-body d-flex flex-column">
+              <a href="/product/${p.slug}" class="text-decoration-none">
+                <h6 class="card-title text-dark">${p.name}</h6>
+              </a>
+              ${p.category_name ? `<small class="text-muted">${p.category_name}</small>` : ''}
+              <div class="mb-1 mt-1" style="color:#ffc107;font-size:0.8rem">
+                ${'★'.repeat(Math.round(p.rating || 0))}${'☆'.repeat(5-Math.round(p.rating || 0))}
+                <span class="text-muted ms-1">(${p.review_count || 0})</span>
+              </div>
+              <div class="product-price mt-auto">
+                ₹${(p.discount_price > 0 ? p.discount_price : p.price).toLocaleString()}
+                ${p.discount_price > 0 ? `<span class="old-price">₹${p.price.toLocaleString()}</span>` : ''}
+              </div>
+              <div class="mt-2 d-flex gap-2">
+                <button class="btn btn-primary btn-sm flex-grow-1" onclick="addToCart(${p.id})">
+                  <i class="fas fa-cart-plus"></i> Add to Cart
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/${p.slug}'">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    // Pagination
+    if (data.pages > 1) {
+      let pagHtml = '<ul class="pagination justify-content-center">';
+      for (let i = 1; i <= data.pages; i++) {
+        pagHtml += `<li class="page-item ${i === data.page ? 'active' : ''}"><a class="page-link" href="#" onclick="goToPage(${i})">${i}</a></li>`;
+      }
+      pagHtml += '</ul>';
+      document.getElementById('pagination').innerHTML = pagHtml;
+    } else {
+      document.getElementById('pagination').innerHTML = '';
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted">Error loading products</p></div>';
+  }
+}
+
+function goToPage(page) {
+  currentPage = page;
+  loadShopProducts();
+  window.scrollTo(0, 0);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('search')) document.getElementById('searchInput').value = params.get('search');
+  if (params.get('category') || '<%= selectedCategory %>') {
+    document.getElementById('categoryFilter').value = params.get('category') || '<%= selectedCategory %>';
+  }
+  loadShopProducts();
+});
+</script>
+
+<%- include('partials/footer') %>

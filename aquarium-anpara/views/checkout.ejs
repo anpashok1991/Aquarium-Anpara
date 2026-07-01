@@ -1,0 +1,150 @@
+<%- include('partials/header') %>
+
+<div class="container py-4">
+  <h2 class="fw-bold mb-4"><i class="fas fa-lock me-2"></i>Checkout</h2>
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <form id="checkoutForm" class="card border-0 shadow-sm p-4">
+        <h5 class="fw-bold mb-3">Shipping Details</h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Full Name *</label>
+            <input type="text" class="form-control" id="name" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Mobile Number *</label>
+            <input type="tel" class="form-control" id="phone" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">WhatsApp Number</label>
+            <input type="tel" class="form-control" id="whatsapp">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email (Optional)</label>
+            <input type="email" class="form-control" id="email">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Address *</label>
+            <textarea class="form-control" id="address" rows="2" required></textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">City *</label>
+            <input type="text" class="form-control" id="city" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">State *</label>
+            <input type="text" class="form-control" id="state" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Pincode *</label>
+            <input type="text" class="form-control" id="pincode" required>
+          </div>
+        </div>
+
+        <h5 class="fw-bold mt-4 mb-3">Payment Method</h5>
+        <div class="d-flex flex-column gap-2">
+          <div class="form-check border rounded p-3">
+            <input class="form-check-input" type="radio" name="payment" id="cod" value="cod" checked>
+            <label class="form-check-label" for="cod"><i class="fas fa-money-bill me-2"></i>Cash on Delivery</label>
+          </div>
+          <div class="form-check border rounded p-3">
+            <input class="form-check-input" type="radio" name="payment" id="upi" value="upi">
+            <label class="form-check-label" for="upi"><i class="fas fa-mobile-alt me-2"></i>UPI Payment</label>
+          </div>
+          <div class="form-check border rounded p-3">
+            <input class="form-check-input" type="radio" name="payment" id="bank" value="bank_transfer">
+            <label class="form-check-label" for="bank"><i class="fas fa-university me-2"></i>Bank Transfer</label>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label">Order Notes (Optional)</label>
+          <textarea class="form-control" id="notes" rows="2" placeholder="Any special instructions..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100 mt-4" id="placeOrderBtn">
+          <i class="fas fa-check-circle me-2"></i>Place Order
+        </button>
+      </form>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">Order Summary</h5>
+          <div id="orderSummary"></div>
+          <hr>
+          <div class="d-flex justify-content-between mb-1"><span>Subtotal</span><span id="sub">₹0</span></div>
+          <div class="d-flex justify-content-between mb-1"><span>Delivery</span><span id="del" class="text-success">Free</span></div>
+          <div class="d-flex justify-content-between mb-1"><span>Discount</span><span id="disc" class="text-danger">-₹0</span></div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold fs-5"><span>Total</span><span id="tot">₹0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let cartItems = [];
+let subtotal = 0;
+
+async function loadCheckout() {
+  try {
+    const data = await api('/cart');
+    cartItems = data.items;
+    subtotal = data.subtotal;
+    const user = getUser();
+    if (user) {
+      document.getElementById('name').value = user.name || '';
+      document.getElementById('phone').value = user.phone || '';
+      document.getElementById('email').value = user.email || '';
+    }
+    renderSummary();
+  } catch (e) { window.location.href = '/cart'; }
+}
+
+function renderSummary() {
+  const summary = document.getElementById('orderSummary');
+  summary.innerHTML = cartItems.map(i => `<div class="d-flex justify-content-between mb-1"><small>${i.name} x${i.quantity}</small><small>₹${(i.unit_price * i.quantity).toLocaleString()}</small></div>`).join('');
+  const delivery = subtotal >= 500 ? 0 : 50;
+  document.getElementById('sub').textContent = '₹' + subtotal.toLocaleString();
+  document.getElementById('del').textContent = delivery === 0 ? 'Free' : '₹' + delivery;
+  document.getElementById('tot').textContent = '₹' + (subtotal + delivery).toLocaleString();
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('placeOrderBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Placing Order...';
+
+  const orderData = {
+    customer_name: document.getElementById('name').value,
+    customer_phone: document.getElementById('phone').value,
+    customer_whatsapp: document.getElementById('whatsapp').value || document.getElementById('phone').value,
+    customer_email: document.getElementById('email').value,
+    shipping_address: document.getElementById('address').value,
+    shipping_city: document.getElementById('city').value,
+    shipping_state: document.getElementById('state').value,
+    shipping_pincode: document.getElementById('pincode').value,
+    payment_method: document.querySelector('input[name="payment"]:checked').value,
+    notes: document.getElementById('notes').value
+  };
+
+  try {
+    const order = await placeOrder(orderData);
+    if (order) {
+      window.location.href = '/order-confirmation/' + order.order_number;
+    }
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Place Order';
+});
+
+document.addEventListener('DOMContentLoaded', loadCheckout);
+</script>
+
+<%- include('partials/footer') %>

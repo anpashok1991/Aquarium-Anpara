@@ -1,0 +1,109 @@
+<%- include('partials/header') %>
+
+<div class="container py-4">
+  <h2 class="fw-bold mb-4"><i class="fas fa-shopping-cart me-2"></i>Shopping Cart</h2>
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div id="cartItems"></div>
+      <div id="emptyCart" class="text-center py-5" style="display:none">
+        <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+        <h4>Your cart is empty</h4>
+        <p class="text-muted">Start adding products to your cart</p>
+        <a href="/shop" class="btn btn-primary">Continue Shopping</a>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">Order Summary</h5>
+          <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><span id="subtotal">₹0</span></div>
+          <div class="d-flex justify-content-between mb-2"><span>Delivery</span><span id="delivery" class="text-success">Free</span></div>
+          <div class="d-flex justify-content-between mb-3"><span>Discount</span><span id="discount" class="text-danger">-₹0</span></div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold fs-5 mb-3"><span>Total</span><span id="total">₹0</span></div>
+          
+          <div class="mb-3">
+            <div class="input-group">
+              <input type="text" class="form-control" id="couponCode" placeholder="Coupon code">
+              <button class="btn btn-outline-primary" onclick="applyCoupon()">Apply</button>
+            </div>
+            <small id="couponMsg" class="text-muted"></small>
+          </div>
+
+          <a href="/checkout" class="btn btn-primary w-100 btn-lg" id="checkoutBtn">
+            <i class="fas fa-lock me-2"></i>Proceed to Checkout
+          </a>
+          <a href="/shop" class="btn btn-outline-secondary w-100 mt-2"><i class="fas fa-arrow-left me-2"></i>Continue Shopping</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let cartData = { items: [], subtotal: 0 };
+let appliedCoupon = null;
+
+async function loadCart() {
+  try {
+    cartData = await api('/cart');
+    renderCart();
+  } catch (e) { console.error(e); }
+}
+
+function renderCart() {
+  const container = document.getElementById('cartItems');
+  const empty = document.getElementById('emptyCart');
+  if (!cartData.items.length) { container.innerHTML = ''; empty.style.display = 'block'; document.getElementById('checkoutBtn').style.display = 'none'; return; }
+  empty.style.display = 'none';
+  document.getElementById('checkoutBtn').style.display = '';
+
+  container.innerHTML = cartData.items.map(item => `
+    <div class="cart-item">
+      <img src="${item.image || '/images/no-image.png'}" alt="${item.name}" onerror="this.src='/images/no-image.png'">
+      <div class="flex-grow-1">
+        <h6 class="mb-1"><a href="/product/${item.slug}" class="text-decoration-none">${item.name}</a></h6>
+        <span class="text-primary fw-bold">₹${(item.unit_price || item.price).toLocaleString()}</span>
+        ${item.discount_price > 0 ? `<span class="text-muted text-decoration-line-through ms-2">₹${item.price.toLocaleString()}</span>` : ''}
+        ${item.stock_quantity <= 5 ? `<span class="badge bg-warning text-dark ms-2">Only ${item.stock_quantity} left</span>` : ''}
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="updateCartItem(${item.id}, ${item.quantity - 1})">-</button>
+        <span class="fw-bold">${item.quantity}</span>
+        <button class="btn btn-outline-secondary btn-sm" onclick="updateCartItem(${item.id}, ${item.quantity + 1})">+</button>
+      </div>
+      <div class="text-end" style="min-width:80px">
+        <strong>₹${(item.item_total || item.unit_price * item.quantity).toLocaleString()}</strong>
+        <br><button class="btn btn-link text-danger btn-sm p-0" onclick="removeFromCart(${item.id})"><small>Remove</small></button>
+      </div>
+    </div>
+  `).join('');
+
+  updateSummary();
+}
+
+function updateSummary() {
+  document.getElementById('subtotal').textContent = '₹' + cartData.subtotal.toLocaleString();
+  const delivery = cartData.subtotal >= 500 ? 0 : 50;
+  document.getElementById('delivery').textContent = delivery === 0 ? 'Free' : '₹' + delivery;
+  document.getElementById('delivery').className = delivery === 0 ? 'text-success' : '';
+  let discount = 0;
+  if (appliedCoupon) { discount = appliedCoupon.discount; document.getElementById('discount').textContent = '-₹' + discount.toFixed(0); }
+  document.getElementById('total').textContent = '₹' + (cartData.subtotal - discount + delivery).toLocaleString();
+}
+
+async function applyCoupon() {
+  const code = document.getElementById('couponCode').value.trim();
+  if (!code) return;
+  try {
+    appliedCoupon = await api('/coupons/validate', { method: 'POST', body: JSON.stringify({ code, subtotal: cartData.subtotal }) });
+    document.getElementById('couponMsg').textContent = 'Coupon applied! You save ₹' + appliedCoupon.discount.toFixed(0);
+    document.getElementById('couponMsg').className = 'text-success';
+    updateSummary();
+  } catch (e) { document.getElementById('couponMsg').textContent = e.message; document.getElementById('couponMsg').className = 'text-danger'; appliedCoupon = null; updateSummary(); }
+}
+
+document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+
+<%- include('partials/footer') %>

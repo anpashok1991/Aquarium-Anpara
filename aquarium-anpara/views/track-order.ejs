@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm p-4">
+        <div class="text-center mb-4"><i class="fas fa-truck fa-3x text-primary mb-3"></i><h3 class="fw-bold">Track Your Order</h3></div>
+        <form id="trackForm">
+          <div class="input-group">
+            <input type="text" class="form-control form-control-lg" id="orderNum" placeholder="Enter Order Number (e.g. AQ24010001)" required>
+            <button type="submit" class="btn btn-primary">Track</button>
+          </div>
+        </form>
+        <div id="trackResult" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('trackForm').addEventListener('submit', async(e) => {
+  e.preventDefault();
+  const num = document.getElementById('orderNum').value.trim();
+  const result = document.getElementById('trackResult');
+  try {
+    const data = await api(`/orders/track/${num}`);
+    const o = data.order;
+    const statuses = ['pending','confirmed','processing','dispatched','delivered'];
+    const currentIdx = statuses.indexOf(o.order_status);
+    result.innerHTML = `
+      <div class="card bg-light"><div class="card-body">
+        <h6>Order #${o.order_number}</h6>
+        <p class="mb-2">Status: <span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></p>
+        <p class="mb-2">Payment: <span class="badge bg-${o.payment_status==='paid'?'success':'secondary'}">${o.payment_status}</span></p>
+        <p class="mb-2">Total: ₹${o.total.toLocaleString()}</p>
+        <div class="progress mt-3" style="height:8px"><div class="progress-bar bg-success" style="width:${((currentIdx+1)/statuses.length)*100}%"></div></div>
+        <small class="text-muted">Last updated: ${new Date(o.updated_at).toLocaleString()}</small>
+      </div></div>`;
+  } catch(e) { result.innerHTML = '<div class="alert alert-danger">Order not found. Please check the order number.</div>'; }
+});
+</script>
+<%- include('partials/footer') %>

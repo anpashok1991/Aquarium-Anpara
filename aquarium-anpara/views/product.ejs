@@ -1,0 +1,145 @@
+<%- include('partials/header') %>
+
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">Home</a></li>
+      <li class="breadcrumb-item"><a href="/shop">Shop</a></li>
+      <% if (product.category_name) { %><li class="breadcrumb-item"><a href="/category/<%= product.category_slug %>"><%= product.category_name %></a></li><% } %>
+      <li class="breadcrumb-item active"><%= product.name %></li>
+    </ol>
+  </nav>
+
+  <div class="row g-5">
+    <div class="col-lg-6">
+      <div class="product-detail-img mb-3">
+        <img id="mainImage" src="<%= product.images && product.images[0] ? product.images[0].image_url : '/images/no-image.png' %>" 
+             alt="<%= product.name %>" class="img-fluid rounded" onerror="this.src='/images/no-image.png'">
+      </div>
+      <% if (product.images && product.images.length > 1) { %>
+      <div class="d-flex gap-2 flex-wrap">
+        <% product.images.forEach(img => { %>
+        <img src="<%= img.image_url %>" class="rounded" style="width:80px;height:80px;object-fit:cover;cursor:pointer;border:2px solid transparent"
+             onclick="document.getElementById('mainImage').src=this.src;document.querySelectorAll('.thumb-img').forEach(t=>t.style.borderColor='transparent');this.style.borderColor='var(--primary)'"
+             onerror="this.src='/images/no-image.png'" alt="thumb">
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="col-lg-6 product-detail-info">
+      <% if (product.brand_name) { %><span class="text-muted"><%= product.brand_name %></span><% } %>
+      <h1 class="mt-2"><%= product.name %></h1>
+      
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div style="color:#ffc107;font-size:1.1rem"><%= '★'.repeat(Math.round(product.rating)) %><%= '☆'.repeat(5-Math.round(product.rating)) %></div>
+        <span class="text-muted"><%= product.review_count %> Reviews</span>
+        <span class="text-muted"><%= product.sold_count %> Sold</span>
+      </div>
+
+      <div class="price mb-3">
+        ₹<%= (product.discount_price > 0 ? product.discount_price : product.price).toLocaleString() %>
+        <% if (product.discount_price > 0) { %>
+          <span class="old-price fs-5">₹<%= product.price.toLocaleString() %></span>
+          <span class="badge bg-danger ms-2"><%= Math.round((product.price - product.discount_price) / product.price * 100) %>% OFF</span>
+        <% } %>
+      </div>
+
+      <p class="text-muted mb-4"><%= product.short_description || product.description %></p>
+
+      <div class="mb-4">
+        <% if (product.stock_quantity > 0) { %>
+          <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i>In Stock (<%= product.stock_quantity %> available)</span>
+        <% } else { %>
+          <span class="badge bg-danger fs-6"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
+        <% } %>
+      </div>
+
+      <% if (product.sku) { %><p class="text-muted small mb-2">SKU: <%= product.sku %></p><% } %>
+
+      <div class="d-flex gap-3 mb-4">
+        <div class="input-group" style="width:150px">
+          <button class="btn btn-outline-secondary" onclick="changeQty(-1)">-</button>
+          <input type="number" class="form-control text-center" id="qty" value="1" min="1" max="<%= product.stock_quantity %>">
+          <button class="btn btn-outline-secondary" onclick="changeQty(1)">+</button>
+        </div>
+        <button class="btn btn-primary btn-lg flex-grow-1" onclick="addToCart(<%= product.id %>, document.getElementById('qty').value)" <%= product.stock_quantity <= 0 ? 'disabled' : '' %>>
+          <i class="fas fa-cart-plus me-2"></i>Add to Cart
+        </button>
+        <button class="btn btn-outline-danger btn-lg" onclick="toggleWishlist(<%= product.id %>)">
+          <i class="far fa-heart"></i>
+        </button>
+      </div>
+
+      <div class="border-top pt-3">
+        <div class="d-flex align-items-center gap-3 mb-2"><i class="fas fa-truck text-success"></i><span>Free delivery on orders above ₹500</span></div>
+        <div class="d-flex align-items-center gap-3 mb-2"><i class="fas fa-undo text-primary"></i><span>Easy returns & replacement</span></div>
+        <div class="d-flex align-items-center gap-3"><i class="fab fa-whatsapp text-success"></i><a href="https://wa.me/919876543210?text=Hi! I'm interested in <%= product.name %>" target="_blank" class="text-success fw-semibold">Ask on WhatsApp</a></div>
+      </div>
+    </div>
+  </div>
+
+  <% if (product.description) { %>
+  <div class="mt-5">
+    <ul class="nav nav-tabs" id="productTabs">
+      <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#description">Description</a></li>
+      <% if (product.reviews && product.reviews.length) { %><li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#reviews">Reviews (<%= product.reviews.length %>)</a></li><% } %>
+    </ul>
+    <div class="tab-content p-4 bg-white rounded-bottom shadow-sm">
+      <div class="tab-pane fade show active" id="description">
+        <p><%= product.description %></p>
+      </div>
+      <% if (product.reviews && product.reviews.length) { %>
+      <div class="tab-pane fade" id="reviews">
+        <% product.reviews.forEach(r => { %>
+        <div class="border-bottom pb-3 mb-3">
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong><%= r.customer_name %></strong>
+              <div style="color:#ffc107;font-size:0.85rem"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5-r.rating) %></div>
+            </div>
+            <small class="text-muted"><%= new Date(r.created_at).toLocaleDateString() %></small>
+          </div>
+          <% if (r.title) { %><h6 class="mt-2"><%= r.title %></h6><% } %>
+          <p class="mb-1"><%= r.comment %></p>
+          <% if (r.admin_reply) { %>
+          <div class="ms-3 mt-2 p-2 bg-light rounded"><strong>Owner Reply:</strong> <%= r.admin_reply %></div>
+          <% } %>
+        </div>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (product.related && product.related.length) { %>
+  <div class="mt-5">
+    <h3 class="fw-bold mb-4">Related Products</h3>
+    <div class="row g-4">
+      <% product.related.forEach(p => { %>
+      <div class="col-6 col-md-3">
+        <div class="product-card h-100">
+          <a href="/product/<%= p.slug %>"><div style="overflow:hidden"><img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.src='/images/no-image.png'"></div></a>
+          <div class="card-body">
+            <a href="/product/<%= p.slug %>" class="text-decoration-none"><h6 class="card-title text-dark"><%= p.name %></h6></a>
+            <div class="product-price">₹<%= (p.discount_price > 0 ? p.discount_price : p.price).toLocaleString() %></div>
+            <button class="btn btn-primary btn-sm w-100 mt-2" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus"></i> Add</button>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<script>
+function changeQty(delta) {
+  const input = document.getElementById('qty');
+  const newVal = parseInt(input.value) + delta;
+  if (newVal >= 1 && newVal <= parseInt(input.max || 999)) input.value = newVal;
+}
+</script>
+
+<%- include('partials/footer') %>

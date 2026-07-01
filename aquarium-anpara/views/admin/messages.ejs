@@ -1,0 +1,22 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/messages"><i class="fas fa-envelope"></i> Messages</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <h3 class="fw-bold mb-4">Contact Messages</h3>
+    <div id="messagesList"></div>
+  </div>
+</div>
+<script>
+async function loadMessages(){try{const d=await api('/contact');if(!d.messages.length){document.getElementById('messagesList').innerHTML='<p class="text-muted">No messages</p>';return;}document.getElementById('messagesList').innerHTML=d.messages.map(m=>`<div class="card border-0 shadow-sm mb-3 p-3 ${m.is_read?'':'border-start border-primary border-4'}"><div class="d-flex justify-content-between"><div><h6>${m.name} ${m.email?'<small class="text-muted">('+m.email+')</small>':''} ${m.phone?'<small class="text-muted">| '+m.phone+'</small>':''}</h6><p class="mb-1">${m.message}</p><small class="text-muted">${new Date(m.created_at).toLocaleString()}</small></div><div class="d-flex gap-2">${!m.is_read?`<button class="btn btn-sm btn-outline-primary" onclick="markRead(${m.id})"><i class="fas fa-check"></i></button>`:''}<button class="btn btn-sm btn-outline-danger" onclick="deleteMessage(${m.id})"><i class="fas fa-trash"></i></button></div></div></div>`).join('');}catch(e){}}
+async function markRead(id){try{await api(`/contact/${id}/read`,{method:'PUT'});loadMessages();}catch(e){}}
+async function deleteMessage(id){if(!confirm('Delete?'))return;try{await api(`/contact/${id}`,{method:'DELETE'});showToast('Deleted');loadMessages();}catch(e){}}
+document.addEventListener('DOMContentLoaded',loadMessages);
+</script>
+<%- include('../partials/footer') %>

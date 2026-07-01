@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="text-center mb-4">
+        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:80px;height:80px"><i class="fas fa-check fa-3x"></i></div>
+        <h2 class="fw-bold mt-3">Order Placed Successfully!</h2>
+        <p class="text-muted">Thank you for your order. We'll contact you soon.</p>
+      </div>
+      <div class="card border-0 shadow-sm p-4">
+        <h5 class="fw-bold mb-3">Order #<%= orderNumber %></h5>
+        <div id="orderDetails"><div class="text-center"><div class="spinner-custom mx-auto"></div></div></div>
+        <div class="d-flex gap-3 mt-4 justify-content-center flex-wrap">
+          <button class="btn btn-success btn-lg" id="whatsappBtn"><i class="fab fa-whatsapp me-2"></i>Send Order on WhatsApp</button>
+          <a href="/orders" class="btn btn-outline-primary btn-lg">View My Orders</a>
+          <a href="/shop" class="btn btn-outline-secondary btn-lg">Continue Shopping</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let orderData = null;
+async function loadOrder() {
+  try {
+    const data = await api('/orders');
+    orderData = data.orders.find(o => o.order_number === '<%= orderNumber %>');
+    if (orderData) {
+      document.getElementById('orderDetails').innerHTML = `
+        <div class="row mb-3"><div class="col-sm-6"><strong>Name:</strong> ${orderData.customer_name}</div><div class="col-sm-6"><strong>Phone:</strong> ${orderData.customer_phone}</div></div>
+        <div class="row mb-3"><div class="col-12"><strong>Address:</strong> ${orderData.shipping_address}, ${orderData.shipping_city}, ${orderData.shipping_state} - ${orderData.shipping_pincode}</div></div>
+        <div class="row mb-3"><div class="col-sm-6"><strong>Payment:</strong> ${orderData.payment_method.toUpperCase()}</div><div class="col-sm-6"><strong>Total:</strong> ₹${orderData.total.toLocaleString()}</div></div>
+        <p class="text-muted"><i class="fas fa-truck me-2"></i>Estimated delivery: 3-5 business days</p>`;
+      document.getElementById('whatsappBtn').onclick = () => sendOrderWhatsApp(orderData);
+    }
+  } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', loadOrder);
+</script>
+<%- include('partials/footer') %>

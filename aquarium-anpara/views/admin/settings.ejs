@@ -1,0 +1,33 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/settings"><i class="fas fa-cog"></i> Settings</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <h3 class="fw-bold mb-4">Settings</h3>
+    <div class="card border-0 shadow-sm p-4">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Shop Name</label><input type="text" class="form-control" id="shopName"></div>
+        <div class="col-md-6"><label class="form-label">Shop Phone</label><input type="text" class="form-control" id="shopPhone"></div>
+        <div class="col-md-6"><label class="form-label">Shop Email</label><input type="email" class="form-control" id="shopEmail"></div>
+        <div class="col-md-6"><label class="form-label">WhatsApp Number</label><input type="text" class="form-control" id="whatsappNumber"></div>
+        <div class="col-12"><label class="form-label">Shop Address</label><textarea class="form-control" id="shopAddress" rows="2"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Shop Logo</label><input type="file" class="form-control" id="shopLogoFile" accept="image/*"><div id="logoPreview" class="mt-2"></div><input type="hidden" id="shopLogo"></div>
+        <div class="col-md-6"><label class="form-label">Free Delivery Min Order (₹)</label><input type="number" class="form-control" id="minOrder"></div>
+        <div class="col-md-6"><label class="form-label">Delivery Charge (₹)</label><input type="number" class="form-control" id="deliveryCharge"></div>
+      </div>
+      <button class="btn btn-primary btn-lg mt-4" onclick="saveSettings()"><i class="fas fa-save me-1"></i>Save Settings</button>
+    </div>
+  </div>
+</div>
+<script>
+async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';if(s.shop_logo){document.getElementById('logoPreview').innerHTML=`<img src="${s.shop_logo}" style="max-height:60px;border-radius:4px" onerror="this.style.display='none'">`;}}catch(e){}}
+async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}await api('/settings',{method:'PUT',body:JSON.stringify({shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value})});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
+document.addEventListener('DOMContentLoaded',loadSettings);
+</script>
+<%- include('../partials/footer') %>

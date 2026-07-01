@@ -1,0 +1,657 @@
+# Build a Complete Premium Pet & Aquarium E-Commerce Website with Admin ERP
+
+Act as a **Senior Solution Architect, Senior UI/UX Designer, Full Stack Developer, Database Architect, and ERP Developer**.
+
+Build a **production-ready, responsive, secure, and modern web application** for my business.
+
+---
+
+# Business Details
+
+**Business Name:** Aquarium Anpara
+
+## About Business
+
+Aquarium Anpara is a complete pet and aquarium store where customers can purchase:
+
+* Imported Aquarium Fishes
+* Freshwater Fishes
+* Marine Fishes
+* Aquarium Plants
+* Aquarium Tanks
+* Aquarium Accessories
+* Aquarium Decorative Items
+* Aquarium Filters
+* Aquarium Pumps
+* Aquarium Lights
+* Aquarium Medicines
+* Fish Foods
+* Bird Foods
+* Dog Foods
+* Cat Foods
+* Rabbit Foods
+* Imported Dog Breeds
+* Indian Dog Breeds
+* Cats
+* Birds
+* Rabbits
+* Hamsters
+* Pet Accessories
+* Pet Toys
+* Pet Grooming Products
+* Pet Medicines
+* Bird Cages
+* Dog Kennels
+* Cat Houses
+* Aquarium Furniture
+* Custom Aquarium Setup Services
+* Aquarium Maintenance Services
+* Home Delivery
+
+The website should look premium, modern, elegant, and trustworthy like Amazon, Flipkart, or a professional pet store.
+
+Use attractive animations, clean typography, premium icons, and beautiful color combinations.
+
+The website must be mobile-friendly and desktop-friendly.
+
+---
+
+# Technology
+
+You may choose any modern technology stack.
+
+Preferred:
+
+* ASP.NET Core (.NET 9)
+* C#
+* REST API
+* SQL Server / PostgreSQL / MySQL (choose whichever best suits the application)
+* Entity Framework Core
+* Bootstrap 5
+* HTML5
+* CSS3
+* JavaScript
+* Responsive Design
+* JWT Authentication
+* Role-Based Authorization
+
+Use whatever database is most suitable for scalability and performance.
+
+---
+
+# Website Pages
+
+## Home
+
+Beautiful landing page including:
+
+* Hero Banner
+* Shop Introduction
+* Featured Products
+* Featured Categories
+* Imported Fish Collection
+* Dog Collection
+* Cat Collection
+* Bird Collection
+* Aquarium Gallery
+* Customer Reviews
+* Why Choose Us
+* Delivery Information
+* Call Now button
+* WhatsApp button
+* Google Map
+* Contact Information
+* Footer
+
+---
+
+## About Us
+
+Include:
+
+* Shop Story
+* Years of Experience
+* Mission
+* Vision
+* Quality Assurance
+* Customer Satisfaction
+
+---
+
+## Shop
+
+Product listing page with
+
+* Grid View
+* List View
+* Product Search
+* Category Filter
+* Brand Filter
+* Price Filter
+* Availability Filter
+* New Arrival
+* Featured Products
+* Best Sellers
+
+Each product should display
+
+* Multiple Images
+* Product Name
+* Price
+* Discount
+* Stock Status
+* Short Description
+* Rating
+* Add to Cart
+* Buy Now
+* Wishlist
+
+---
+
+## Product Details
+
+Show
+
+* Multiple Images
+* Zoom
+* Product Description
+* Specifications
+* Features
+* Related Products
+* Similar Products
+* Customer Reviews
+* Stock Availability
+
+---
+
+## Categories
+
+Separate categories like
+
+Aquarium
+
+Dogs
+
+Cats
+
+Birds
+
+Fish Foods
+
+Dog Foods
+
+Cat Foods
+
+Bird Foods
+
+Accessories
+
+Medicines
+
+Decorations
+
+Plants
+
+Aquarium Equipment
+
+---
+
+## Cart
+
+Allow users to
+
+* Update Quantity
+* Remove Product
+* Save for Later
+* Continue Shopping
+
+---
+
+## Checkout
+
+Customer enters
+
+* Name
+* Mobile Number
+* WhatsApp Number
+* Email (optional)
+* Address
+* City
+* State
+* Pincode
+
+Payment options
+
+* Cash on Delivery
+* UPI
+* Bank Transfer
+
+After placing order
+
+Generate Order ID automatically.
+
+---
+
+## Order Confirmation
+
+Display
+
+* Order Number
+* Ordered Products
+* Quantity
+* Price
+* Total
+* Delivery Address
+* Estimated Delivery
+
+Provide button
+
+"Send Order on WhatsApp"
+
+The complete order summary should automatically open WhatsApp directed to the shop owner.
+
+---
+
+## Gallery
+
+Beautiful gallery with
+
+* Aquarium Photos
+* Fish Photos
+* Dogs
+* Cats
+* Birds
+* Store Images
+
+---
+
+## Contact Us
+
+Include
+
+* Contact Form
+* Phone Number
+* WhatsApp Button
+* Google Maps
+* Business Hours
+* Address
+
+When user clicks Contact via WhatsApp, it should open WhatsApp chat with the shop owner's number with a prefilled message.
+
+---
+
+# User Features
+
+Customers can
+
+* Browse Products
+* Search Products
+* Filter Products
+* Add to Cart
+* Place Orders
+* Track Order Status
+* View Order History (optional account)
+* Contact Shop
+* Share Products
+* Add to Wishlist
+* Receive Order Confirmation
+
+---
+
+# Authentication
+
+Customer Login
+
+Customer Registration
+
+Forgot Password
+
+OTP Verification (optional)
+
+Google Login (optional)
+
+---
+
+# Admin Panel
+
+Secure Admin Login
+
+Dashboard should display
+
+* Total Products
+* Total Categories
+* Total Orders
+* Today's Orders
+* Monthly Sales
+* Revenue
+* Customers
+* Inventory Alerts
+* Out of Stock Products
+* Low Stock Products
+
+---
+
+# Product Management
+
+Admin can
+
+* Add Product
+* Edit Product
+* Delete Product
+* Upload Multiple Images
+* Add Video
+* Set Category
+* Set Brand
+* Set Stock
+* Set Price
+* Set Discount
+* Mark Featured
+* Mark Best Seller
+* Activate/Deactivate Product
+
+---
+
+# Category Management
+
+CRUD operations
+
+Unlimited Categories
+
+Unlimited Subcategories
+
+---
+
+# Inventory Management
+
+Complete stock management
+
+Purchase Entry
+
+Stock In
+
+Stock Out
+
+Damage Stock
+
+Stock Transfer
+
+Low Stock Alert
+
+Barcode Support
+
+SKU Management
+
+---
+
+# Order Management
+
+Admin can
+
+* View Orders
+* Accept Orders
+* Reject Orders
+* Dispatch Orders
+* Deliver Orders
+* Cancel Orders
+* Update Order Status
+* Print Invoice
+* Generate Receipt
+
+---
+
+# Receipt & Invoice
+
+Generate professional GST-style invoices (GST fields optional if applicable) containing
+
+* Shop Logo
+* Shop Name
+* Customer Details
+* Product Details
+* Quantity
+* Price
+* Discount
+* Tax
+* Total
+
+Admin can
+
+* Print Receipt
+* Download PDF
+* Share Invoice
+
+Include a button to send the invoice/receipt PDF and order summary to the customer's WhatsApp.
+
+---
+
+# WhatsApp Integration
+
+Integrate WhatsApp throughout the application.
+
+Customer can
+
+* Contact Shop
+* Ask Questions
+* Place Custom Orders
+
+Admin can
+
+* Send Order Confirmation
+* Send Invoice
+* Send Receipt
+* Send Delivery Updates
+* Send Payment Confirmation
+* Send Promotional Messages (manual)
+
+---
+
+# Customer Management
+
+Admin can
+
+* View Customers
+* Search Customers
+* Customer Purchase History
+* Total Spending
+* WhatsApp Number
+* Address
+
+---
+
+# Reports
+
+Daily Sales
+
+Weekly Sales
+
+Monthly Sales
+
+Yearly Sales
+
+Profit Report
+
+Expense Report
+
+Product Sales Report
+
+Stock Report
+
+Customer Report
+
+Order Report
+
+Top Selling Products
+
+---
+
+# Coupons
+
+Discount Coupons
+
+Promo Codes
+
+Festival Offers
+
+Flash Sale
+
+---
+
+# Reviews
+
+Customer Reviews
+
+Ratings
+
+Admin Approval
+
+Reply to Reviews
+
+---
+
+# Notifications
+
+Order Notifications
+
+Low Stock Notifications
+
+New Customer Notifications
+
+Delivery Notifications
+
+---
+
+# SEO
+
+SEO-friendly URLs
+
+Meta Tags
+
+Open Graph
+
+Schema Markup
+
+Image Optimization
+
+Fast Loading
+
+---
+
+# Security
+
+JWT Authentication
+
+Role-Based Authorization
+
+Password Encryption
+
+SQL Injection Protection
+
+XSS Protection
+
+CSRF Protection
+
+Secure File Upload
+
+Audit Logs
+
+---
+
+# Performance
+
+Lazy Loading
+
+Caching
+
+Image Compression
+
+Pagination
+
+Optimized Database Queries
+
+Responsive Design
+
+---
+
+# Database
+
+Design a normalized relational database including tables for:
+
+* Users
+* Roles
+* Products
+* Product Images
+* Categories
+* Brands
+* Inventory
+* Orders
+* Order Items
+* Customers
+* Payments
+* Receipts
+* Coupons
+* Reviews
+* Notifications
+* Settings
+* Audit Logs
+
+---
+
+# Admin Settings
+
+Admin can manage
+
+* Shop Information
+* Shop Logo
+* Business Hours
+* Contact Number
+* WhatsApp Number
+* Email
+* Google Maps Location
+* Delivery Charges
+* Social Media Links
+* Payment Settings
+* Homepage Banners
+* Website Theme
+
+---
+
+# UI/UX
+
+The website should have a premium look inspired by leading e-commerce platforms.
+
+Include:
+
+* Smooth animations
+* Modern cards
+* Premium buttons
+* Mega menu
+* Sticky navigation
+* Floating WhatsApp button
+* Floating Call button
+* Beautiful product cards
+* Attractive banners
+* Elegant footer
+* Dark/Light mode support
+
+---
+
+# Deliverables
+
+Provide a complete production-ready solution including:
+
+* Responsive Frontend
+* Backend APIs
+* Database
+* Admin ERP
+* Customer Portal
+* Authentication
+* Product Management
+* Inventory Management
+* Billing System
+* Receipt Generation
+* PDF Invoice
+* WhatsApp Integration
+* Reporting Dashboard
+* Deployment Configuration
+* Complete Source Code
+* Well-structured project architecture
+* Clean, documented, maintainable code suitable for future enhancements.

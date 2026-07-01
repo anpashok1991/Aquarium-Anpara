@@ -1,0 +1,44 @@
+<%- include('partials/header') %>
+<div class="container py-4">
+  <h2 class="fw-bold mb-4">Contact Us</h2>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm p-4">
+        <h5 class="fw-bold mb-3">Send us a Message</h5>
+        <form id="contactForm">
+          <div class="mb-3"><label class="form-label">Name *</label><input type="text" class="form-control" id="cName" required></div>
+          <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="cEmail"></div>
+          <div class="mb-3"><label class="form-label">Phone</label><input type="tel" class="form-control" id="cPhone"></div>
+          <div class="mb-3"><label class="form-label">Subject</label><input type="text" class="form-control" id="cSubject"></div>
+          <div class="mb-3"><label class="form-label">Message *</label><textarea class="form-control" id="cMessage" rows="4" required></textarea></div>
+          <button type="submit" class="btn btn-primary w-100"><i class="fas fa-paper-plane me-2"></i>Send Message</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm p-4 mb-4">
+        <h5 class="fw-bold mb-3">Contact Information</h5>
+        <p><i class="fas fa-map-marker-alt text-primary me-2"></i><%= shopAddress %></p>
+        <p><i class="fas fa-phone text-primary me-2"></i><a href="tel:<%= shopPhone %>"><%= shopPhone %></a></p>
+        <p><i class="fas fa-envelope text-primary me-2"></i><a href="mailto:<%= shopEmail %>"><%= shopEmail %></a></p>
+        <p><i class="fas fa-clock text-primary me-2"></i>Mon-Sat: 9:00 AM - 9:00 PM</p>
+        <a href="https://wa.me/<%= whatsappNumber %>?text=Hi! I have a query." class="btn btn-success mt-2" target="_blank"><i class="fab fa-whatsapp me-2"></i>WhatsApp Us</a>
+      </div>
+      <div class="card border-0 shadow-sm p-4">
+        <h5 class="fw-bold mb-3">Find Us</h5>
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.0!2d81.0!3d24.0!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjTCsDAwJzAwLjAiTiA4McKwMDAnMDAuMCJF!5e0!3m2!1sen!2sin" width="100%" height="200" style="border:0;border-radius:8px" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('contactForm').addEventListener('submit', async(e) => {
+  e.preventDefault();
+  try {
+    await api('/contact', { method:'POST', body: JSON.stringify({ name: document.getElementById('cName').value, email: document.getElementById('cEmail').value, phone: document.getElementById('cPhone').value, subject: document.getElementById('cSubject').value, message: document.getElementById('cMessage').value }) });
+    showToast('Message sent successfully!');
+    document.getElementById('contactForm').reset();
+  } catch(e) { showToast(e.message, 'error'); }
+});
+</script>
+<%- include('partials/footer') %>

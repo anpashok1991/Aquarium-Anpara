@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <nav class="admin-sidebar d-none d-lg-block">
+    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link active" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/customers"><i class="fas fa-users"></i> Customers</a></li>
+      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
+    </ul>
+  </nav>
+  <div class="admin-content flex-grow-1">
+    <h3 class="fw-bold mb-4">Orders</h3>
+    <div class="d-flex gap-2 mb-3 flex-wrap">
+      <button class="btn btn-outline-primary btn-sm status-filter active" onclick="filterOrders('',this)">All</button>
+      <button class="btn btn-outline-warning btn-sm status-filter" onclick="filterOrders('pending',this)">Pending</button>
+      <button class="btn btn-outline-info btn-sm status-filter" onclick="filterOrders('confirmed',this)">Confirmed</button>
+      <button class="btn btn-outline-primary btn-sm status-filter" onclick="filterOrders('processing',this)">Processing</button>
+      <button class="btn btn-outline-secondary btn-sm status-filter" onclick="filterOrders('dispatched',this)">Dispatched</button>
+      <button class="btn btn-outline-success btn-sm status-filter" onclick="filterOrders('delivered',this)">Delivered</button>
+      <button class="btn btn-outline-danger btn-sm status-filter" onclick="filterOrders('cancelled',this)">Cancelled</button>
+    </div>
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead><tr><th>Order #</th><th>Customer</th><th>Phone</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="ordersTable"></tbody>
+      </table></div>
+    </div></div>
+  </div>
+</div>
+<script>
+let currentStatus = '';
+function filterOrders(s,btn) { currentStatus = s; document.querySelectorAll('.status-filter').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); loadOrders(); }
+async function loadOrders() {
+  const params = currentStatus ? `?status=${currentStatus}` : '';
+  try {
+    const data = await api(`/orders${params}`);
+    document.getElementById('ordersTable').innerHTML = data.orders.map(o => `
+      <tr>
+        <td><strong>${o.order_number}</strong></td><td>${o.customer_name}</td><td>${o.customer_phone}</td>
+        <td>₹${o.total.toLocaleString()}</td>
+        <td><span class="badge bg-${o.payment_status==='paid'?'success':'warning'}">${o.payment_method}</span></td>
+        <td><select class="form-select form-select-sm" style="width:130px" onchange="updateOrderStatus(${o.id}, this.value)">
+          ${['pending','confirmed','processing','dispatched','delivered','cancelled'].map(s=>`<option value="${s}" ${o.order_status===s?'selected':''}>${s}</option>`).join('')}
+        </select></td>
+        <td>${new Date(o.created_at).toLocaleDateString()}</td>
+        <td><button class="btn btn-sm btn-outline-primary" onclick="viewOrder(${o.id})"><i class="fas fa-eye"></i></button>
+        <button class="btn btn-sm btn-outline-success" onclick="sendOrderWhatsApp({order_number:'${o.order_number}',customer_name:'${o.customer_name}',customer_phone:'${o.customer_phone}',total:${o.total}})"><i class="fab fa-whatsapp"></i></button></td>
+      </tr>`).join('');
+  } catch(e) { console.error(e); }
+}
+async function updateOrderStatus(id, status) {
+  try { await api(`/orders/${id}/status`, { method:'PUT', body: JSON.stringify({ order_status: status }) }); showToast('Status updated'); } catch(e) { showToast(e.message, 'error'); }
+}
+async function viewOrder(id) {
+  try {
+    const data = await api(`/orders/${id}`);
+    const o = data.order;
+    let items = '';
+    if (o.items) items = o.items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₹${i.price}</td><td>₹${i.total}</td></tr>`).join('');
+    const modal = document.createElement('div');
+    modal.className = 'modal fade'; modal.innerHTML = `<div class="modal-dialog modal-lg"><div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Order #${o.order_number}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row mb-3"><div class="col-6"><strong>Customer:</strong> ${o.customer_name}<br><strong>Phone:</strong> ${o.customer_phone}<br><strong>Email:</strong> ${o.customer_email||'-'}</div>
+        <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}<br><strong>Payment:</strong> ${o.payment_method.toUpperCase()}<br><strong>Status:</strong> ${o.order_status}</div></div>
+        <table class="table table-sm"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
+        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br><strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5></div>
+      </div></div></div>`;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    modal.addEventListener('hidden.bs.modal', () => modal.remove());
+  } catch(e) { showToast(e.message, 'error'); }
+}
+document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+<%- include('../partials/footer') %>
