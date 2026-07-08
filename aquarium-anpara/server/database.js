@@ -17,9 +17,10 @@ db.exec(`
     name TEXT NOT NULL,
     email TEXT UNIQUE,
     phone TEXT UNIQUE,
-    password TEXT NOT NULL,
+    password TEXT,
     role TEXT DEFAULT 'customer' CHECK(role IN ('admin','staff','customer')),
     avatar TEXT,
+    auth_provider TEXT DEFAULT 'local',
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -273,5 +274,41 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cart_session ON cart(session_id);
   CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
 `);
+
+// --- Migration: support passwordless (Google) users + auth_provider column ---
+(function migrateUsers() {
+  const cols = db.prepare("PRAGMA table_info(users)").all();
+  if (cols.length === 0) return;
+  const hasAuthProvider = cols.some(c => c.name === 'auth_provider');
+  const passwordCol = cols.find(c => c.name === 'password');
+  const passwordNotNull = passwordCol && passwordCol.notnull === 1;
+
+  if (hasAuthProvider && !passwordNotNull) return; // already migrated
+
+  db.exec('BEGIN TRANSACTION');
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS users_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE,
+      phone TEXT UNIQUE,
+      password TEXT,
+      role TEXT DEFAULT 'customer' CHECK(role IN ('admin','staff','customer')),
+      avatar TEXT,
+      auth_provider TEXT DEFAULT 'local',
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    db.exec(`INSERT OR IGNORE INTO users_new (id, name, email, phone, password, role, avatar, auth_provider, is_active, created_at, updated_at)
+      SELECT id, name, email, phone, password, role, avatar, 'local', is_active, created_at, updated_at FROM users`);
+    db.exec('DROP TABLE users');
+    db.exec('ALTER TABLE users_new RENAME TO users');
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+})();
 
 module.exports = db;

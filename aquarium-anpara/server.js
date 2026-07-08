@@ -4,6 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const fs = require('fs');
@@ -48,6 +49,7 @@ const upload = multer({
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(compression());
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -75,6 +77,7 @@ app.use((req, res, next) => {
   res.locals.shopEmail = process.env.SHOP_EMAIL || '';
   res.locals.shopAddress = process.env.SHOP_ADDRESS || '';
   res.locals.whatsappNumber = process.env.WHATSAPP_NUMBER || '';
+  res.locals.googleClientId = process.env.GOOGLE_CLIENT_ID || '';
   res.locals.user = req.user || null;
   res.locals.currentPath = req.path;
   next();

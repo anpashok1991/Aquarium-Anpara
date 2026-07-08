@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const db = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 
@@ -7,6 +8,23 @@ router.get('/users', auth, adminOnly, (req, res) => {
   try {
     const users = db.prepare('SELECT id, name, email, phone, role, is_active, created_at FROM users ORDER BY created_at DESC').all();
     res.json({ users });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/users', auth, adminOnly, (req, res) => {
+  try {
+    const { name, email, phone, password, role } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password are required' });
+    if (!['admin', 'staff', 'customer'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
+
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) return res.status(400).json({ error: 'Email already exists' });
+
+    const hash = bcrypt.hashSync(password, 10);
+    const result = db.prepare('INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)').run(name, email, phone || null, hash, role);
+
+    const user = db.prepare('SELECT id, name, email, phone, role, is_active, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
+    res.json({ user });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

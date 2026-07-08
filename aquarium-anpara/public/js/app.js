@@ -42,7 +42,9 @@ function logout() {
   token = null;
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  window.location.href = '/';
+  fetch(API + '/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).finally(() => {
+    window.location.href = '/';
+  });
 }
 function isLoggedIn() { return !!token; }
 

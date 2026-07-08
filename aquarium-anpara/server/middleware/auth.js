@@ -1,12 +1,18 @@
 const jwt = require('jsonwebtoken');
 const db = require('../database');
 
+const TOKEN_SECRET = process.env.JWT_SECRET;
+
+function extractToken(req) {
+  return req.header('Authorization')?.replace('Bearer ', '') || (req.cookies && req.cookies.token);
+}
+
 const auth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '') || req.cookies?.token;
+  const token = extractToken(req);
   if (!token) return res.status(401).json({ error: 'Access denied' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active FROM users WHERE id = ?').get(decoded.id);
+    const decoded = jwt.verify(token, TOKEN_SECRET);
+    const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active, auth_provider FROM users WHERE id = ?').get(decoded.id);
     if (!user || !user.is_active) return res.status(401).json({ error: 'Invalid token' });
     req.user = user;
     next();
@@ -16,11 +22,11 @@ const auth = (req, res, next) => {
 };
 
 const optionalAuth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '') || req.cookies?.token;
+  const token = extractToken(req);
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active FROM users WHERE id = ?').get(decoded.id);
+      const decoded = jwt.verify(token, TOKEN_SECRET);
+      const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active, auth_provider FROM users WHERE id = ?').get(decoded.id);
       if (user && user.is_active) req.user = user;
     } catch (e) {}
   }
@@ -37,8 +43,25 @@ const staffOrAdmin = (req, res, next) => {
   next();
 };
 
-const generateToken = (user) => {
-  return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+// Server-side guard for admin/staff EJS page routes.
+// Reads JWT from cookie/header, verifies admin role, otherwise redirects to /login.
+const requireAdminPage = (req, res, next) => {
+  const token = extractToken(req);
+  if (!token) return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  try {
+    const decoded = jwt.verify(token, TOKEN_SECRET);
+    const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active FROM users WHERE id = ?').get(decoded.id);
+    if (!user || !user.is_active) return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+    if (user.role !== 'admin' && user.role !== 'staff') return res.redirect('/');
+    req.user = user;
+    next();
+  } catch (e) {
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
 };
 
-module.exports = { auth, optionalAuth, adminOnly, staffOrAdmin, generateToken };
+const generateToken = (user) => {
+  return jwt.sign({ id: user.id, role: user.role }, TOKEN_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+};
+
+module.exports = { auth, optionalAuth, adminOnly, staffOrAdmin, requireAdminPage, generateToken };

@@ -1,8 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const { OAuth2Client } = require('google-auth-library');
 const db = require('../database');
 const { auth, generateToken } = require('../middleware/auth');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+};
 
 router.post('/register', (req, res) => {
   try {
@@ -20,6 +30,7 @@ router.post('/register', (req, res) => {
     
     db.prepare('INSERT INTO customers (user_id, name, email, phone) VALUES (?, ?, ?, ?)').run(user.id, name, email || null, phone || null);
     
+    res.cookie('token', token, COOKIE_OPTIONS);
     res.json({ token, user });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -39,6 +50,7 @@ router.post('/login', (req, res) => {
     
     const token = generateToken(user);
     const { password: _, ...safeUser } = user;
+    res.cookie('token', token, COOKIE_OPTIONS);
     res.json({ token, user: safeUser });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -71,6 +83,43 @@ router.put('/change-password', auth, (req, res) => {
     res.json({ message: 'Password updated' });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Logged out' });
+});
+
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Google credential required' });
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload();
+    const { email, name, sub: googleId, picture } = payload;
+
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (!user) {
+      const result = db.prepare('INSERT INTO users (name, email, password, auth_provider, avatar) VALUES (?, ?, NULL, ?, ?)').run(name, email, 'google', picture || null);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      db.prepare('INSERT INTO customers (user_id, name, email) VALUES (?, ?, ?)').run(user.id, name, email);
+    } else if (user.auth_provider !== 'google') {
+      db.prepare('UPDATE users SET auth_provider = ?, avatar = COALESCE(?, avatar) WHERE id = ?').run('google', picture, user.id);
+    }
+
+    if (!user.is_active) return res.status(401).json({ error: 'Account disabled' });
+
+    const token = generateToken(user);
+    const { password: _, ...safeUser } = user;
+    res.cookie('token', token, COOKIE_OPTIONS);
+    res.json({ token, user: safeUser });
+  } catch (e) {
+    res.status(500).json({ error: 'Google authentication failed: ' + e.message });
   }
 });
 

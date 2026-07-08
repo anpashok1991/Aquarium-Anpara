@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const { requireAdminPage } = require('../middleware/auth');
 
 router.get('/', (req, res) => {
   try {
@@ -63,22 +64,22 @@ router.get('/login', (req, res) => { res.render('login', { title: 'Login' }); })
 router.get('/register', (req, res) => { res.render('register', { title: 'Register' }); });
 router.get('/track-order', (req, res) => { res.render('track-order', { title: 'Track Order' }); });
 
-router.get('/admin', (req, res) => { res.render('admin/dashboard', { title: 'Admin Dashboard' }); });
-router.get('/admin/products', (req, res) => { res.render('admin/products', { title: 'Manage Products' }); });
-router.get('/admin/products/new', (req, res) => { res.render('admin/product-form', { title: 'Add Product', product: null }); });
-router.get('/admin/products/edit/:id', (req, res) => { res.render('admin/product-form', { title: 'Edit Product', productId: req.params.id }); });
-router.get('/admin/categories', (req, res) => { res.render('admin/categories', { title: 'Manage Categories' }); });
-router.get('/admin/brands', (req, res) => { res.render('admin/brands', { title: 'Manage Brands' }); });
-router.get('/admin/orders', (req, res) => { res.render('admin/orders', { title: 'Manage Orders' }); });
-router.get('/admin/customers', (req, res) => { res.render('admin/customers', { title: 'Manage Customers' }); });
-router.get('/admin/inventory', (req, res) => { res.render('admin/inventory', { title: 'Inventory Management' }); });
-router.get('/admin/coupons', (req, res) => { res.render('admin/coupons', { title: 'Manage Coupons' }); });
-router.get('/admin/reviews', (req, res) => { res.render('admin/reviews', { title: 'Manage Reviews' }); });
-router.get('/admin/reports', (req, res) => { res.render('admin/reports', { title: 'Reports' }); });
-router.get('/admin/banners', (req, res) => { res.render('admin/banners', { title: 'Manage Banners' }); });
-router.get('/admin/gallery', (req, res) => { res.render('admin/gallery', { title: 'Manage Gallery' }); });
-router.get('/admin/settings', (req, res) => { res.render('admin/settings', { title: 'Settings' }); });
-router.get('/admin/messages', (req, res) => { res.render('admin/messages', { title: 'Contact Messages' }); });
-router.get('/admin/users', (req, res) => { res.render('admin/users', { title: 'Manage Users' }); });
+router.get('/admin', requireAdminPage, (req, res) => { res.render('admin/dashboard', { title: 'Admin Dashboard' }); });
+router.get('/admin/products', requireAdminPage, (req, res) => { res.render('admin/products', { title: 'Manage Products' }); });
+router.get('/admin/products/new', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Add Product', product: null }); });
+router.get('/admin/products/edit/:id', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Edit Product', productId: req.params.id }); });
+router.get('/admin/categories', requireAdminPage, (req, res) => { res.render('admin/categories', { title: 'Manage Categories' }); });
+router.get('/admin/brands', requireAdminPage, (req, res) => { res.render('admin/brands', { title: 'Manage Brands' }); });
+router.get('/admin/orders', requireAdminPage, (req, res) => { res.render('admin/orders', { title: 'Manage Orders' }); });
+router.get('/admin/customers', requireAdminPage, (req, res) => { res.render('admin/customers', { title: 'Manage Customers' }); });
+router.get('/admin/inventory', requireAdminPage, (req, res) => { res.render('admin/inventory', { title: 'Inventory Management' }); });
+router.get('/admin/coupons', requireAdminPage, (req, res) => { res.render('admin/coupons', { title: 'Manage Coupons' }); });
+router.get('/admin/reviews', requireAdminPage, (req, res) => { res.render('admin/reviews', { title: 'Manage Reviews' }); });
+router.get('/admin/reports', requireAdminPage, (req, res) => { res.render('admin/reports', { title: 'Reports' }); });
+router.get('/admin/banners', requireAdminPage, (req, res) => { res.render('admin/banners', { title: 'Manage Banners' }); });
+router.get('/admin/gallery', requireAdminPage, (req, res) => { res.render('admin/gallery', { title: 'Manage Gallery' }); });
+router.get('/admin/settings', requireAdminPage, (req, res) => { res.render('admin/settings', { title: 'Settings' }); });
+router.get('/admin/messages', requireAdminPage, (req, res) => { res.render('admin/messages', { title: 'Contact Messages' }); });
+router.get('/admin/users', requireAdminPage, (req, res) => { res.render('admin/users', { title: 'Manage Users' }); });
 
 module.exports = router;

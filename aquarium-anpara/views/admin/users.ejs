@@ -9,24 +9,105 @@
     </ul>
   </nav>
   <div class="admin-content flex-grow-1">
-    <h3 class="fw-bold mb-4">Users</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold mb-0">Users</h3>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <i class="fas fa-plus me-1"></i> Create Admin/Staff
+      </button>
+    </div>
+
     <div class="card border-0 shadow-sm"><div class="card-body">
       <table class="table table-hover mb-0"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="usersTable"></tbody></table>
     </div></div>
   </div>
 </div>
+
+<div class="modal fade" id="createUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Admin/Staff Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createUserForm">
+          <div class="mb-3">
+            <label class="form-label">Full Name *</label>
+            <input type="text" class="form-control" id="newUserName" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email *</label>
+            <input type="email" class="form-control" id="newUserEmail" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <input type="tel" class="form-control" id="newUserPhone">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password *</label>
+            <input type="password" class="form-control" id="newUserPassword" required minlength="6">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Role *</label>
+            <select class="form-select" id="newUserRole" required>
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="createUser()">
+          <i class="fas fa-plus me-1"></i> Create Account
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-async function loadUsers(){try{const d=await api('/admin/users');document.getElementById('usersTable').innerHTML=d.users.map(u=>`<tr><td><strong>${u.name}</strong></td><td>${u.email||'-'}</td><td>${u.phone||'-'}</td>
-  <td><select class="form-select form-select-sm" style="width:120px" onchange="updateUserRole(${u.id},this.value)">
-    <option value="customer" ${u.role==='customer'?'selected':''}>Customer</option>
-    <option value="staff" ${u.role==='staff'?'selected':''}>Staff</option>
-    <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-  </select></td>
-  <td><span class="badge bg-${u.is_active?'success':'secondary'}">${u.is_active?'Active':'Inactive'}</span></td>
-  <td><button class="btn btn-sm btn-outline-${u.is_active?'warning':'success'}" onclick="toggleUserStatus(${u.id},${!u.is_active})">${u.is_active?'Deactivate':'Activate'}</button></td></tr>`).join('');}catch(e){}}
-async function updateUserRole(id,role){try{await api(`/admin/users/${id}/role`,{method:'PUT',body:JSON.stringify({role})});showToast('Role updated');}catch(e){showToast(e.message,'error');}}
-async function toggleUserStatus(id,active){try{await api(`/admin/users/${id}/status`,{method:'PUT',body:JSON.stringify({is_active:active})});showToast('Status updated');loadUsers();}catch(e){showToast(e.message,'error');}}
+async function loadUsers(){
+  try{
+    const d=await api('/admin/users');
+    document.getElementById('usersTable').innerHTML=d.users.map(u=>`<tr><td><strong>${u.name}</strong></td><td>${u.email||'-'}</td><td>${u.phone||'-'}</td>
+    <td><select class="form-select form-select-sm" style="width:120px" onchange="updateUserRole(${u.id},this.value)">
+      <option value="customer" ${u.role==='customer'?'selected':''}>Customer</option>
+      <option value="staff" ${u.role==='staff'?'selected':''}>Staff</option>
+      <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+    </select></td>
+    <td><span class="badge bg-${u.is_active?'success':'secondary'}">${u.is_active?'Active':'Inactive'}</span></td>
+    <td><button class="btn btn-sm btn-outline-${u.is_active?'warning':'success'}" onclick="toggleUserStatus(${u.id},${!u.is_active})">${u.is_active?'Deactivate':'Activate'}</button></td></tr>`).join('');
+  }catch(e){}
+}
+
+async function updateUserRole(id,role){
+  try{await api(`/admin/users/${id}/role`,{method:'PUT',body:JSON.stringify({role})});showToast('Role updated');}catch(e){showToast(e.message,'error');}
+}
+
+async function toggleUserStatus(id,active){
+  try{await api(`/admin/users/${id}/status`,{method:'PUT',body:JSON.stringify({is_active:active})});showToast('Status updated');loadUsers();}catch(e){showToast(e.message,'error');}
+}
+
+async function createUser(){
+  const name = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const phone = document.getElementById('newUserPhone').value.trim();
+  const password = document.getElementById('newUserPassword').value;
+  const role = document.getElementById('newUserRole').value;
+
+  if(!name || !email || !password){showToast('Please fill all required fields','error');return;}
+
+  try{
+    await api('/admin/users',{method:'POST',body:JSON.stringify({name,email,phone:phone||undefined,password,role})});
+    showToast('Account created successfully');
+    document.getElementById('createUserForm').reset();
+    bootstrap.Modal.getInstance(document.getElementById('createUserModal')).hide();
+    loadUsers();
+  }catch(e){showToast(e.message,'error');}
+}
+
 document.addEventListener('DOMContentLoaded',loadUsers);
 </script>
 <%- include('../partials/footer') %>
