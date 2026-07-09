@@ -61,7 +61,7 @@
           <div class="product-badge"><span class="badge-featured">Featured</span></div>
           <a href="/product/<%= p.slug %>">
             <div style="overflow:hidden">
-              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy">
+              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy" onerror="this.style.display='none'">
             </div>
           </a>
           <div class="card-body">
@@ -102,7 +102,7 @@
           <div class="product-badge"><span class="badge-sale">Best Seller</span></div>
           <a href="/product/<%= p.slug %>">
             <div style="overflow:hidden">
-              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy">
+              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy" onerror="this.style.display='none'">
             </div>
           </a>
           <div class="card-body">
@@ -184,8 +184,8 @@
       </div>
       <div class="col-lg-6">
         <div class="row g-3">
-          <div class="col-6"><img src="/images/service1.png" class="img-fluid rounded" alt="Setup" onerror="this.src='/images/no-image.png'"></div>
-          <div class="col-6"><img src="/images/service2.png" class="img-fluid rounded" alt="Maintenance" onerror="this.src='/images/no-image.png'"></div>
+          <div class="col-6"><img src="/images/service1.png" class="img-fluid rounded" alt="Setup" onerror="this.style.display='none'"></div>
+          <div class="col-6"><img src="/images/service2.png" class="img-fluid rounded" alt="Maintenance" onerror="this.style.display='none'"></div>
         </div>
       </div>
     </div>

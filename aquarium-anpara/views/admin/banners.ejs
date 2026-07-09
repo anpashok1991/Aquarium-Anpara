@@ -1,16 +1,9 @@
 <%- include('../partials/header') %>
 <div class="d-flex">
-  <nav class="admin-sidebar d-none d-lg-block">
-    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
-    <ul class="nav flex-column">
-      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link active" href="/admin/banners"><i class="fas fa-image"></i> Banners</a></li>
-      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
-    </ul>
-  </nav>
+  <%- include('../partials/admin-sidebar') %>
   <div class="admin-content flex-grow-1">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="fw-bold mb-0">Banners</h3>
+      <div class="d-flex align-items-center"><button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button><h3 class="fw-bold mb-0">Banners</h3></div>
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bannerModal" onclick="document.getElementById('bannerId').value='';document.getElementById('bannerTitle').value='';document.getElementById('bannerSubtitle').value='';document.getElementById('bannerImage').value='';document.getElementById('bannerLink').value='';document.getElementById('bannerFile').value='';document.getElementById('bannerImgPreview').innerHTML=''"><i class="fas fa-plus me-1"></i>Add Banner</button>
     </div>
     <div class="row g-3" id="bannerGrid"></div>
@@ -28,7 +21,7 @@
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveBanner()">Save</button></div>
 </div></div></div>
 <script>
-async function loadBanners(){try{const d=await api('/banners/all');document.getElementById('bannerGrid').innerHTML=d.banners.map(b=>`<div class="col-md-4"><div class="card border-0 shadow-sm"><img src="${b.image||'/images/no-image.png'}" class="card-img-top" style="height:150px;object-fit:cover" onerror="this.src='/images/no-image.png'"><div class="card-body"><h6>${b.title||''}</h6><small class="text-muted">${b.subtitle||''}</small><div class="mt-2"><button class="btn btn-sm btn-outline-primary" onclick="editBanner(${JSON.stringify(b).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteBanner(${b.id})"><i class="fas fa-trash"></i></button></div></div></div></div>`).join('');}catch(e){}}
+async function loadBanners(){try{const d=await api('/banners/all');document.getElementById('bannerGrid').innerHTML=d.banners.map(b=>`<div class="col-md-4"><div class="card border-0 shadow-sm"><img src="${b.image||'/images/no-image.png'}" class="card-img-top" style="height:150px;object-fit:cover" onerror="this.style.display='none'"><div class="card-body"><h6>${b.title||''}</h6><small class="text-muted">${b.subtitle||''}</small><div class="mt-2"><button class="btn btn-sm btn-outline-primary" onclick="editBanner(${JSON.stringify(b).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteBanner(${b.id})"><i class="fas fa-trash"></i></button></div></div></div></div>`).join('');}catch(e){}}
 function editBanner(b){document.getElementById('bannerId').value=b.id;document.getElementById('bannerTitle').value=b.title||'';document.getElementById('bannerSubtitle').value=b.subtitle||'';document.getElementById('bannerImage').value=b.image||'';document.getElementById('bannerLink').value=b.link||'';document.getElementById('bannerFile').value='';document.getElementById('bannerImgPreview').innerHTML=b.image?`<img src="${b.image}" style="max-height:80px;border-radius:4px" onerror="this.style.display='none'">`:'';new bootstrap.Modal(document.getElementById('bannerModal')).show();}
 async function saveBanner(){const id=document.getElementById('bannerId').value;const body={title:document.getElementById('bannerTitle').value,subtitle:document.getElementById('bannerSubtitle').value,link:document.getElementById('bannerLink').value};try{const fileInput=document.getElementById('bannerFile');if(fileInput.files.length>0){body.image=await uploadFile(fileInput.files[0],'banners');}else{body.image=document.getElementById('bannerImage').value;}if(id)await api(`/banners/${id}`,{method:'PUT',body:JSON.stringify(body)});else await api('/banners',{method:'POST',body:JSON.stringify(body)});bootstrap.Modal.getInstance(document.getElementById('bannerModal')).hide();showToast('Saved');loadBanners();}catch(e){showToast(e.message,'error');}}
 async function deleteBanner(id){if(!confirm('Delete?'))return;try{await api(`/banners/${id}`,{method:'DELETE'});showToast('Deleted');loadBanners();}catch(e){}}

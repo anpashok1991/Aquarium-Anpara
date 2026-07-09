@@ -161,11 +161,19 @@ img { max-width: 100%; height: auto; }
 .cart-item img { width: 100px; height: 100px; object-fit: cover; border-radius: var(--radius-sm); }
 
 /* Admin */
-.admin-sidebar { width: 260px; min-height: 100vh; background: var(--dark); position: fixed; top: 0; left: 0; z-index: 1040; padding-top: 1rem; transition: var(--transition); }
-.admin-sidebar .nav-link { color: var(--gray-light); padding: 0.8rem 1.5rem; border-radius: 0; display: flex; align-items: center; gap: 0.8rem; }
+.admin-sidebar { width: 260px; min-height: 100vh; background: var(--dark); position: fixed; top: 0; left: 0; z-index: 1040; padding-top: 0; transition: transform 0.3s ease; overflow-y: auto; }
+.admin-sidebar-header { padding: 1rem 1.5rem 0.8rem; position: relative; }
+.admin-sidebar-header h5 { margin-bottom: 0.2rem; }
+.admin-sidebar-close { display: none; position: absolute; top: 12px; right: 12px; background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; padding: 0; line-height: 1; }
+.admin-sidebar .nav-link { color: var(--gray-light); padding: 0.8rem 1.5rem; border-radius: 0; display: flex; align-items: center; gap: 0.8rem; font-size: 0.9rem; }
 .admin-sidebar .nav-link:hover, .admin-sidebar .nav-link.active { background: rgba(255,255,255,0.1); color: var(--white); }
 .admin-sidebar .nav-link i { width: 20px; text-align: center; }
-.admin-content { margin-left: 260px; padding: 1.5rem; min-height: 100vh; }
+.admin-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1039; }
+.admin-sidebar-toggle { display: inline-block; background: var(--dark); color: #fff; border: none; padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 1.2rem; cursor: pointer; margin-right: 0.8rem; }
+.admin-sidebar-toggle:hover { background: var(--primary); }
+.admin-sidebar.collapsed { transform: translateX(-100%); }
+.admin-content { margin-left: 260px; padding: 1.5rem; min-height: 100vh; transition: margin-left 0.3s ease; }
+.admin-content.expanded { margin-left: 0; }
 .admin-stat { background: var(--white); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); transition: var(--transition); }
 .admin-stat:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .admin-stat h3 { font-size: 2rem; font-weight: 700; }
@@ -194,7 +202,12 @@ img { max-width: 100%; height: auto; }
   .section-title { font-size: 1.5rem; }
   .product-card .card-img-top { height: 180px; }
   .cart-item { flex-direction: column; text-align: center; }
-  .admin-sidebar { width: 0; overflow: hidden; }
+  .admin-sidebar { transform: translateX(-100%); width: 280px; }
+  .admin-sidebar.open { transform: translateX(0); }
+  .admin-sidebar.collapsed { transform: translateX(-100%); }
+  .admin-sidebar-overlay.open { display: block; }
+  .admin-sidebar-close { display: block; }
+  .admin-sidebar-toggle { display: inline-block; }
   .admin-content { margin-left: 0; }
   .whatsapp-float, .call-float { width: 50px; height: 50px; font-size: 1.4rem; }
 }

@@ -1,23 +1,9 @@
 <%- include('../partials/header') %>
 <div class="d-flex">
-  <nav class="admin-sidebar d-none d-lg-block">
-    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
-    <ul class="nav flex-column">
-      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link active" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/customers"><i class="fas fa-users"></i> Customers</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/coupons"><i class="fas fa-ticket-alt"></i> Coupons</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/settings"><i class="fas fa-cog"></i> Settings</a></li>
-      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back to Site</a></li>
-    </ul>
-  </nav>
+  <%- include('../partials/admin-sidebar') %>
   <div class="admin-content flex-grow-1">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="fw-bold mb-0">Products</h3>
+      <div class="d-flex align-items-center"><button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button><h3 class="fw-bold mb-0">Products</h3></div>
       <a href="/admin/products/new" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add Product</a>
     </div>
     <div class="card border-0 shadow-sm">
@@ -49,7 +35,7 @@ async function loadAdminProducts() {
     if (catSelect.options.length <= 1) cData.flat.forEach(c => { catSelect.add(new Option(c.name, c.slug)); });
     document.getElementById('productsTable').innerHTML = pData.products.map(p => `
       <tr>
-        <td><img src="${p.primary_image || '/images/no-image.png'}" style="width:50px;height:50px;object-fit:cover;border-radius:8px" onerror="this.src='/images/no-image.png'"></td>
+        <td><img src="${p.primary_image || '/images/no-image.png'}" style="width:50px;height:50px;object-fit:cover;border-radius:8px" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23eee%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2214%22 x=%22100%22 y=%22105%22 text-anchor=%22middle%22%3ENo Image%3C/text%3E%3C/svg%3E'"></td>
         <td><strong>${p.name}</strong><br><small class="text-muted">${p.sku || ''}</small></td>
         <td>${p.category_name || '-'}</td>
         <td>₹${p.price.toLocaleString()}${p.discount_price > 0 ? `<br><small class="text-danger">${p.discount_price}</small>` : ''}</td>

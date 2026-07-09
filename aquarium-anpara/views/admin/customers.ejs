@@ -1,17 +1,8 @@
 <%- include('../partials/header') %>
 <div class="d-flex">
-  <nav class="admin-sidebar d-none d-lg-block">
-    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
-    <ul class="nav flex-column">
-      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
-      <li class="nav-item"><a class="nav-link active" href="/admin/customers"><i class="fas fa-users"></i> Customers</a></li>
-      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
-    </ul>
-  </nav>
+  <%- include('../partials/admin-sidebar') %>
   <div class="admin-content flex-grow-1">
-    <h3 class="fw-bold mb-4">Customers</h3>
+    <div class="d-flex align-items-center mb-4"><button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button><h3 class="fw-bold mb-0">Customers</h3></div>
     <input type="text" class="form-control mb-3" id="searchCust" placeholder="Search customers..." style="max-width:300px" onkeyup="loadCustomers()">
     <div class="card border-0 shadow-sm"><div class="card-body">
       <table class="table table-hover mb-0"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Orders</th><th>Total Spent</th><th>Joined</th></tr></thead>

@@ -70,13 +70,29 @@ app.post('/api/upload', auth, adminOnly, upload.single('file'), (req, res) => {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.disable('view cache');
 
 app.use((req, res, next) => {
-  res.locals.shopName = process.env.SHOP_NAME || 'Aquarium Anpara';
-  res.locals.shopPhone = process.env.SHOP_PHONE || '';
-  res.locals.shopEmail = process.env.SHOP_EMAIL || '';
-  res.locals.shopAddress = process.env.SHOP_ADDRESS || '';
-  res.locals.whatsappNumber = process.env.WHATSAPP_NUMBER || '';
+  try {
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+    const s = {};
+    rows.forEach(r => { s[r.key] = r.value; });
+    res.locals.shopName = s.shop_name || process.env.SHOP_NAME || 'Aquarium Anpara';
+    res.locals.shopPhone = s.shop_phone || process.env.SHOP_PHONE || '';
+    res.locals.shopEmail = s.shop_email || process.env.SHOP_EMAIL || '';
+    res.locals.shopAddress = s.shop_address || process.env.SHOP_ADDRESS || '';
+    res.locals.whatsappNumber = s.whatsapp_number || process.env.WHATSAPP_NUMBER || '';
+    res.locals.minOrderFreeDelivery = s.min_order_free_delivery || '500';
+    res.locals.deliveryCharge = s.delivery_charge || '50';
+  } catch (e) {
+    res.locals.shopName = process.env.SHOP_NAME || 'Aquarium Anpara';
+    res.locals.shopPhone = process.env.SHOP_PHONE || '';
+    res.locals.shopEmail = process.env.SHOP_EMAIL || '';
+    res.locals.shopAddress = process.env.SHOP_ADDRESS || '';
+    res.locals.whatsappNumber = process.env.WHATSAPP_NUMBER || '';
+    res.locals.minOrderFreeDelivery = '500';
+    res.locals.deliveryCharge = '50';
+  }
   res.locals.googleClientId = process.env.GOOGLE_CLIENT_ID || '';
   res.locals.user = req.user || null;
   res.locals.currentPath = req.path;

@@ -121,9 +121,33 @@ async function placeOrder(orderData) {
   } catch (e) { showToast(e.message, 'error'); return null; }
 }
 
+// Admin Sidebar Toggle
+function toggleAdminSidebar() {
+  const sidebar = document.getElementById('adminSidebar');
+  const overlay = document.getElementById('adminSidebarOverlay');
+  if (!sidebar) return;
+  if (window.innerWidth <= 768) {
+    sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+  } else {
+    sidebar.classList.toggle('collapsed');
+    const content = document.querySelector('.admin-content');
+    if (content) content.classList.toggle('expanded');
+  }
+}
+function closeAdminSidebar() {
+  const sidebar = document.getElementById('adminSidebar');
+  const overlay = document.getElementById('adminSidebarOverlay');
+  if (!sidebar) return;
+  sidebar.classList.remove('open', 'collapsed');
+  if (overlay) overlay.classList.remove('open');
+  const content = document.querySelector('.admin-content');
+  if (content) content.classList.remove('expanded');
+}
+
 // WhatsApp
 function sendWhatsApp(message) {
-  const number = '919876543210';
+  const number = document.body.getAttribute('data-whatsapp') || '919876543210';
   window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');
 }
 

@@ -1,0 +1,27 @@
+<nav id="adminSidebar" class="admin-sidebar">
+  <div class="admin-sidebar-header">
+    <h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin Panel</h5>
+    <small class="text-muted"><%= shopName %></small>
+    <button class="admin-sidebar-close" onclick="closeAdminSidebar()">&times;</button>
+  </div>
+  <ul class="nav flex-column">
+    <li class="nav-item"><a class="nav-link<%= currentPath === '/admin' ? ' active' : '' %>" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/products') ? ' active' : '' %>" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/categories') ? ' active' : '' %>" href="/admin/categories"><i class="fas fa-tags"></i> Categories</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/brands') ? ' active' : '' %>" href="/admin/brands"><i class="fas fa-star"></i> Brands</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/orders') ? ' active' : '' %>" href="/admin/orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/customers') ? ' active' : '' %>" href="/admin/customers"><i class="fas fa-users"></i> Customers</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/inventory') ? ' active' : '' %>" href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/coupons') ? ' active' : '' %>" href="/admin/coupons"><i class="fas fa-ticket-alt"></i> Coupons</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/reviews') ? ' active' : '' %>" href="/admin/reviews"><i class="fas fa-star-half-alt"></i> Reviews</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/reports') ? ' active' : '' %>" href="/admin/reports"><i class="fas fa-chart-bar"></i> Reports</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/banners') ? ' active' : '' %>" href="/admin/banners"><i class="fas fa-image"></i> Banners</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/gallery') ? ' active' : '' %>" href="/admin/gallery"><i class="fas fa-images"></i> Gallery</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/messages') ? ' active' : '' %>" href="/admin/messages"><i class="fas fa-envelope"></i> Messages</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/users') ? ' active' : '' %>" href="/admin/users"><i class="fas fa-user-cog"></i> Users</a></li>
+    <li class="nav-item"><a class="nav-link<%= currentPath.startsWith('/admin/settings') ? ' active' : '' %>" href="/admin/settings"><i class="fas fa-cog"></i> Settings</a></li>
+    <li class="nav-item mt-3 border-top pt-3"><a class="nav-link" href="/"><i class="fas fa-globe"></i> Visit Site</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+  </ul>
+</nav>
+<div id="adminSidebarOverlay" class="admin-sidebar-overlay" onclick="closeAdminSidebar()"></div>

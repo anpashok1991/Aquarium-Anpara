@@ -1,17 +1,9 @@
 <%- include('../partials/header') %>
 <div class="d-flex">
-  <nav class="admin-sidebar d-none d-lg-block">
-    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
-    <ul class="nav flex-column">
-      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link" href="/admin/products"><i class="fas fa-box"></i> Products</a></li>
-      <li class="nav-item"><a class="nav-link active" href="/admin/inventory"><i class="fas fa-warehouse"></i> Inventory</a></li>
-      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
-    </ul>
-  </nav>
+  <%- include('../partials/admin-sidebar') %>
   <div class="admin-content flex-grow-1">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="fw-bold mb-0">Inventory</h3>
+      <div class="d-flex align-items-center"><button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button><h3 class="fw-bold mb-0">Inventory</h3></div>
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adjustModal"><i class="fas fa-plus me-1"></i>Stock Adjustment</button>
     </div>
     <div class="d-flex gap-2 mb-3">

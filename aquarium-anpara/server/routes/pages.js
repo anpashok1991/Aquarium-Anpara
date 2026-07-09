@@ -26,8 +26,8 @@ router.get('/shop', (req, res) => {
   try {
     const categories = db.prepare('SELECT * FROM categories WHERE is_active = 1 AND parent_id IS NULL ORDER BY name').all();
     const brands = db.prepare('SELECT * FROM brands WHERE is_active = 1 ORDER BY name').all();
-    res.render('shop', { title: 'Shop', categories, brands });
-  } catch (e) { res.render('shop', { title: 'Shop', categories: [], brands: [] }); }
+    res.render('shop', { title: 'Shop', categories, brands, selectedCategory: '' });
+  } catch (e) { res.render('shop', { title: 'Shop', categories: [], brands: [], selectedCategory: '' }); }
 });
 
 router.get('/product/:slug', (req, res) => {

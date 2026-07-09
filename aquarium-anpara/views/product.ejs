@@ -14,14 +14,14 @@
     <div class="col-lg-6">
       <div class="product-detail-img mb-3">
         <img id="mainImage" src="<%= product.images && product.images[0] ? product.images[0].image_url : '/images/no-image.png' %>" 
-             alt="<%= product.name %>" class="img-fluid rounded" onerror="this.src='/images/no-image.png'">
+             alt="<%= product.name %>" class="img-fluid rounded" onerror="this.style.display='none'">
       </div>
       <% if (product.images && product.images.length > 1) { %>
       <div class="d-flex gap-2 flex-wrap">
         <% product.images.forEach(img => { %>
         <img src="<%= img.image_url %>" class="rounded" style="width:80px;height:80px;object-fit:cover;cursor:pointer;border:2px solid transparent"
              onclick="document.getElementById('mainImage').src=this.src;document.querySelectorAll('.thumb-img').forEach(t=>t.style.borderColor='transparent');this.style.borderColor='var(--primary)'"
-             onerror="this.src='/images/no-image.png'" alt="thumb">
+             onerror="this.style.display='none'" alt="thumb">
         <% }) %>
       </div>
       <% } %>
@@ -120,7 +120,7 @@
       <% product.related.forEach(p => { %>
       <div class="col-6 col-md-3">
         <div class="product-card h-100">
-          <a href="/product/<%= p.slug %>"><div style="overflow:hidden"><img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.src='/images/no-image.png'"></div></a>
+          <a href="/product/<%= p.slug %>"><div style="overflow:hidden"><img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.style.display='none'"></div></a>
           <div class="card-body">
             <a href="/product/<%= p.slug %>" class="text-decoration-none"><h6 class="card-title text-dark"><%= p.name %></h6></a>
             <div class="product-price">₹<%= (p.discount_price > 0 ? p.discount_price : p.price).toLocaleString() %></div>

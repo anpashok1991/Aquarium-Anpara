@@ -136,7 +136,7 @@ async function loadShopProducts() {
   if (sort) params.set('sort', sort);
   if (inStock) params.set('in_stock', '1');
   params.set('page', currentPage);
-  params.set('limit', 12);
+  params.set('limit', 100);
 
   try {
     const data = await api(`/products?${params.toString()}`);
@@ -159,7 +159,7 @@ async function loadShopProducts() {
             <a href="/product/${p.slug}" class="${currentView === 'list' ? 'w-25' : ''}" style="${currentView === 'list' ? 'min-width:200px' : ''}">
               <div style="overflow:hidden">
                 <img src="${p.primary_image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" loading="lazy"
-                  onerror="this.src='/images/no-image.png'">
+                  onerror="this.style.display='none'">
               </div>
             </a>
             <div class="card-body d-flex flex-column">
@@ -188,6 +188,8 @@ async function loadShopProducts() {
         </div>`;
     });
 
+    initScrollAnimations();
+
     // Pagination
     if (data.pages > 1) {
       let pagHtml = '<ul class="pagination justify-content-center">';
@@ -211,14 +213,15 @@ function goToPage(page) {
   window.scrollTo(0, 0);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+(function init() {
+  if (typeof api !== 'function') return setTimeout(init, 50);
   const params = new URLSearchParams(window.location.search);
   if (params.get('search')) document.getElementById('searchInput').value = params.get('search');
   if (params.get('category') || '<%= selectedCategory %>') {
     document.getElementById('categoryFilter').value = params.get('category') || '<%= selectedCategory %>';
   }
   loadShopProducts();
-});
+})();
 </script>
 
 <%- include('partials/footer') %>

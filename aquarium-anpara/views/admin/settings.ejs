@@ -1,15 +1,8 @@
 <%- include('../partials/header') %>
 <div class="d-flex">
-  <nav class="admin-sidebar d-none d-lg-block">
-    <div class="px-3 mb-4"><h5 class="text-white fw-bold"><i class="fas fa-fish me-2"></i>Admin</h5></div>
-    <ul class="nav flex-column">
-      <li class="nav-item"><a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link active" href="/admin/settings"><i class="fas fa-cog"></i> Settings</a></li>
-      <li class="nav-item mt-3"><a class="nav-link" href="/"><i class="fas fa-arrow-left"></i> Back</a></li>
-    </ul>
-  </nav>
+  <%- include('../partials/admin-sidebar') %>
   <div class="admin-content flex-grow-1">
-    <h3 class="fw-bold mb-4">Settings</h3>
+    <div class="d-flex align-items-center mb-4"><button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button><h3 class="fw-bold mb-0">Settings</h3></div>
     <div class="card border-0 shadow-sm p-4">
       <div class="row g-3">
         <div class="col-md-6"><label class="form-label">Shop Name</label><input type="text" class="form-control" id="shopName"></div>
