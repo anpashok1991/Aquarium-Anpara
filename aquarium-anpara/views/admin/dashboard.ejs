@@ -80,7 +80,13 @@ async function loadDashboard() {
         <div class="flex-grow-1"><small class="fw-semibold">${p.name}</small><br><small class="text-muted">${p.sold_count} sold</small></div>
         <span class="fw-bold">₹${p.price.toLocaleString()}</span>
       </div>`).join('');
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    const errDiv = document.createElement('div');
+    errDiv.className = 'alert alert-danger mt-3';
+    errDiv.textContent = 'Dashboard load failed: ' + e.message;
+    document.querySelector('.admin-content .row')?.before(errDiv);
+  }
 }
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
