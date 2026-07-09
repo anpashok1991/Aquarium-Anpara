@@ -48,8 +48,7 @@ async function loadOrder() {
     const canModify = order.order_status === 'pending';
     const statusColor = { delivered:'success', cancelled:'danger', confirmed:'info', processing:'warning', dispatched:'primary', pending:'secondary' };
     container.innerHTML = `
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
+      <div class="glass-card p-3 mb-3">
           <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
             <div>
               <h4 class="fw-bold mb-1">Order #${order.order_number}</h4>
@@ -80,11 +79,9 @@ async function loadOrder() {
           ${order.notes ? '<div class="mt-2"><small class="text-muted"><strong>Notes:</strong> ' + order.notes + '</small></div>' : ''}
         </div>
       </div>
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
+      <div class="glass-card p-3 mb-3">
           <h6 class="fw-bold mb-3"><i class="fas fa-box me-2"></i>Items</h6>
           <div id="orderItems"></div>
-        </div>
       </div>
       ${canModify ? '<button class="btn btn-danger btn-lg w-100" onclick="cancelOrder()"><i class="fas fa-ban me-2"></i>Cancel Order</button>' : '<p class="text-muted text-center">This order can no longer be modified.</p>'}
     `;

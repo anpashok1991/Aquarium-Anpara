@@ -1,56 +1,148 @@
 <%- include('partials/header') %>
 
-<section class="hero-section">
-  <div class="container">
-    <div class="row align-items-center">
-      <div class="col-lg-6">
-        <span class="badge bg-warning text-dark mb-3 px-3 py-2">🐠 Premium Pet & Aquarium Store</span>
-        <h1>Your Complete Pet & Aquarium Destination</h1>
-        <p>Premium aquarium fishes, pets, pet food, accessories and expert setup services. Quality products with doorstep delivery across India.</p>
-        <div class="d-flex gap-3 flex-wrap">
-          <a href="/shop" class="btn btn-light btn-lg"><i class="fas fa-shopping-bag me-2"></i>Shop Now</a>
-          <a href="https://wa.me/<%= whatsappNumber %>" class="btn btn-success btn-lg" target="_blank"><i class="fab fa-whatsapp me-2"></i>WhatsApp Us</a>
-        </div>
-        <div class="d-flex gap-4 mt-4">
-          <div><h4 class="mb-0 fw-bold">500+</h4><small class="opacity-75">Products</small></div>
-          <div><h4 class="mb-0 fw-bold">2000+</h4><small class="opacity-75">Happy Customers</small></div>
-          <div><h4 class="mb-0 fw-bold">5+</h4><small class="opacity-75">Years Experience</small></div>
-        </div>
-      </div>
-      <div class="col-lg-6 text-center d-none d-lg-block">
-        <img src="/images/hero-pet.png" alt="Pets" class="img-fluid" style="max-height:400px;">
-      </div>
-    </div>
-  </div>
-</section>
+<%
+/* =============================================================
+   IMAGE CONFIGURATION - Change these URLs to customize images
+   ============================================================= */
+const IMAGES = {
+  // Hero Carousel backgrounds (fallback when no banners exist)
+  hero: [
+    'https://images.unsplash.com/photo-1519121785383-3229633bb75b?w=1400&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1511169735097-a83acef93610?w=1400&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=1400&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1559253664-ca249d4608c6?w=1400&h=600&fit=crop'
+  ],
+  // Category images
+  category: {
+    aquarium: 'https://images.unsplash.com/photo-1545239351-11435bd82e75?w=400&h=220&fit=crop',
+    'fish-foods': 'https://images.unsplash.com/photo-1570464188985-8b99bab1db61?w=400&h=220&fit=crop',
+    'aquarium-equipment': 'https://images.unsplash.com/photo-1545239351-11435bd82e75?w=400&h=220&fit=crop',
+    dogs: 'https://images.unsplash.com/photo-1477884213360-7e9d7dcc1e48?w=400&h=220&fit=crop',
+    'dog-foods': 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=400&h=220&fit=crop',
+    cats: 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=400&h=220&fit=crop',
+    'cat-foods': 'https://images.unsplash.com/photo-1579722820308-d74e5712c4f6?w=400&h=220&fit=crop',
+    birds: 'https://images.unsplash.com/photo-1478309827042-3e3f1f3a6b7b?w=400&h=220&fit=crop',
+    'bird-foods': 'https://images.unsplash.com/photo-1570464188985-8b99bab1db61?w=400&h=220&fit=crop',
+    plants: 'https://images.unsplash.com/photo-1480044965905-02098d419e96?w=400&h=220&fit=crop',
+    accessories: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400&h=220&fit=crop',
+    medicines: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=220&fit=crop',
+    decorations: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=220&fit=crop'
+  }
+};
 
+const catIcons = {
+  aquarium: 'fa-fish', dogs: 'fa-dog', cats: 'fa-cat', birds: 'fa-dove',
+  'fish-foods': 'fa-bowl-food', 'dog-foods': 'fa-bone', 'cat-foods': 'fa-paw',
+  accessories: 'fa-tag', medicines: 'fa-pills', decorations: 'fa-star',
+  plants: 'fa-leaf', 'aquarium-equipment': 'fa-gear', 'bird-foods': 'fa-seedling'
+};
+%>
+
+<!-- Hero Carousel -->
+<div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="5000" data-bs-pause="false">
+  <div class="carousel-indicators">
+    <% const heroCount = banners.length || IMAGES.hero.length; %>
+    <% for (let i = 0; i < heroCount; i++) { %>
+      <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="<%= i %>" class="<%= i === 0 ? 'active' : '' %>" aria-label="Slide <%= i+1 %>"></button>
+    <% } %>
+  </div>
+  <div class="carousel-inner">
+    <% if (banners.length) { %>
+      <% banners.forEach((b, i) => { %>
+      <div class="carousel-item<%= i === 0 ? ' active' : '' %>" style="background-image:url('<%= b.image || '/images/hero-bg.jpg' %>')">
+        <div class="carousel-caption">
+          <div class="hero-badge"><i class="fas fa-fish me-1"></i> Premium Aquarium Store</div>
+          <h1 class="fade-in"><%= b.title || 'Welcome to Aquarium Anpara' %></h1>
+          <% if (b.subtitle) { %><p class="fade-in delay-1"><%= b.subtitle %></p><% } %>
+          <div class="d-flex gap-3 flex-wrap justify-content-center fade-in delay-2">
+            <a href="/shop" class="btn btn-light btn-lg"><i class="fas fa-shopping-bag me-2"></i>Shop Now</a>
+            <a href="https://wa.me/<%= whatsappNumber %>" class="btn btn-success btn-lg" target="_blank"><i class="fab fa-whatsapp me-2"></i>WhatsApp Us</a>
+          </div>
+          <div class="hero-stats fade-in delay-3">
+            <div><h4>500+</h4><small>Products</small></div>
+            <div><h4>2000+</h4><small>Happy Customers</small></div>
+            <div><h4>5+</h4><small>Years Experience</small></div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    <% } else { %>
+      <% const heroSlides = [
+        { title: 'Your Complete Pet & Aquarium Destination', subtitle: 'Premium aquarium fishes, pets, pet food, accessories and expert setup services.' },
+        { title: 'Beautiful Aquarium Fish Collection', subtitle: 'Imported & Freshwater fish species for your dream aquarium.' },
+        { title: 'Premium Aquarium Setup Services', subtitle: 'Custom design, installation & maintenance by our experts.' },
+        { title: 'Everything Your Pet Needs', subtitle: 'Quality pet food, accessories, medicines & more at your doorstep.' }
+      ]; %>
+      <% heroSlides.forEach((f, i) => { %>
+      <div class="carousel-item<%= i === 0 ? ' active' : '' %>" style="background-image:url('<%= IMAGES.hero[i] %>')">
+        <div class="carousel-caption">
+          <div class="hero-badge"><i class="fas fa-fish me-1"></i> Premium Aquarium Store</div>
+          <h1 class="fade-in"><%= f.title %></h1>
+          <p class="fade-in delay-1"><%= f.subtitle %></p>
+          <div class="d-flex gap-3 flex-wrap justify-content-center fade-in delay-2">
+            <a href="/shop" class="btn btn-light btn-lg"><i class="fas fa-shopping-bag me-2"></i>Shop Now</a>
+            <a href="https://wa.me/<%= whatsappNumber %>" class="btn btn-success btn-lg" target="_blank"><i class="fab fa-whatsapp me-2"></i>WhatsApp Us</a>
+          </div>
+          <div class="hero-stats fade-in delay-3">
+            <div><h4>500+</h4><small>Products</small></div>
+            <div><h4>2000+</h4><small>Happy Customers</small></div>
+            <div><h4>5+</h4><small>Years Experience</small></div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    <% } %>
+  </div>
+  <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+</div>
+
+<!-- Shop by Category -->
 <section class="section">
   <div class="container">
-    <div class="text-center mb-5">
+    <div class="section-title-wrapper text-center">
       <h2 class="section-title">Shop by Category</h2>
       <p class="section-subtitle">Explore our wide range of products</p>
     </div>
-    <div class="row g-4">
-      <% const catIcons = {'aquarium':'fa-fish','dogs':'fa-dog','cats':'fa-cat','birds':'fa-dove','fish-foods':'fa-bowl-food','dog-foods':'fa-bone','cat-foods':'fa-paw','accessories':'fa-tag','medicines':'fa-pills','decorations':'fa-star','plants':'fa-leaf','aquarium-equipment':'fa-gear','bird-foods':'fa-seedling'}; %>
-      <% categories.forEach(cat => { %>
-      <div class="col-6 col-md-4 col-lg-3 fade-in">
-        <a href="/category/<%= cat.slug %>" class="text-decoration-none">
-          <div class="category-card">
-            <i class="fas <%= catIcons[cat.slug] || 'fa-box' %>"></i>
-            <h5><%= cat.name %></h5>
-            <span><%= cat.product_count %> Products</span>
-          </div>
-        </a>
+    <div class="cat-scroll-wrapper">
+      <div class="cat-scroll-track" id="categoryTrack">
+        <% categories.forEach(cat => { %>
+        <div class="cat-scroll-item fade-in">
+          <a href="/category/<%= cat.slug %>" class="text-decoration-none">
+            <div class="category-card">
+              <div class="cat-img-wrapper" style="background-image:url('<%= cat.image || IMAGES.category[cat.slug] || '/images/no-image.png' %>');background-size:cover;background-position:center">
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3.5rem;color:rgba(255,255,255,0.2)">
+                  <i class="fas <%= catIcons[cat.slug] || 'fa-box' %>"></i>
+                </div>
+                <div class="cat-overlay">
+                  <span>View All <i class="fas fa-arrow-right ms-1"></i></span>
+                </div>
+              </div>
+              <div class="cat-body">
+                <i class="fas <%= catIcons[cat.slug] || 'fa-box' %>"></i>
+                <h5><%= cat.name %></h5>
+                <span class="cat-count"><%= cat.product_count %> Products</span>
+              </div>
+            </div>
+          </a>
+        </div>
+        <% }) %>
       </div>
-      <% }) %>
+      <button class="cat-scroll-btn cat-scroll-left d-none d-md-flex" onclick="scrollCategory(-1)" aria-label="Previous categories"><i class="fas fa-chevron-left"></i></button>
+      <button class="cat-scroll-btn cat-scroll-right d-none d-md-flex" onclick="scrollCategory(1)" aria-label="Next categories"><i class="fas fa-chevron-right"></i></button>
     </div>
   </div>
 </section>
 
+<!-- Featured Products -->
 <% if (featured.length) { %>
 <section class="section bg-white">
   <div class="container">
-    <div class="text-center mb-5">
+    <div class="section-title-wrapper text-center">
       <h2 class="section-title">Featured Products</h2>
       <p class="section-subtitle">Handpicked products just for you</p>
     </div>
@@ -58,25 +150,27 @@
       <% featured.forEach(p => { %>
       <div class="col-6 col-md-4 col-lg-3 fade-in">
         <div class="product-card position-relative">
-          <div class="product-badge"><span class="badge-featured">Featured</span></div>
+          <div class="product-badge"><span class="badge badge-featured">Featured</span></div>
           <a href="/product/<%= p.slug %>">
-            <div style="overflow:hidden">
+            <div class="card-img-wrapper">
               <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy" onerror="this.style.display='none'">
             </div>
           </a>
           <div class="card-body">
+            <% if (p.category_name) { %><small class="card-category"><%= p.category_name %></small><% } %>
             <a href="/product/<%= p.slug %>" class="text-decoration-none">
-              <h6 class="card-title text-dark"><%= p.name %></h6>
+              <h6 class="card-title"><%= p.name %></h6>
             </a>
-            <div class="mb-1" style="color:#ffc107;font-size:0.8rem">
-              <%= '★'.repeat(Math.round(p.rating)) %><span class="text-muted ms-1">(<%= p.review_count %>)</span>
+            <div class="product-rating">
+              <span class="stars"><%= '★'.repeat(Math.round(p.rating)) %></span>
+              <span class="count">(<%= p.review_count %>)</span>
             </div>
             <div class="product-price">
               ₹<%= p.discount_price > 0 ? p.discount_price.toLocaleString() : p.price.toLocaleString() %>
-              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><% } %>
+              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><span class="discount-tag">-<%= Math.round((p.price-p.discount_price)/p.price*100) %>%</span><% } %>
             </div>
-            <div class="btn-group mt-2">
-              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus"></i> Add</button>
+            <div class="btn-group">
+              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus me-1"></i>Add</button>
               <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/<%= p.slug %>'">View</button>
             </div>
           </div>
@@ -88,10 +182,11 @@
 </section>
 <% } %>
 
+<!-- Best Sellers -->
 <% if (bestSellers.length) { %>
 <section class="section">
   <div class="container">
-    <div class="text-center mb-5">
+    <div class="section-title-wrapper text-center">
       <h2 class="section-title">Best Sellers</h2>
       <p class="section-subtitle">Most popular products among our customers</p>
     </div>
@@ -99,22 +194,23 @@
       <% bestSellers.forEach(p => { %>
       <div class="col-6 col-md-4 col-lg-3 fade-in">
         <div class="product-card position-relative">
-          <div class="product-badge"><span class="badge-sale">Best Seller</span></div>
+          <div class="product-badge"><span class="badge badge-sale">Best Seller</span></div>
           <a href="/product/<%= p.slug %>">
-            <div style="overflow:hidden">
+            <div class="card-img-wrapper">
               <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" loading="lazy" onerror="this.style.display='none'">
             </div>
           </a>
           <div class="card-body">
+            <% if (p.category_name) { %><small class="card-category"><%= p.category_name %></small><% } %>
             <a href="/product/<%= p.slug %>" class="text-decoration-none">
-              <h6 class="card-title text-dark"><%= p.name %></h6>
+              <h6 class="card-title"><%= p.name %></h6>
             </a>
             <div class="product-price">
               ₹<%= p.discount_price > 0 ? p.discount_price.toLocaleString() : p.price.toLocaleString() %>
-              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><% } %>
+              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><span class="discount-tag">-<%= Math.round((p.price-p.discount_price)/p.price*100) %>%</span><% } %>
             </div>
-            <div class="btn-group mt-2">
-              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus"></i> Add</button>
+            <div class="btn-group">
+              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus me-1"></i>Add</button>
               <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/<%= p.slug %>'">View</button>
             </div>
           </div>
@@ -126,29 +222,31 @@
 </section>
 <% } %>
 
-<section class="section bg-primary text-white">
+<!-- Why Choose Us -->
+<section class="section" style="background:linear-gradient(135deg, #0d6efd, #006994);">
   <div class="container">
     <div class="row align-items-center">
       <div class="col-lg-6 mb-4 mb-lg-0">
-        <h2 class="fw-bold">Why Choose <%= shopName %>?</h2>
-        <p class="mb-0 opacity-75">We are committed to providing the best products and services for your beloved pets.</p>
+        <h2 class="fw-bold text-white" style="font-size:2.2rem">Why Choose <%= shopName %>?</h2>
+        <p class="mb-0" style="color:rgba(255,255,255,0.75);font-size:1.1rem">We are committed to providing the best products and services for your beloved pets.</p>
       </div>
       <div class="col-lg-6">
         <div class="row g-3">
-          <div class="col-6"><div class="text-center p-3"><i class="fas fa-truck fa-2x mb-2 opacity-75"></i><h6>Free Delivery</h6><small class="opacity-75">On orders above ₹500</small></div></div>
-          <div class="col-6"><div class="text-center p-3"><i class="fas fa-shield-alt fa-2x mb-2 opacity-75"></i><h6>Quality Assured</h6><small class="opacity-75">100% genuine products</small></div></div>
-          <div class="col-6"><div class="text-center p-3"><i class="fas fa-headset fa-2x mb-2 opacity-75"></i><h6>Expert Support</h6><small class="opacity-75">Pet care guidance</small></div></div>
-          <div class="col-6"><div class="text-center p-3"><i class="fas fa-undo fa-2x mb-2 opacity-75"></i><h6>Easy Returns</h6><small class="opacity-75">Hassle-free policy</small></div></div>
+          <div class="col-6"><div class="feature-card"><i class="fas fa-truck" style="color:#fff"></i><h6 style="color:#fff">Free Delivery</h6><small style="color:rgba(255,255,255,0.7)">On orders above ₹500</small></div></div>
+          <div class="col-6"><div class="feature-card"><i class="fas fa-shield-alt" style="color:#fff"></i><h6 style="color:#fff">Quality Assured</h6><small style="color:rgba(255,255,255,0.7)">100% genuine products</small></div></div>
+          <div class="col-6"><div class="feature-card"><i class="fas fa-headset" style="color:#fff"></i><h6 style="color:#fff">Expert Support</h6><small style="color:rgba(255,255,255,0.7)">Pet care guidance</small></div></div>
+          <div class="col-6"><div class="feature-card"><i class="fas fa-undo" style="color:#fff"></i><h6 style="color:#fff">Easy Returns</h6><small style="color:rgba(255,255,255,0.7)">Hassle-free policy</small></div></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
+<!-- Customer Reviews -->
 <% if (reviews.length) { %>
 <section class="section">
   <div class="container">
-    <div class="text-center mb-5">
+    <div class="section-title-wrapper text-center">
       <h2 class="section-title">Customer Reviews</h2>
       <p class="section-subtitle">What our customers say about us</p>
     </div>
@@ -156,7 +254,7 @@
       <% reviews.forEach(r => { %>
       <div class="col-md-4 fade-in">
         <div class="review-card h-100">
-          <div class="stars mb-2" style="color:#ffc107"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5-r.rating) %></div>
+          <div class="stars mb-2"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5-r.rating) %></div>
           <h6 class="fw-bold"><%= r.title %></h6>
           <p class="text-muted small"><%= r.comment %></p>
           <div class="reviewer mt-auto">
@@ -171,25 +269,61 @@
 </section>
 <% } %>
 
+<!-- Aquarium Setup Services -->
 <section class="section bg-white">
   <div class="container">
     <div class="row align-items-center">
       <div class="col-lg-6 mb-4 mb-lg-0">
-        <h2 class="fw-bold">Need Aquarium Setup Services?</h2>
-        <p class="text-muted">We offer custom aquarium design, installation, and maintenance services. Let our experts create the perfect aquatic environment for you.</p>
-        <div class="d-flex gap-3">
+        <h2 class="fw-bold" style="font-size:2rem">Need Aquarium Setup Services?</h2>
+        <p class="text-muted" style="font-size:1.05rem">We offer custom aquarium design, installation, and maintenance services. Let our experts create the perfect aquatic environment for you.</p>
+        <div class="d-flex gap-3 mt-4">
           <a href="https://wa.me/<%= whatsappNumber %>?text=Hi! I need aquarium setup service." class="btn btn-success" target="_blank"><i class="fab fa-whatsapp me-2"></i>Get Quote</a>
           <a href="/contact" class="btn btn-outline-primary">Contact Us</a>
         </div>
       </div>
       <div class="col-lg-6">
         <div class="row g-3">
-          <div class="col-6"><img src="/images/service1.png" class="img-fluid rounded" alt="Setup" onerror="this.style.display='none'"></div>
-          <div class="col-6"><img src="/images/service2.png" class="img-fluid rounded" alt="Maintenance" onerror="this.style.display='none'"></div>
+          <div class="col-6 fade-in-left">
+            <div class="service-card">
+              <i class="fas fa-water"></i>
+              <h5 class="fw-bold mt-3">Custom Design</h5>
+              <p class="text-muted small mb-0">Tailored aquarium designs for your space</p>
+            </div>
+          </div>
+          <div class="col-6 fade-in-right">
+            <div class="service-card">
+              <i class="fas fa-tools"></i>
+              <h5 class="fw-bold mt-3">Installation</h5>
+              <p class="text-muted small mb-0">Professional setup & equipment installation</p>
+            </div>
+          </div>
+          <div class="col-6 fade-in-left delay-2">
+            <div class="service-card">
+              <i class="fas fa-leaf"></i>
+              <h5 class="fw-bold mt-3">Aquascaping</h5>
+              <p class="text-muted small mb-0">Beautiful planted tank designs</p>
+            </div>
+          </div>
+          <div class="col-6 fade-in-right delay-2">
+            <div class="service-card">
+              <i class="fas fa-heartbeat"></i>
+              <h5 class="fw-bold mt-3">Maintenance</h5>
+              <p class="text-muted small mb-0">Regular upkeep & water quality management</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<script>
+function scrollCategory(dir) {
+  const track = document.getElementById('categoryTrack');
+  if (!track) return;
+  const scrollAmt = track.querySelector('.cat-scroll-item')?.offsetWidth + 24 || 250;
+  track.scrollBy({ left: dir * scrollAmt, behavior: 'smooth' });
+}
+</script>
 
 <%- include('partials/footer') %>

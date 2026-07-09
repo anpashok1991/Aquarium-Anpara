@@ -17,10 +17,16 @@ async function loadWishlist() {
     grid.innerHTML = data.items.map(p => `
       <div class="col-6 col-md-4 col-lg-3">
         <div class="product-card h-100">
-          <a href="/product/${p.slug}"><div style="overflow:hidden"><img src="${p.image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" onerror="this.style.display='none'"></div></a>
+          <a href="/product/${p.slug}">
+            <div class="card-img-wrapper">
+              <img src="${p.image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" onerror="this.style.display='none'">
+            </div>
+          </a>
           <div class="card-body">
-            <a href="/product/${p.slug}" class="text-decoration-none"><h6 class="card-title text-dark">${p.name}</h6></a>
-            <div class="product-price">₹${(p.discount_price > 0 ? p.discount_price : p.price).toLocaleString()}</div>
+            <a href="/product/${p.slug}" class="text-decoration-none"><h6 class="card-title">${p.name}</h6></a>
+            <div class="product-price">₹${(p.discount_price > 0 ? p.discount_price : p.price).toLocaleString()}
+              ${p.discount_price > 0 ? `<span class="old-price">₹${p.price.toLocaleString()}</span>` : ''}
+            </div>
             <button class="btn btn-danger btn-sm w-100 mt-2" onclick="toggleWishlist(${p.product_id})"><i class="fas fa-trash me-1"></i>Remove</button>
           </div>
         </div>

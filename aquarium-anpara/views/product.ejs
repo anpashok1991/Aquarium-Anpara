@@ -120,11 +120,17 @@
       <% product.related.forEach(p => { %>
       <div class="col-6 col-md-3">
         <div class="product-card h-100">
-          <a href="/product/<%= p.slug %>"><div style="overflow:hidden"><img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.style.display='none'"></div></a>
+          <a href="/product/<%= p.slug %>">
+            <div class="card-img-wrapper">
+              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.style.display='none'">
+            </div>
+          </a>
           <div class="card-body">
-            <a href="/product/<%= p.slug %>" class="text-decoration-none"><h6 class="card-title text-dark"><%= p.name %></h6></a>
-            <div class="product-price">₹<%= (p.discount_price > 0 ? p.discount_price : p.price).toLocaleString() %></div>
-            <button class="btn btn-primary btn-sm w-100 mt-2" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus"></i> Add</button>
+            <a href="/product/<%= p.slug %>" class="text-decoration-none"><h6 class="card-title"><%= p.name %></h6></a>
+            <div class="product-price">₹<%= (p.discount_price > 0 ? p.discount_price : p.price).toLocaleString() %>
+              <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><% } %>
+            </div>
+            <button class="btn btn-primary btn-sm w-100 mt-2" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus me-1"></i>Add</button>
           </div>
         </div>
       </div>

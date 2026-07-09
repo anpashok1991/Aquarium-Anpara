@@ -4,10 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> | <%= shopName %></title>
-  <meta name="description" content="<%= shopName %> - Premium pet and aquarium store. Fish, dogs, cats, birds, aquarium supplies and more.">
+  <meta name="description" content="<%= shopName %> - Premium pet and aquarium store. Shop aquarium fish, dogs, cats, birds, pet food, aquarium supplies, and accessories with doorstep delivery.">
+  <meta name="keywords" content="aquarium shop, pet store, aquarium fish, tropical fish, pet supplies, aquarium tanks, fish food, pet food, aquarium plants, aquarium accessories">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="<%= shopName %>">
+  <link rel="canonical" href="https://<%= shopDomain || 'aquarium-anpara.com' %><%= currentPath || '/' %>">
   <meta property="og:title" content="<%= title %> | <%= shopName %>">
-  <meta property="og:description" content="Premium pet and aquarium store">
+  <meta property="og:description" content="Premium pet and aquarium store - Quality pet food, accessories, medicines & more at your doorstep.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://<%= shopDomain || 'aquarium-anpara.com' %><%= currentPath || '/' %>">
+  <meta property="og:site_name" content="<%= shopName %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= title %> | <%= shopName %>">
+  <meta name="twitter:description" content="Premium pet and aquarium store - Quality products with doorstep delivery.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    "name": "<%= shopName %>",
+    "image": "/images/hero-pet.png",
+    "description": "Premium pet and aquarium store offering aquarium fish, pets, pet food, accessories and expert setup services.",
+    "address": { "@type": "PostalAddress", "addressLocality": "Anpara", "addressRegion": "UP", "addressCountry": "IN" },
+    "telephone": "<%= shopPhone %>",
+    "email": "<%= shopEmail %>",
+    "url": "https://<%= shopDomain || 'aquarium-anpara.com' %>",
+    "sameAs": ["https://facebook.com/","https://instagram.com/","https://youtube.com/"]
+  }
+  </script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="/css/style.css" rel="stylesheet">
@@ -28,35 +51,33 @@
     </div>
   </div>
 
-  <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white" id="mainNavbar">
     <div class="container">
       <a class="navbar-brand" href="/">
         <i class="fas fa-fish"></i> <%= shopName %>
       </a>
-      <div class="d-flex align-items-center gap-2 d-lg-none">
-        <div class="d-flex align-items-center gap-3">
-          <span id="headerPincodeMobile" class="text-muted small"></span>
-          <a href="/cart" class="nav-icon position-relative" title="Cart">
-            <i class="fas fa-shopping-cart"></i>
-            <span class="nav-badge cart-count">0</span>
+      <div class="d-flex align-items-center gap-1 d-lg-none">
+        <a href="/cart" class="nav-icon position-relative" title="Cart">
+          <i class="fas fa-shopping-cart"></i>
+          <span class="nav-badge cart-count">0</span>
+        </a>
+        <div class="dropdown auth-only" style="display:none">
+          <a class="nav-link dropdown-toggle px-1" href="#" data-bs-toggle="dropdown">
+            <i class="fas fa-user-circle fs-5"></i>
           </a>
-          <div class="dropdown auth-only" style="display:none">
-            <a class="nav-link dropdown-toggle p-0" href="#" data-bs-toggle="dropdown">
-              <i class="fas fa-user-circle fs-5"></i>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>My Profile</a></li>
-              <li class="customer-only"><a class="dropdown-item" href="/orders"><i class="fas fa-box me-2"></i>My Orders</a></li>
-              <li class="customer-only"><a class="dropdown-item" href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
-              <li id="admin-link" style="display:none"><a class="dropdown-item" href="/admin"><i class="fas fa-cog me-2"></i>Admin Panel</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-            </ul>
-          </div>
-          <div class="guest-only">
-            <a href="/login" class="btn btn-outline-primary btn-sm"><i class="fas fa-sign-in-alt"></i></a>
-          </div>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>My Profile</a></li>
+            <li class="customer-only"><a class="dropdown-item" href="/orders"><i class="fas fa-box me-2"></i>My Orders</a></li>
+            <li class="customer-only"><a class="dropdown-item" href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+            <li id="admin-link" style="display:none"><a class="dropdown-item" href="/admin"><i class="fas fa-cog me-2"></i>Admin Panel</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
         </div>
+        <div class="guest-only">
+          <a href="/login" class="btn btn-outline-primary btn-sm px-2">Login</a>
+        </div>
+        <span id="headerPincodeMobile" class="text-muted small ms-1 d-none d-sm-inline"></span>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -70,19 +91,19 @@
           <li class="nav-item"><a class="nav-link <%= currentPath === '/gallery' ? 'active' : '' %>" href="/gallery">Gallery</a></li>
           <li class="nav-item"><a class="nav-link <%= currentPath === '/contact' ? 'active' : '' %>" href="/contact">Contact</a></li>
         </ul>
-        <div class="d-flex align-items-center gap-3 d-none d-lg-flex">
+        <div class="d-flex align-items-center gap-2 d-none d-lg-flex">
           <a href="/shop" class="nav-icon" title="Search"><i class="fas fa-search"></i></a>
           <a href="/wishlist" class="nav-icon" title="Wishlist"><i class="far fa-heart"></i></a>
           <a href="/cart" class="nav-icon position-relative" title="Cart">
             <i class="fas fa-shopping-cart"></i>
             <span class="nav-badge cart-count">0</span>
           </a>
-          <span id="headerPincode" class="text-muted small ms-1"></span>
+          <span id="headerPincode" class="text-muted small ms-2"></span>
           <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
             <i class="fas fa-moon"></i>
           </div>
           <div class="dropdown auth-only" style="display:none">
-            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            <a class="nav-link dropdown-toggle px-2" href="#" data-bs-toggle="dropdown">
               <i class="fas fa-user-circle me-1"></i> <span class="user-name">Account</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -95,7 +116,7 @@
             </ul>
           </div>
           <div class="guest-only">
-            <a href="/login" class="btn btn-outline-primary btn-sm">Login</a>
+            <a href="/login" class="btn btn-primary btn-sm px-3">Login</a>
           </div>
         </div>
       </div>

@@ -11,14 +11,12 @@ async function loadOrders() {
     const data = await api('/orders');
     if (!data.orders.length) { container.innerHTML = '<div class="text-center py-5"><i class="fas fa-box-open fa-3x text-muted mb-3"></i><h5>No orders yet</h5><a href="/shop" class="btn btn-primary mt-3">Start Shopping</a></div>'; return; }
     container.innerHTML = data.orders.map(o => `
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div><h6 class="mb-1">Order #${o.order_number}</h6><small class="text-muted">${new Date(o.created_at).toLocaleDateString()}</small></div>
-            <div><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></div>
-            <div class="fw-bold">₹${o.total.toLocaleString()}</div>
-            <a href="/orders/${o.order_number}" class="btn btn-outline-primary btn-sm">View Details</a>
-          </div>
+      <div class="glass-card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div><h6 class="mb-1">Order #${o.order_number}</h6><small class="text-muted">${new Date(o.created_at).toLocaleDateString()}</small></div>
+          <div><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></div>
+          <div class="fw-bold">₹${o.total.toLocaleString()}</div>
+          <a href="/orders/${o.order_number}" class="btn btn-outline-primary btn-sm">View Details</a>
         </div>
       </div>`).join('');
   } catch(e) { container.innerHTML = '<p class="text-center text-muted py-5">Error loading orders</p>'; }

@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 // Ensure uploads directories exist
 const uploadsDir = path.join(__dirname, 'uploads');
-['products', 'banners', 'gallery', 'settings'].forEach(dir => {
+['products', 'banners', 'gallery', 'settings', 'categories', 'general'].forEach(dir => {
   const p = path.join(uploadsDir, dir);
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
@@ -111,6 +111,7 @@ app.use((req, res, next) => {
   res.locals.googleClientId = process.env.GOOGLE_CLIENT_ID || '';
   res.locals.user = req.user || null;
   res.locals.currentPath = req.path;
+  res.locals.shopDomain = process.env.SHOP_DOMAIN || req.hostname || 'aquarium-anpara.com';
   next();
 });
 

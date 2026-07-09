@@ -1,33 +1,51 @@
 <%- include('partials/header') %>
-<section class="hero-section" style="min-height:40vh">
-  <div class="container text-center">
-    <h1>About <%= shopName %></h1>
-    <p class="lead">Your trusted partner in pet care since 2019</p>
+<div class="hero-carousel position-relative overflow-hidden" style="min-height:40vh;background:linear-gradient(135deg, rgba(13,110,253,0.9), rgba(0,105,148,0.8)), url('/images/hero-bg.jpg') center/cover">
+  <div class="container h-100 d-flex align-items-center" style="min-height:40vh">
+    <div class="text-center w-100 py-5">
+      <h1 class="text-white fw-bold" style="font-size:3rem">About <%= shopName %></h1>
+      <p class="text-white lead" style="opacity:0.9">Your trusted partner in pet care since 2019</p>
+    </div>
   </div>
-</section>
+</div>
 <section class="section">
   <div class="container">
     <div class="row align-items-center g-5">
-      <div class="col-lg-6"><img src="/images/about.png" class="img-fluid rounded shadow" alt="About Us" onerror="this.style.display='none'"></div>
-      <div class="col-lg-6">
-        <h2 class="fw-bold">Our Story</h2>
-        <p class="text-muted">Started with a passion for aquariums and pets, <%= shopName %> has grown into a complete pet and aquarium destination. We provide premium quality fishes, pets, food, accessories, and expert setup services.</p>
-        <div class="row g-4 mt-4">
-          <div class="col-6"><div class="text-center p-3 bg-light rounded"><h4 class="text-primary fw-bold">5+</h4><small>Years Experience</small></div></div>
-          <div class="col-6"><div class="text-center p-3 bg-light rounded"><h4 class="text-primary fw-bold">2000+</h4><small>Happy Customers</small></div></div>
-          <div class="col-6"><div class="text-center p-3 bg-light rounded"><h4 class="text-primary fw-bold">500+</h4><small>Products</small></div></div>
-          <div class="col-6"><div class="text-center p-3 bg-light rounded"><h4 class="text-primary fw-bold">50+</h4><small>Fish Species</small></div></div>
+      <div class="col-lg-6 fade-in-left">
+        <img src="/images/about.png" class="img-fluid rounded shadow" alt="About Us" onerror="this.style.display='none'" style="border-radius:var(--radius-lg)">
+      </div>
+      <div class="col-lg-6 fade-in-right">
+        <div class="section-title-wrapper" style="text-align:left">
+          <h2 class="section-title">Our Story</h2>
+        </div>
+        <p class="text-muted" style="font-size:1.05rem">Started with a passion for aquariums and pets, <%= shopName %> has grown into a complete pet and aquarium destination. We provide premium quality fishes, pets, food, accessories, and expert setup services.</p>
+        <div class="row g-3 mt-4">
+          <div class="col-6"><div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(13,110,253,0.08),rgba(13,206,240,0.08));border:1px solid rgba(13,110,253,0.1)"><h4 class="text-primary fw-bold">5+</h4><small class="text-muted">Years Experience</small></div></div>
+          <div class="col-6"><div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(13,110,253,0.08),rgba(13,206,240,0.08));border:1px solid rgba(13,110,253,0.1)"><h4 class="text-primary fw-bold">2000+</h4><small class="text-muted">Happy Customers</small></div></div>
+          <div class="col-6"><div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(13,110,253,0.08),rgba(13,206,240,0.08));border:1px solid rgba(13,110,253,0.1)"><h4 class="text-primary fw-bold">500+</h4><small class="text-muted">Products</small></div></div>
+          <div class="col-6"><div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(13,110,253,0.08),rgba(13,206,240,0.08));border:1px solid rgba(13,110,253,0.1)"><h4 class="text-primary fw-bold">50+</h4><small class="text-muted">Fish Species</small></div></div>
         </div>
       </div>
     </div>
   </div>
 </section>
-<section class="section bg-white">
+<section class="section" style="background:linear-gradient(135deg, #0d6efd, #006994);">
   <div class="container text-center">
-    <h2 class="fw-bold mb-4">Our Mission & Vision</h2>
+    <h2 class="fw-bold text-white mb-4" style="font-size:2rem">Our Mission & Vision</h2>
     <div class="row g-4">
-      <div class="col-md-6"><div class="p-4"><i class="fas fa-bullseyee fa-3x text-primary mb-3"></i><h4>Mission</h4><p class="text-muted">To provide the highest quality pet products and services while ensuring the health and happiness of every pet we serve.</p></div></div>
-      <div class="col-md-6"><div class="p-4"><i class="fas fa-eye fa-3x text-primary mb-3"></i><h4>Vision</h4><p class="text-muted">To become the most trusted and comprehensive pet care destination, known for quality, care, and customer satisfaction.</p></div></div>
+      <div class="col-md-6 fade-in-left">
+        <div class="glass-card p-4 h-100" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(15px);border-color:rgba(255,255,255,0.15)">
+          <i class="fas fa-bullseye fa-3x mb-3" style="color:var(--aqua)"></i>
+          <h4 style="color:#fff">Mission</h4>
+          <p style="color:rgba(255,255,255,0.75)">To provide the highest quality pet products and services while ensuring the health and happiness of every pet we serve.</p>
+        </div>
+      </div>
+      <div class="col-md-6 fade-in-right">
+        <div class="glass-card p-4 h-100" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(15px);border-color:rgba(255,255,255,0.15)">
+          <i class="fas fa-eye fa-3x mb-3" style="color:var(--aqua)"></i>
+          <h4 style="color:#fff">Vision</h4>
+          <p style="color:rgba(255,255,255,0.75)">To become the most trusted and comprehensive pet care destination, known for quality, care, and customer satisfaction.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>

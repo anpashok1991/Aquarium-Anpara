@@ -194,7 +194,49 @@ function initScrollAnimations() {
       }
     });
   }, { threshold: 0.1 });
-  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  document.querySelectorAll('.fade-in, .fade-in-left, .fade-in-right, .fade-in-scale').forEach(el => observer.observe(el));
+}
+
+// Navbar scroll effect
+function initNavbarScroll() {
+  const navbar = document.querySelector('.navbar');
+  if (!navbar) return;
+  const checkScroll = () => {
+    if (window.scrollY > 20) {
+      navbar.classList.add('scrolled');
+    } else {
+      navbar.classList.remove('scrolled');
+    }
+  };
+  window.addEventListener('scroll', checkScroll, { passive: true });
+  checkScroll();
+}
+
+// Button ripple effect
+function addRippleEffect() {
+  document.querySelectorAll('.btn:not(.btn-sm)').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        left: ${x - size/2}px;
+        top: ${y - size/2}px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 50%;
+        transform: scale(0);
+        animation: rippleAnim 0.6s ease-out;
+        pointer-events: none;
+      `;
+      this.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    });
+  });
 }
 
 // Format price
@@ -213,14 +255,13 @@ function starRating(rating) {
 
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
-  // Verify token is still valid — clear stale localStorage on error
+  // Verify token is still valid
   if (token) {
     try {
       const res = await fetch(API + '/auth/me', { headers: headers() });
       if (!res.ok) { logout(); return; }
       const data = await res.json();
       if (!data.user) { logout(); return; }
-      // Update localStorage with latest user data (including address/pincode)
       localStorage.setItem('user', JSON.stringify(data.user));
     } catch { logout(); return; }
   }
@@ -241,4 +282,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   updateCartCount();
   initScrollAnimations();
+  initNavbarScroll();
+  addRippleEffect();
 });
