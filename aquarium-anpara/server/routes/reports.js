@@ -11,7 +11,7 @@ router.get('/dashboard', auth, adminOnly, (req, res) => {
     const todayOrders = db.prepare("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = DATE('now')").get().count;
     const totalCustomers = db.prepare('SELECT COUNT(*) as count FROM customers').get().count;
     
-    const totalRevenue = db.prepare('SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE order_status != "cancelled"').get().sum;
+    const totalRevenue = db.prepare(`SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE order_status != 'cancelled'`).get().sum;
     const monthlyRevenue = db.prepare("SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE order_status != 'cancelled' AND created_at >= date('now', 'start of month')").get().sum;
     
     const lowStockProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE is_active = 1 AND stock_quantity <= low_stock_threshold').get().count;
