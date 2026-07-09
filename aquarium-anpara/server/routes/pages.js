@@ -49,8 +49,10 @@ router.get('/category/:slug', (req, res) => {
   try {
     const category = db.prepare('SELECT * FROM categories WHERE slug = ?').get(req.params.slug);
     if (!category) return res.status(404).render('error', { title: 'Not Found', error: 'Category not found' });
-    res.render('shop', { title: category.name, categories: [], brands: [], selectedCategory: req.params.slug });
-  } catch (e) { res.render('shop', { title: 'Shop', categories: [], brands: [] }); }
+    const categories = db.prepare('SELECT * FROM categories WHERE is_active = 1 AND parent_id IS NULL ORDER BY name').all();
+    const brands = db.prepare('SELECT * FROM brands WHERE is_active = 1 ORDER BY name').all();
+    res.render('shop', { title: category.name, categories, brands, selectedCategory: req.params.slug });
+  } catch (e) { res.render('shop', { title: 'Shop', categories: [], brands: [], selectedCategory: '' }); }
 });
 
 router.get('/cart', (req, res) => { res.render('cart', { title: 'Shopping Cart' }); });

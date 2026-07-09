@@ -88,12 +88,17 @@
 <script>
 let cartItems = [];
 let subtotal = 0;
+let appliedCoupon = null;
 
 async function loadCheckout() {
   try {
     const data = await api('/cart');
     cartItems = data.items;
     subtotal = data.subtotal;
+    const saved = localStorage.getItem('coupon');
+    if (saved) {
+      try { appliedCoupon = JSON.parse(saved); } catch { localStorage.removeItem('coupon'); }
+    }
     const user = getUser();
     if (user) {
       document.getElementById('name').value = user.name || '';
@@ -108,9 +113,12 @@ function renderSummary() {
   const summary = document.getElementById('orderSummary');
   summary.innerHTML = cartItems.map(i => `<div class="d-flex justify-content-between mb-1"><small>${i.name} x${i.quantity}</small><small>₹${(i.unit_price * i.quantity).toLocaleString()}</small></div>`).join('');
   const delivery = subtotal >= 500 ? 0 : 50;
+  const discount = appliedCoupon ? appliedCoupon.discount : 0;
+  const total = subtotal - discount + delivery;
   document.getElementById('sub').textContent = '₹' + subtotal.toLocaleString();
   document.getElementById('del').textContent = delivery === 0 ? 'Free' : '₹' + delivery;
-  document.getElementById('tot').textContent = '₹' + (subtotal + delivery).toLocaleString();
+  document.getElementById('disc').textContent = discount > 0 ? '-₹' + discount.toLocaleString() : '-₹0';
+  document.getElementById('tot').textContent = '₹' + total.toLocaleString();
 }
 
 document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
@@ -129,12 +137,15 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     shipping_state: document.getElementById('state').value,
     shipping_pincode: document.getElementById('pincode').value,
     payment_method: document.querySelector('input[name="payment"]:checked').value,
-    notes: document.getElementById('notes').value
+    notes: document.getElementById('notes').value,
+    coupon_code: appliedCoupon ? appliedCoupon.code : null,
+    discount: appliedCoupon ? appliedCoupon.discount : 0
   };
 
   try {
     const order = await placeOrder(orderData);
     if (order) {
+      localStorage.removeItem('coupon');
       window.location.href = '/order-confirmation/' + order.order_number;
     }
   } catch (e) {

@@ -47,6 +47,12 @@ let appliedCoupon = null;
 async function loadCart() {
   try {
     cartData = await api('/cart');
+    const saved = localStorage.getItem('coupon');
+    if (saved && cartData.items.length) {
+      try { appliedCoupon = JSON.parse(saved); } catch { localStorage.removeItem('coupon'); }
+    } else {
+      localStorage.removeItem('coupon');
+    }
     renderCart();
   } catch (e) { console.error(e); }
 }
@@ -99,8 +105,9 @@ async function applyCoupon() {
     appliedCoupon = await api('/coupons/validate', { method: 'POST', body: JSON.stringify({ code, subtotal: cartData.subtotal }) });
     document.getElementById('couponMsg').textContent = 'Coupon applied! You save ₹' + appliedCoupon.discount.toFixed(0);
     document.getElementById('couponMsg').className = 'text-success';
+    localStorage.setItem('coupon', JSON.stringify({ code: appliedCoupon.code, discount: appliedCoupon.discount }));
     updateSummary();
-  } catch (e) { document.getElementById('couponMsg').textContent = e.message; document.getElementById('couponMsg').className = 'text-danger'; appliedCoupon = null; updateSummary(); }
+  } catch (e) { document.getElementById('couponMsg').textContent = e.message; document.getElementById('couponMsg').className = 'text-danger'; appliedCoupon = null; localStorage.removeItem('coupon'); updateSummary(); }
 }
 
 document.addEventListener('DOMContentLoaded', loadCart);
