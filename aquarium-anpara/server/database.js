@@ -311,4 +311,12 @@ db.exec(`
   }
 })();
 
+// --- Migration: add is_active column to customers ---
+(function migrateCustomers() {
+  const cols = db.prepare("PRAGMA table_info(customers)").all();
+  if (cols.length === 0) return;
+  if (cols.some(c => c.name === 'is_active')) return;
+  db.exec("ALTER TABLE customers ADD COLUMN is_active INTEGER DEFAULT 1");
+})();
+
 module.exports = db;

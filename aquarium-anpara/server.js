@@ -9,7 +9,7 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const fs = require('fs');
 
-require('./server/database');
+const db = require('./server/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,6 +71,21 @@ app.post('/api/upload', auth, adminOnly, upload.single('file'), (req, res) => {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.disable('view cache');
+
+// Auto-seed default settings on first run
+const settingCount = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
+if (settingCount === 0) {
+  const insert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+  insert.run('shop_name', 'Aquarium Anpara');
+  insert.run('shop_phone', '+91 98765 43210');
+  insert.run('shop_email', 'info@aquariumanpara.com');
+  insert.run('shop_address', 'Aquarium Anpara, Main Road, Anpara, India');
+  insert.run('whatsapp_number', '919876543210');
+  insert.run('shop_logo', '/images/logo.png');
+  insert.run('min_order_free_delivery', '500');
+  insert.run('delivery_charge', '50');
+  console.log('✅ Default settings seeded');
+}
 
 app.use((req, res, next) => {
   try {

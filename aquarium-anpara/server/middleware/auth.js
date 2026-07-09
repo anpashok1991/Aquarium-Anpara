@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const db = require('../database');
 
-const TOKEN_SECRET = process.env.JWT_SECRET;
+const TOKEN_SECRET = process.env.JWT_SECRET || 'aquarium-anpara-fallback-secret-key-2026';
+if (!process.env.JWT_SECRET) console.warn('⚠️  JWT_SECRET not set, using fallback (set it in Render env vars for production)');
 
 function extractToken(req) {
   return req.header('Authorization')?.replace('Bearer ', '') || (req.cookies && req.cookies.token);
