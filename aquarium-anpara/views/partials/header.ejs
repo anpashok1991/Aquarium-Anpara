@@ -33,9 +33,32 @@
       <a class="navbar-brand" href="/">
         <i class="fas fa-fish"></i> <%= shopName %>
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      <div class="d-flex align-items-center gap-2 d-lg-none">
+        <div class="d-flex align-items-center gap-3">
+          <a href="/cart" class="nav-icon position-relative" title="Cart">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="nav-badge cart-count">0</span>
+          </a>
+          <div class="dropdown auth-only" style="display:none">
+            <a class="nav-link dropdown-toggle p-0" href="#" data-bs-toggle="dropdown">
+              <i class="fas fa-user-circle fs-5"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li class="customer-only"><a class="dropdown-item" href="/orders"><i class="fas fa-box me-2"></i>My Orders</a></li>
+              <li class="customer-only"><a class="dropdown-item" href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+              <li id="admin-link" style="display:none"><a class="dropdown-item" href="/admin"><i class="fas fa-cog me-2"></i>Admin Panel</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+            </ul>
+          </div>
+          <div class="guest-only">
+            <a href="/login" class="btn btn-outline-primary btn-sm"><i class="fas fa-sign-in-alt"></i></a>
+          </div>
+        </div>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
       <div class="collapse navbar-collapse" id="mainNav">
         <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link <%= currentPath === '/' ? 'active' : '' %>" href="/">Home</a></li>
@@ -44,7 +67,7 @@
           <li class="nav-item"><a class="nav-link <%= currentPath === '/gallery' ? 'active' : '' %>" href="/gallery">Gallery</a></li>
           <li class="nav-item"><a class="nav-link <%= currentPath === '/contact' ? 'active' : '' %>" href="/contact">Contact</a></li>
         </ul>
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3 d-none d-lg-flex">
           <a href="/shop" class="nav-icon" title="Search"><i class="fas fa-search"></i></a>
           <a href="/wishlist" class="nav-icon" title="Wishlist"><i class="far fa-heart"></i></a>
           <a href="/cart" class="nav-icon position-relative" title="Cart">

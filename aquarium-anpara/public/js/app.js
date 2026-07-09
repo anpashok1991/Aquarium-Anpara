@@ -212,7 +212,17 @@ function starRating(rating) {
 }
 
 // Init
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Verify token is still valid — clear stale localStorage on error
+  if (token) {
+    try {
+      const res = await fetch(API + '/auth/me', { headers: headers() });
+      if (!res.ok) { logout(); return; }
+      const data = await res.json();
+      if (!data.user) { logout(); return; }
+    } catch { logout(); return; }
+  }
+
   const user = getUser();
   document.querySelectorAll('.user-name').forEach(el => { if (user) el.textContent = user.name; });
   document.querySelectorAll('.auth-only').forEach(el => { el.style.display = isLoggedIn() ? '' : 'none'; });

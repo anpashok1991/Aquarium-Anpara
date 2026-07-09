@@ -22,7 +22,7 @@ router.post('/validate', (req, res) => {
     
     let discount = coupon.discount_type === 'percentage' ? (subtotal * coupon.discount_value / 100) : coupon.discount_value;
     if (coupon.max_discount > 0) discount = Math.min(discount, coupon.max_discount);
-    res.json({ coupon: { code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, discount } });
+    res.json({ code: coupon.code, discount_type: coupon.discount_type, discount_value: coupon.discount_value, discount });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

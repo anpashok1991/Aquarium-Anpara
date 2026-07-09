@@ -18,6 +18,7 @@ router.get('/', (req, res) => {
     if (best_seller === '1') { where.push("p.is_best_seller = 1"); }
     if (new_arrival === '1') { where.push("p.is_new_arrival = 1"); }
     if (in_stock === '1') { where.push("p.stock_quantity > 0"); }
+    if (req.query.on_sale === '1') { where.push("p.discount_price > 0"); }
 
     let orderBy = 'p.created_at DESC';
     if (sort === 'price_asc') orderBy = 'p.price ASC';
