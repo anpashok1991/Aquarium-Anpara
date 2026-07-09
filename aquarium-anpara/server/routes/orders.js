@@ -152,4 +152,30 @@ router.put('/:id/status', auth, adminOnly, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.put('/cancel/:orderNumber', auth, (req, res) => {
+  try {
+    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be cancelled' });
+    db.prepare("UPDATE orders SET order_status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(order.id);
+    res.json({ order: db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/shipping/:orderNumber', auth, (req, res) => {
+  try {
+    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be updated' });
+    const { customer_name, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode } = req.body;
+    if (!shipping_address || !shipping_city || !shipping_state || !shipping_pincode) return res.status(400).json({ error: 'All address fields required' });
+    db.prepare(`UPDATE orders SET customer_name=COALESCE(?,customer_name), customer_phone=COALESCE(?,customer_phone),
+      customer_whatsapp=COALESCE(?,customer_whatsapp), shipping_address=?, shipping_city=?, shipping_state=?, shipping_pincode=?,
+      updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(customer_name, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode, order.id);
+    res.json({ order: db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

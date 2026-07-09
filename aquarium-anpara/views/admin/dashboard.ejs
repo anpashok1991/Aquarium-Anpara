@@ -82,7 +82,10 @@ async function loadDashboard() {
       </div>`).join('');
   } catch(e) { console.error(e); }
 }
-document.addEventListener('DOMContentLoaded', loadDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+  setInterval(loadDashboard, 30000);
+});
 </script>
 
 <%- include('../partials/footer') %>

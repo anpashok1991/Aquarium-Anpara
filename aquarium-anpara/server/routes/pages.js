@@ -59,6 +59,7 @@ router.get('/cart', (req, res) => { res.render('cart', { title: 'Shopping Cart' 
 router.get('/checkout', (req, res) => { res.render('checkout', { title: 'Checkout' }); });
 router.get('/order-confirmation/:orderNumber', (req, res) => { res.render('order-confirmation', { title: 'Order Confirmed', orderNumber: req.params.orderNumber }); });
 router.get('/orders', (req, res) => { res.render('orders', { title: 'My Orders' }); });
+router.get('/orders/:orderNumber', (req, res) => { res.render('order-detail', { title: 'Order Details', orderNumber: req.params.orderNumber }); });
 router.get('/profile', (req, res) => { res.render('profile', { title: 'My Profile' }); });
 router.get('/wishlist', (req, res) => { res.render('wishlist', { title: 'Wishlist' }); });
 router.get('/gallery', (req, res) => { res.render('gallery', { title: 'Gallery' }); });
