@@ -36,17 +36,37 @@
   </div>
 </div>
 <script>
-const productId = '<%= typeof productId !== "undefined" ? productId : "" %>';
+const product = <%- JSON.stringify(product || null) %>;
 async function loadForm() {
   const [cData, bData] = await Promise.all([api('/categories'), api('/brands')]);
   const catSel = document.getElementById('category');
   const brandSel = document.getElementById('brand');
   cData.flat.forEach(c => catSel.add(new Option(c.name, c.id)));
   bData.brands.forEach(b => brandSel.add(new Option(b.name, b.id)));
-  if (productId) {
+  if (product) {
     document.getElementById('formTitle').textContent = 'Edit Product';
-    const pData = await api(`/products/slug-or-id-${productId}`);
-    // fallback: try loading by searching
+    document.getElementById('name').value = product.name || '';
+    document.getElementById('sku').value = product.sku || '';
+    document.getElementById('shortDesc').value = product.short_description || '';
+    document.getElementById('description').value = product.description || '';
+    document.getElementById('price').value = product.price || '';
+    document.getElementById('discountPrice').value = product.discount_price || '';
+    document.getElementById('costPrice').value = product.cost_price || '';
+    document.getElementById('stock').value = product.stock_quantity || 0;
+    document.getElementById('barcode').value = product.barcode || '';
+    document.getElementById('lowStock').value = product.low_stock_threshold || 5;
+    document.getElementById('weight').value = product.weight || 0;
+    if (product.category_id) catSel.value = product.category_id;
+    if (product.brand_id) brandSel.value = product.brand_id;
+    document.getElementById('isFeatured').checked = !!product.is_featured;
+    document.getElementById('isBestSeller').checked = !!product.is_best_seller;
+    document.getElementById('isNewArrival').checked = !!product.is_new_arrival;
+    document.getElementById('isActive').checked = product.is_active !== 0;
+    document.getElementById('metaTitle').value = product.meta_title || '';
+    document.getElementById('metaDesc').value = product.meta_description || '';
+    if (product.primary_image) {
+      document.getElementById('imagePreview').innerHTML = `<img src="${product.primary_image}" style="max-height:100px;border-radius:8px">`;
+    }
   }
 }
 document.getElementById('productForm').addEventListener('submit', async(e) => {
@@ -81,7 +101,7 @@ document.getElementById('productForm').addEventListener('submit', async(e) => {
       const imgUrl = document.getElementById('imageUrl').value;
       if (imgUrl) body.images = [{ url: imgUrl }];
     }
-    if (productId) { await api(`/products/${productId}`, { method: 'PUT', body: JSON.stringify(body) }); }
+    if (product) { await api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify(body) }); }
     else { await api('/products', { method: 'POST', body: JSON.stringify(body) }); }
     showToast('Product saved!');
     window.location.href = '/admin/products';

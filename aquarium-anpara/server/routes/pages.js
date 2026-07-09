@@ -69,7 +69,13 @@ router.get('/track-order', (req, res) => { res.render('track-order', { title: 'T
 router.get('/admin', requireAdminPage, (req, res) => { res.render('admin/dashboard', { title: 'Admin Dashboard' }); });
 router.get('/admin/products', requireAdminPage, (req, res) => { res.render('admin/products', { title: 'Manage Products' }); });
 router.get('/admin/products/new', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Add Product', product: null }); });
-router.get('/admin/products/edit/:id', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Edit Product', productId: req.params.id }); });
+router.get('/admin/products/edit/:id', requireAdminPage, (req, res) => {
+  try {
+    const product = db.prepare(`SELECT p.*, (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image FROM products p WHERE p.id = ?`).get(req.params.id);
+    if (!product) return res.redirect('/admin/products');
+    res.render('admin/product-form', { title: 'Edit Product', product, productId: req.params.id });
+  } catch (e) { res.redirect('/admin/products'); }
+});
 router.get('/admin/categories', requireAdminPage, (req, res) => { res.render('admin/categories', { title: 'Manage Categories' }); });
 router.get('/admin/brands', requireAdminPage, (req, res) => { res.render('admin/brands', { title: 'Manage Brands' }); });
 router.get('/admin/orders', requireAdminPage, (req, res) => { res.render('admin/orders', { title: 'Manage Orders' }); });
