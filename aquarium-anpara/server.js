@@ -132,6 +132,7 @@ app.use('/api/gallery', require('./server/routes/gallery'));
 app.use('/api/notifications', require('./server/routes/notifications'));
 app.use('/api/contact', require('./server/routes/contact'));
 app.use('/api/wishlist', require('./server/routes/wishlist'));
+app.use('/api/addresses', require('./server/routes/addresses'));
 
 app.use('/', require('./server/routes/pages'));
 

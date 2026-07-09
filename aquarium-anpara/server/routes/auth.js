@@ -58,16 +58,24 @@ router.post('/login', (req, res) => {
 });
 
 router.get('/me', auth, (req, res) => {
-  res.json({ user: req.user });
+  const addr = db.prepare('SELECT id, label, name, phone, address, city, state, pincode, is_primary FROM addresses WHERE user_id = ? AND is_primary = 1 LIMIT 1').get(req.user.id);
+  res.json({ user: { ...req.user, primary_address: addr || null } });
 });
 
 router.put('/profile', auth, (req, res) => {
   try {
-    const { name, email, phone, avatar } = req.body;
+    const { name, email, phone, avatar, address, city, state, pincode, whatsapp } = req.body;
     db.prepare('UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone), avatar = COALESCE(?, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
       .run(name, email, phone, avatar, req.user.id);
+    db.prepare(`UPDATE customers SET
+      name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone),
+      whatsapp = COALESCE(?, whatsapp), address = COALESCE(?, address),
+      city = COALESCE(?, city), state = COALESCE(?, state), pincode = COALESCE(?, pincode)
+      WHERE user_id = ?`)
+      .run(name, email, phone, whatsapp, address, city, state, pincode, req.user.id);
     const user = db.prepare('SELECT id, name, email, phone, role, avatar FROM users WHERE id = ?').get(req.user.id);
-    res.json({ user });
+    const customer = db.prepare('SELECT address, city, state, pincode, whatsapp FROM customers WHERE user_id = ?').get(req.user.id);
+    res.json({ user: { ...user, ...(customer || {}) } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -220,6 +220,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res.ok) { logout(); return; }
       const data = await res.json();
       if (!data.user) { logout(); return; }
+      // Update localStorage with latest user data (including address/pincode)
+      localStorage.setItem('user', JSON.stringify(data.user));
     } catch { logout(); return; }
   }
 
@@ -227,6 +229,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.user-name').forEach(el => { if (user) el.textContent = user.name; });
   document.querySelectorAll('.auth-only').forEach(el => { el.style.display = isLoggedIn() ? '' : 'none'; });
   document.querySelectorAll('.guest-only').forEach(el => { el.style.display = isLoggedIn() ? 'none' : ''; });
+  const pc = document.getElementById('headerPincode');
+  if (pc) pc.textContent = user && user.primary_address?.pincode ? '📍 ' + user.primary_address.pincode : '';
+  const pcMobile = document.getElementById('headerPincodeMobile');
+  if (pcMobile) pcMobile.textContent = user && user.primary_address?.pincode ? '📍 ' + user.primary_address.pincode : '';
 
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);

@@ -4,40 +4,50 @@
   <h2 class="fw-bold mb-4"><i class="fas fa-lock me-2"></i>Checkout</h2>
   <div class="row g-4">
     <div class="col-lg-8">
+      <div id="savedAddresses" class="mb-3" style="display:none">
+        <div class="card border-0 shadow-sm p-3">
+          <h5 class="fw-bold mb-3"><i class="fas fa-map-marker-alt me-2"></i>Saved Addresses</h5>
+          <div id="addressOptions" class="d-flex flex-column gap-2"></div>
+          <button class="btn btn-link btn-sm mt-2 p-0" onclick="showManualForm()">+ Enter a different address</button>
+        </div>
+      </div>
+
       <form id="checkoutForm" class="card border-0 shadow-sm p-4">
-        <h5 class="fw-bold mb-3">Shipping Details</h5>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Full Name *</label>
-            <input type="text" class="form-control" id="name" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Mobile Number *</label>
-            <input type="tel" class="form-control" id="phone" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">WhatsApp Number</label>
-            <input type="tel" class="form-control" id="whatsapp">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Email (Optional)</label>
-            <input type="email" class="form-control" id="email">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Address *</label>
-            <textarea class="form-control" id="address" rows="2" required></textarea>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">City *</label>
-            <input type="text" class="form-control" id="city" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">State *</label>
-            <input type="text" class="form-control" id="state" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Pincode *</label>
-            <input type="text" class="form-control" id="pincode" required>
+        <div id="shippingFields">
+          <h5 class="fw-bold mb-3">Shipping Details</h5>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full Name *</label>
+              <input type="text" class="form-control" id="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mobile Number *</label>
+              <input type="tel" class="form-control" id="phone" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">WhatsApp Number</label>
+              <input type="tel" class="form-control" id="whatsapp">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email (Optional)</label>
+              <input type="email" class="form-control" id="email">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address *</label>
+              <textarea class="form-control" id="address" rows="2" required></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City *</label>
+              <input type="text" class="form-control" id="city" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">State *</label>
+              <input type="text" class="form-control" id="state" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Pincode *</label>
+              <input type="text" class="form-control" id="pincode" required>
+            </div>
           </div>
         </div>
 
@@ -89,21 +99,68 @@
 let cartItems = [];
 let subtotal = 0;
 let appliedCoupon = null;
+let savedAddresses = [];
+
+function fillAddress(a) {
+  document.getElementById('name').value = a.name || '';
+  document.getElementById('phone').value = a.phone || '';
+  document.getElementById('address').value = a.address || '';
+  document.getElementById('city').value = a.city || '';
+  document.getElementById('state').value = a.state || '';
+  document.getElementById('pincode').value = a.pincode || '';
+}
+
+function selectAddress(a) {
+  fillAddress(a);
+  document.querySelectorAll('#addressOptions .list-group-item').forEach(el => el.classList.remove('active', 'list-group-item-primary'));
+  const el = document.getElementById('addrOption_' + a.id);
+  if (el) el.classList.add('active', 'list-group-item-primary');
+  // also set whatsapp if available
+  if (a.phone) document.getElementById('whatsapp').value = document.getElementById('whatsapp').value || a.phone;
+}
+
+function showManualForm() {
+  document.querySelectorAll('#addressOptions .list-group-item').forEach(el => el.classList.remove('active', 'list-group-item-primary'));
+  document.getElementById('shippingFields').style.display = '';
+}
 
 async function loadCheckout() {
   try {
-    const data = await api('/cart');
-    cartItems = data.items;
-    subtotal = data.subtotal;
+    const [cartData, addrData] = await Promise.all([api('/cart'), api('/addresses')]);
+    cartItems = cartData.items;
+    subtotal = cartData.subtotal;
+    savedAddresses = addrData.addresses || [];
+
     const saved = localStorage.getItem('coupon');
     if (saved) {
       try { appliedCoupon = JSON.parse(saved); } catch { localStorage.removeItem('coupon'); }
     }
-    const user = getUser();
-    if (user) {
-      document.getElementById('name').value = user.name || '';
-      document.getElementById('phone').value = user.phone || '';
-      document.getElementById('email').value = user.email || '';
+
+    if (savedAddresses.length) {
+      document.getElementById('savedAddresses').style.display = '';
+      document.getElementById('shippingFields').style.display = 'none';
+      const container = document.getElementById('addressOptions');
+      container.innerHTML = savedAddresses.map(a => `
+        <div class="list-group-item list-group-item-action rounded p-2 cursor-pointer ${a.is_primary ? 'active list-group-item-primary' : ''}"
+             id="addrOption_${a.id}" onclick="selectAddress(${JSON.stringify(a).replace(/"/g, '&quot;')})" style="cursor:pointer">
+          <div class="d-flex justify-content-between">
+            <span><strong>${a.label}</strong>${a.is_primary ? ' <span class="badge bg-success ms-1">Primary</span>' : ''}</span>
+            <small>${a.pincode}</small>
+          </div>
+          <small>${a.name}, ${a.address}, ${a.city}, ${a.state} - ${a.pincode}</small>
+        </div>`).join('');
+
+      const primary = savedAddresses.find(a => a.is_primary) || savedAddresses[0];
+      fillAddress(primary);
+      const el = document.getElementById('addrOption_' + primary.id);
+      if (el) el.classList.add('active', 'list-group-item-primary');
+    } else {
+      const user = getUser();
+      if (user) {
+        document.getElementById('name').value = user.name || '';
+        document.getElementById('phone').value = user.phone || '';
+        document.getElementById('email').value = user.email || '';
+      }
     }
     renderSummary();
   } catch (e) { window.location.href = '/cart'; }
@@ -157,5 +214,4 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
 
 document.addEventListener('DOMContentLoaded', loadCheckout);
 </script>
-
 <%- include('partials/footer') %>

@@ -1,0 +1,214 @@
+<%- include('partials/header') %>
+<div class="container py-4">
+  <h3 class="fw-bold mb-4"><i class="fas fa-user-circle me-2"></i>My Profile</h3>
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <form id="profileForm" class="card border-0 shadow-sm p-4">
+        <h5 class="fw-bold mb-3">Personal Info</h5>
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="pName">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="pEmail">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Phone</label>
+          <input type="tel" class="form-control" id="pPhone">
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
+      </form>
+    </div>
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0"><i class="fas fa-map-marker-alt me-2"></i>My Addresses</h5>
+          <button class="btn btn-primary btn-sm" onclick="showAddressForm()"><i class="fas fa-plus me-1"></i>Add</button>
+        </div>
+        <div id="addressList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Address Modal -->
+<div class="modal fade" id="addressModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addrModalTitle">Add Address</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addressForm">
+          <div class="mb-2">
+            <label class="form-label">Label</label>
+            <select class="form-select" id="addrLabel"><option>Home</option><option>Office</option><option>Other</option></select>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label">Name</label><input type="text" class="form-control" id="addrName"></div>
+            <div class="col-6"><label class="form-label">Phone</label><input type="tel" class="form-control" id="addrPhone"></div>
+          </div>
+          <div class="mb-2"><label class="form-label">Address</label><textarea class="form-control" id="addrAddress" rows="2"></textarea></div>
+          <div class="row g-2 mb-2">
+            <div class="col-5"><label class="form-label">City</label><input type="text" class="form-control" id="addrCity"></div>
+            <div class="col-4"><label class="form-label">State</label><input type="text" class="form-control" id="addrState"></div>
+            <div class="col-3"><label class="form-label">Pincode</label><input type="text" class="form-control" id="addrPincode"></div>
+          </div>
+          <input type="hidden" id="addrId">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAddress()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let editingId = null;
+
+async function loadAddresses() {
+  try {
+    const data = await api('/addresses');
+    const list = document.getElementById('addressList');
+    if (!data.addresses.length) {
+      list.innerHTML = '<p class="text-muted text-center mb-0">No addresses saved yet.</p>';
+      return;
+    }
+    list.innerHTML = data.addresses.map(a => `
+      <div class="border rounded p-3 mb-2 ${a.is_primary ? 'border-primary' : ''}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <span class="badge bg-${a.is_primary ? 'primary' : 'secondary'} me-2">${a.label}</span>
+            ${a.is_primary ? '<span class="badge bg-success">Primary</span>' : ''}
+            <strong class="ms-1">${a.name}</strong> &mdash; ${a.phone}
+            <p class="mb-0 mt-1 small">${a.address}, ${a.city}, ${a.state} - ${a.pincode}</p>
+          </div>
+          <div class="d-flex gap-1">
+            ${!a.is_primary ? `<button class="btn btn-sm btn-outline-success" onclick="setPrimary(${a.id})" title="Set as primary"><i class="fas fa-check"></i></button>` : ''}
+            <button class="btn btn-sm btn-outline-primary" onclick="editAddress(${a.id})"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteAddress(${a.id})"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) { showToast('Failed to load addresses', 'error'); }
+}
+
+function showAddressForm() {
+  editingId = null;
+  document.getElementById('addrModalTitle').textContent = 'Add Address';
+  document.getElementById('addressForm').reset();
+  document.getElementById('addrId').value = '';
+  const user = getUser();
+  if (user) {
+    document.getElementById('addrName').value = user.name || '';
+    document.getElementById('addrPhone').value = user.phone || '';
+  }
+  new bootstrap.Modal(document.getElementById('addressModal')).show();
+}
+
+async function editAddress(id) {
+  try {
+    const data = await api('/addresses');
+    const a = data.addresses.find(x => x.id === id);
+    if (!a) return;
+    editingId = id;
+    document.getElementById('addrModalTitle').textContent = 'Edit Address';
+    document.getElementById('addrId').value = id;
+    document.getElementById('addrLabel').value = a.label;
+    document.getElementById('addrName').value = a.name;
+    document.getElementById('addrPhone').value = a.phone;
+    document.getElementById('addrAddress').value = a.address;
+    document.getElementById('addrCity').value = a.city;
+    document.getElementById('addrState').value = a.state;
+    document.getElementById('addrPincode').value = a.pincode;
+    new bootstrap.Modal(document.getElementById('addressModal')).show();
+  } catch(e) { showToast('Failed to load address', 'error'); }
+}
+
+async function saveAddress() {
+  const body = {
+    label: document.getElementById('addrLabel').value,
+    name: document.getElementById('addrName').value,
+    phone: document.getElementById('addrPhone').value,
+    address: document.getElementById('addrAddress').value,
+    city: document.getElementById('addrCity').value,
+    state: document.getElementById('addrState').value,
+    pincode: document.getElementById('addrPincode').value
+  };
+  if (!body.name || !body.phone || !body.address || !body.city || !body.state || !body.pincode) {
+    showToast('All fields required', 'error'); return;
+  }
+  try {
+    const id = document.getElementById('addrId').value;
+    if (id) {
+      await api(`/addresses/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      await api('/addresses', { method: 'POST', body: JSON.stringify(body) });
+    }
+    bootstrap.Modal.getInstance(document.getElementById('addressModal')).hide();
+    loadAddresses();
+    refreshUser();
+    showToast('Address saved!');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function setPrimary(id) {
+  try {
+    await api(`/addresses/${id}/primary`, { method: 'PUT' });
+    loadAddresses();
+    refreshUser();
+    showToast('Primary address updated');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteAddress(id) {
+  if (!confirm('Delete this address?')) return;
+  try {
+    await api(`/addresses/${id}`, { method: 'DELETE' });
+    loadAddresses();
+    refreshUser();
+    showToast('Address deleted');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function refreshUser() {
+  try {
+    const data = await api('/auth/me');
+    localStorage.setItem('user', JSON.stringify(data.user));
+    const pincode = data.user.primary_address?.pincode || '';
+    const pc = document.getElementById('headerPincode');
+    if (pc) pc.textContent = pincode ? '📍 ' + pincode : '';
+    const pcMobile = document.getElementById('headerPincodeMobile');
+    if (pcMobile) pcMobile.textContent = pincode ? '📍 ' + pincode : '';
+  } catch(e) {}
+}
+
+// Personal info save
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const data = await api('/auth/profile', { method: 'PUT', body: JSON.stringify({
+      name: document.getElementById('pName').value,
+      email: document.getElementById('pEmail').value,
+      phone: document.getElementById('pPhone').value
+    })});
+    localStorage.setItem('user', JSON.stringify(data.user));
+    document.querySelectorAll('.user-name').forEach(el => { el.textContent = data.user.name; });
+    showToast('Profile saved!');
+  } catch(e) { showToast(e.message, 'error'); }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const data = await api('/auth/me');
+  const u = data.user;
+  document.getElementById('pName').value = u.name || '';
+  document.getElementById('pEmail').value = u.email || '';
+  document.getElementById('pPhone').value = u.phone || '';
+  loadAddresses();
+});
+</script>
+<%- include('partials/footer') %>

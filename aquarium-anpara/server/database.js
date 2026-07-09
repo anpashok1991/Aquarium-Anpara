@@ -266,6 +266,20 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS addresses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label TEXT DEFAULT 'Home',
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    address TEXT NOT NULL,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    pincode TEXT NOT NULL,
+    is_primary INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
   CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
@@ -317,6 +331,19 @@ db.exec(`
   if (cols.length === 0) return;
   if (cols.some(c => c.name === 'is_active')) return;
   db.exec("ALTER TABLE customers ADD COLUMN is_active INTEGER DEFAULT 1");
+})();
+
+// --- Migration: create addresses table + migrate existing data ---
+(function migrateAddresses() {
+  const existing = db.prepare('SELECT COUNT(*) as c FROM addresses').get().c;
+  if (existing === 0) {
+    const rows = db.prepare("SELECT c.user_id, c.name, c.phone, c.address, c.city, c.state, c.pincode, c.whatsapp FROM customers c WHERE c.user_id IS NOT NULL AND c.address IS NOT NULL AND c.address != ''").all();
+    const insert = db.prepare('INSERT INTO addresses (user_id, label, name, phone, address, city, state, pincode, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)');
+    rows.forEach(r => {
+      insert.run(r.user_id, 'Home', r.name, r.whatsapp || r.phone, r.address, r.city, r.state, r.pincode);
+    });
+    if (rows.length) console.log(`✅ Migrated ${rows.length} existing address(es) to addresses table`);
+  }
 })();
 
 module.exports = db;
