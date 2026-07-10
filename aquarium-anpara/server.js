@@ -9,6 +9,11 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const fs = require('fs');
 
+if (typeof BigInt !== 'undefined' && !BigInt.prototype.toJSON) {
+  BigInt.prototype.toJSON = function () { return Number(this); };
+  console.log('✅ BigInt.prototype.toJSON patched');
+}
+
 const prisma = require('./server/database');
 
 const app = express();
