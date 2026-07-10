@@ -73,7 +73,8 @@ router.get('/', optionalAuth, async (req, res) => {
 
 router.post('/add', optionalAuth, async (req, res) => {
   try {
-    const { product_id, quantity = 1 } = req.body;
+    const product_id = Number(req.body.product_id);
+    const quantity = Number(req.body.quantity) || 1;
     const sessionId = getSessionId(req);
     const userId = req.user?.id;
     const product = await prisma.products.findFirst({ where: { id: product_id, is_active: 1 } });
@@ -106,18 +107,18 @@ router.post('/add', optionalAuth, async (req, res) => {
 
 router.put('/:id', optionalAuth, async (req, res) => {
   try {
-    const { quantity } = req.body;
+    const quantity = Number(req.body.quantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      await prisma.cart.delete({ where: { id: Number(req.params.id) } });
+      return res.json({ message: 'Cart updated' });
+    }
     const item = await prisma.cart.findUnique({
       where: { id: Number(req.params.id) },
       include: { products: { select: { stock_quantity: true } } }
     });
     if (!item) return res.status(404).json({ error: 'Cart item not found' });
     if (quantity > item.products.stock_quantity) return res.status(400).json({ error: 'Insufficient stock' });
-    if (quantity <= 0) {
-      await prisma.cart.delete({ where: { id: item.id } });
-    } else {
-      await prisma.cart.update({ where: { id: item.id }, data: { quantity } });
-    }
+    await prisma.cart.update({ where: { id: item.id }, data: { quantity } });
     res.json({ message: 'Cart updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
