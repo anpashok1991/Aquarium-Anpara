@@ -45,21 +45,9 @@ body {
   color: var(--dark);
   line-height: 1.6;
   overflow-x: hidden;
-  position: relative;
-}
-body::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.04) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 20%, rgba(13,202,240,0.04) 0%, transparent 50%),
-              radial-gradient(ellipse at 50% 80%, rgba(32,201,151,0.03) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-}
-.container, .container-fluid, footer, nav, .admin-content {
-  position: relative;
-  z-index: 1;
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.06) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 20%, rgba(13,202,240,0.06) 0%, transparent 50%);
+  background-attachment: fixed;
 }
 
 a { text-decoration: none; color: inherit; transition: var(--transition); }
