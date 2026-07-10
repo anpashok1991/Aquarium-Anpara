@@ -170,7 +170,7 @@ const catIcons = {
               <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><span class="discount-tag">-<%= Math.round((p.price-p.discount_price)/p.price*100) %>%</span><% } %>
             </div>
             <div class="btn-group">
-              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus me-1"></i>Add</button>
+              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>, 1, this)"><i class="fas fa-cart-plus me-1"></i>Add</button>
               <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/<%= p.slug %>'">View</button>
             </div>
           </div>
@@ -210,7 +210,7 @@ const catIcons = {
               <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><span class="discount-tag">-<%= Math.round((p.price-p.discount_price)/p.price*100) %>%</span><% } %>
             </div>
             <div class="btn-group">
-              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>)"><i class="fas fa-cart-plus me-1"></i>Add</button>
+              <button class="btn btn-primary btn-sm" onclick="addToCart(<%= p.id %>, 1, this)"><i class="fas fa-cart-plus me-1"></i>Add</button>
               <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/<%= p.slug %>'">View</button>
             </div>
           </div>

@@ -71,11 +71,17 @@ function showToast(message, type = 'success') {
 }
 
 // Cart
-async function addToCart(productId, qty = 1) {
+async function addToCart(productId, qty = 1, btn) {
   try {
     await api('/cart/add', { method: 'POST', body: JSON.stringify({ product_id: productId, quantity: qty }) });
     showToast('Added to cart!');
     updateCartCount();
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>Go to Cart';
+      btn.onclick = function() { window.location.href = '/cart'; };
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-success');
+    }
   } catch (e) { showToast(e.message, 'error'); }
 }
 
