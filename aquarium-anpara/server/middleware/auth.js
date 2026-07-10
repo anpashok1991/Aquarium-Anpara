@@ -1,20 +1,23 @@
 const jwt = require('jsonwebtoken');
-const db = require('../database');
+const prisma = require('../database');
 
 const TOKEN_SECRET = process.env.JWT_SECRET || 'aquarium-anpara-fallback-secret-key-2026';
-if (!process.env.JWT_SECRET) console.warn('⚠️  JWT_SECRET not set, using fallback (set it in Render env vars for production)');
+if (!process.env.JWT_SECRET) console.warn('⚠️  JWT_SECRET not set, using fallback');
 
 function extractToken(req) {
   return req.header('Authorization')?.replace('Bearer ', '') || (req.cookies && req.cookies.token);
 }
 
-const auth = (req, res, next) => {
-  const token = extractToken(req);
-  if (!token) return res.status(401).json({ error: 'Access denied' });
+const auth = async (req, res, next) => {
   try {
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: 'Access denied' });
     const decoded = jwt.verify(token, TOKEN_SECRET);
-    const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active, auth_provider FROM users WHERE id = ?').get(decoded.id);
-    if (!user || !user.is_active) return res.status(401).json({ error: 'Invalid token' });
+    const user = await prisma.users.findFirst({
+      where: { id: decoded.id, is_active: 1 },
+      select: { id: true, name: true, email: true, phone: true, role: true, avatar: true, is_active: true, auth_provider: true }
+    });
+    if (!user) return res.status(401).json({ error: 'Invalid token' });
     req.user = user;
     next();
   } catch (e) {
@@ -22,15 +25,18 @@ const auth = (req, res, next) => {
   }
 };
 
-const optionalAuth = (req, res, next) => {
-  const token = extractToken(req);
-  if (token) {
-    try {
+const optionalAuth = async (req, res, next) => {
+  try {
+    const token = extractToken(req);
+    if (token) {
       const decoded = jwt.verify(token, TOKEN_SECRET);
-      const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active, auth_provider FROM users WHERE id = ?').get(decoded.id);
-      if (user && user.is_active) req.user = user;
-    } catch (e) {}
-  }
+      const user = await prisma.users.findFirst({
+        where: { id: decoded.id, is_active: 1 },
+        select: { id: true, name: true, email: true, phone: true, role: true, avatar: true, is_active: true, auth_provider: true }
+      });
+      if (user) req.user = user;
+    }
+  } catch (e) {}
   next();
 };
 
@@ -44,15 +50,16 @@ const staffOrAdmin = (req, res, next) => {
   next();
 };
 
-// Server-side guard for admin/staff EJS page routes.
-// Reads JWT from cookie/header, verifies admin role, otherwise redirects to /login.
-const requireAdminPage = (req, res, next) => {
-  const token = extractToken(req);
-  if (!token) return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+const requireAdminPage = async (req, res, next) => {
   try {
+    const token = extractToken(req);
+    if (!token) return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
     const decoded = jwt.verify(token, TOKEN_SECRET);
-    const user = db.prepare('SELECT id, name, email, phone, role, avatar, is_active FROM users WHERE id = ?').get(decoded.id);
-    if (!user || !user.is_active) return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+    const user = await prisma.users.findFirst({
+      where: { id: decoded.id, is_active: 1 },
+      select: { id: true, name: true, email: true, phone: true, role: true, avatar: true, is_active: true }
+    });
+    if (!user) return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
     if (user.role !== 'admin' && user.role !== 'staff') return res.redirect('/');
     req.user = user;
     next();

@@ -1,31 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { category } = req.query;
-    let query = 'SELECT * FROM gallery';
-    let params = [];
-    if (category) { query += ' WHERE category = ?'; params.push(category); }
-    query += ' ORDER BY sort_order, created_at DESC';
-    const images = db.prepare(query).all(...params);
+    const where = {};
+    if (category) where.category = category;
+    const images = await prisma.gallery.findMany({ where, orderBy: [{ sort_order: 'asc' }, { created_at: 'desc' }] });
     res.json({ images });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, (req, res) => {
+router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { title, image, category, sort_order } = req.body;
-    const result = db.prepare('INSERT INTO gallery (title, image, category, sort_order) VALUES (?, ?, ?, ?)').run(title, image, category, sort_order || 0);
-    res.status(201).json({ image: db.prepare('SELECT * FROM gallery WHERE id = ?').get(result.lastInsertRowid) });
+    const result = await prisma.gallery.create({ data: { title, image, category, sort_order: sort_order || 0 } });
+    res.status(201).json({ image: result });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
-    db.prepare('DELETE FROM gallery WHERE id = ?').run(req.params.id);
+    await prisma.gallery.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Image deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

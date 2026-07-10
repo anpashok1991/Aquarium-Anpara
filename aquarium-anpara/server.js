@@ -9,7 +9,7 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const fs = require('fs');
 
-const db = require('./server/database');
+const prisma = require('./server/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -73,23 +73,35 @@ app.set('views', path.join(__dirname, 'views'));
 app.disable('view cache');
 
 // Auto-seed default settings on first run
-const settingCount = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
-if (settingCount === 0) {
-  const insert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
-  insert.run('shop_name', 'Aquarium Anpara');
-  insert.run('shop_phone', '+91 98765 43210');
-  insert.run('shop_email', 'info@aquariumanpara.com');
-  insert.run('shop_address', 'Aquarium Anpara, Main Road, Anpara, India');
-  insert.run('whatsapp_number', '919876543210');
-  insert.run('shop_logo', '/images/logo.png');
-  insert.run('min_order_free_delivery', '500');
-  insert.run('delivery_charge', '50');
-  console.log('✅ Default settings seeded');
-}
-
-app.use((req, res, next) => {
+(async () => {
   try {
-    const rows = db.prepare('SELECT key, value FROM settings').all();
+    const settingCount = await prisma.settings.count();
+    if (settingCount === 0) {
+      const defaults = [
+        { key: 'shop_name', value: 'Aquarium Anpara' },
+        { key: 'shop_phone', value: '+91 98765 43210' },
+        { key: 'shop_email', value: 'info@aquariumanpara.com' },
+        { key: 'shop_address', value: 'Aquarium Anpara, Main Road, Anpara, India' },
+        { key: 'whatsapp_number', value: '919876543210' },
+        { key: 'shop_logo', value: '/images/logo.png' },
+        { key: 'min_order_free_delivery', value: '500' },
+        { key: 'delivery_charge', value: '50' }
+      ];
+      for (const s of defaults) {
+        await prisma.settings.upsert({
+          where: { key: s.key },
+          update: {},
+          create: s
+        });
+      }
+      console.log('✅ Default settings seeded');
+    }
+  } catch (e) { console.log('ℹ️ Settings check deferred:', e.message); }
+})();
+
+app.use(async (req, res, next) => {
+  try {
+    const rows = await prisma.settings.findMany({ select: { key: true, value: true } });
     const s = {};
     rows.forEach(r => { s[r.key] = r.value; });
     res.locals.shopName = s.shop_name || process.env.SHOP_NAME || 'Aquarium Anpara';

@@ -1,38 +1,63 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 
-router.get('/dashboard', auth, adminOnly, (req, res) => {
+router.get('/dashboard', auth, adminOnly, async (req, res) => {
   try {
-    const totalProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE is_active = 1').get().count;
-    const totalCategories = db.prepare('SELECT COUNT(*) as count FROM categories WHERE is_active = 1').get().count;
-    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get().count;
-    const todayOrders = db.prepare("SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = DATE('now')").get().count;
-    const totalCustomers = db.prepare('SELECT COUNT(*) as count FROM customers').get().count;
-    
-    const totalRevenue = db.prepare(`SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE order_status != 'cancelled'`).get().sum;
-    const monthlyRevenue = db.prepare("SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE order_status != 'cancelled' AND created_at >= date('now', 'start of month')").get().sum;
-    
-    const lowStockProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE is_active = 1 AND stock_quantity <= low_stock_threshold').get().count;
-    const outOfStockProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE is_active = 1 AND stock_quantity = 0').get().count;
-    
-    const recentOrders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC LIMIT 5').all();
-    const topProducts = db.prepare(`SELECT p.name, p.sold_count, p.price, p.rating,
-      (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-      FROM products p WHERE p.is_active = 1 ORDER BY p.sold_count DESC LIMIT 5`).all();
+    const totalProducts = await prisma.products.count({ where: { is_active: 1 } });
+    const totalCategories = await prisma.categories.count({ where: { is_active: 1 } });
+    const totalOrders = await prisma.orders.count();
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayOrders = await prisma.orders.count({ where: { created_at: { gte: todayStart } } });
+    const totalCustomers = await prisma.customers.count();
 
-    const dailySales = db.prepare(`SELECT DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue
-      FROM orders WHERE order_status != 'cancelled' AND created_at >= date('now', '-30 days')
-      GROUP BY DATE(created_at) ORDER BY date`).all();
+    const totalRevenueAgg = await prisma.orders.aggregate({
+      _sum: { total: true },
+      where: { order_status: { not: 'cancelled' } }
+    });
+    const totalRevenue = totalRevenueAgg._sum.total || 0;
+
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const monthlyRevenueAgg = await prisma.orders.aggregate({
+      _sum: { total: true },
+      where: { order_status: { not: 'cancelled' }, created_at: { gte: monthStart } }
+    });
+    const monthlyRevenue = monthlyRevenueAgg._sum.total || 0;
+
+    const allActive = await prisma.products.findMany({ where: { is_active: 1 }, select: { stock_quantity: true, low_stock_threshold: true } });
+    const lowStockProducts = allActive.filter(p => p.stock_quantity <= p.low_stock_threshold).length;
+    const outOfStockProducts = allActive.filter(p => p.stock_quantity === 0).length;
+
+    const recentOrders = await prisma.orders.findMany({ orderBy: { created_at: 'desc' }, take: 5 });
+
+    const topProducts = await prisma.products.findMany({
+      where: { is_active: 1 },
+      orderBy: { sold_count: 'desc' },
+      take: 5,
+      select: {
+        name: true, sold_count: true, price: true, rating: true,
+        product_images: { where: { is_primary: 1 }, take: 1, select: { image_url: true } }
+      }
+    });
+    const topProductsMapped = topProducts.map(p => ({
+      name: p.name, sold_count: p.sold_count, price: p.price, rating: p.rating,
+      image: p.product_images[0]?.image_url || null
+    }));
+
+    const dailySales = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date, COUNT(*) as orders, SUM(total) as revenue
+      FROM orders WHERE order_status != 'cancelled' AND created_at >= datetime('now', '-30 days')
+      GROUP BY DATE(created_at) ORDER BY date
+    `;
 
     res.json({ totalProducts, totalCategories, totalOrders, todayOrders, totalCustomers,
       totalRevenue, monthlyRevenue, lowStockProducts, outOfStockProducts,
-      recentOrders, topProducts, dailySales });
+      recentOrders, topProducts: topProductsMapped, dailySales });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/sales', auth, adminOnly, (req, res) => {
+router.get('/sales', auth, adminOnly, async (req, res) => {
   try {
     const { period = 'daily', start_date, end_date } = req.query;
     let groupBy, dateFormat;
@@ -42,52 +67,71 @@ router.get('/sales', auth, adminOnly, (req, res) => {
       case 'yearly': groupBy = "strftime('%Y', created_at)"; dateFormat = 'yearly'; break;
       default: groupBy = "DATE(created_at)"; dateFormat = 'daily';
     }
-    let where = ["order_status != 'cancelled'"];
+    let whereClause = "order_status != 'cancelled'";
     let params = [];
-    if (start_date) { where.push("created_at >= ?"); params.push(start_date); }
-    if (end_date) { where.push("created_at <= ?"); params.push(end_date); }
-    
-    const sales = db.prepare(`SELECT ${groupBy} as period, COUNT(*) as orders, SUM(subtotal) as subtotal,
-      SUM(discount) as discount, SUM(shipping_charge) as shipping, SUM(total) as revenue
-      FROM orders WHERE ${where.join(' AND ')} GROUP BY ${groupBy} ORDER BY period DESC`).all(...params);
+    if (start_date) { whereClause += " AND created_at >= ?"; params.push(start_date); }
+    if (end_date) { whereClause += " AND created_at <= ?"; params.push(end_date); }
+
+    const sales = await prisma.$queryRawUnsafe(
+      `SELECT ${groupBy} as period, COUNT(*) as orders, SUM(subtotal) as subtotal,
+       SUM(discount) as discount, SUM(shipping_charge) as shipping, SUM(total) as revenue
+       FROM orders WHERE ${whereClause} GROUP BY ${groupBy} ORDER BY period DESC`,
+      ...params
+    );
     res.json({ sales, period: dateFormat });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/products', auth, adminOnly, (req, res) => {
+router.get('/products', auth, adminOnly, async (req, res) => {
   try {
-    const products = db.prepare(`SELECT p.*, c.name as category_name, b.name as brand_name,
-      (p.price - p.cost_price) as profit_per_unit, (p.sold_count * (p.price - p.cost_price)) as total_profit
-      FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN brands b ON p.brand_id = b.id
-      WHERE p.is_active = 1 ORDER BY p.sold_count DESC`).all();
-    res.json({ products });
+    const products = await prisma.products.findMany({
+      where: { is_active: 1 },
+      include: { categories: { select: { name: true } }, brands: { select: { name: true } } },
+      orderBy: { sold_count: 'desc' }
+    });
+    const mapped = products.map(p => ({
+      ...p,
+      category_name: p.categories?.name || null,
+      brand_name: p.brands?.name || null,
+      profit_per_unit: (p.price || 0) - (p.cost_price || 0),
+      total_profit: (p.sold_count || 0) * ((p.price || 0) - (p.cost_price || 0)),
+      categories: undefined, brands: undefined
+    }));
+    res.json({ products: mapped });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/customers', auth, adminOnly, (req, res) => {
+router.get('/customers', auth, adminOnly, async (req, res) => {
   try {
-    const customers = db.prepare('SELECT * FROM customers ORDER BY total_spent DESC').all();
+    const customers = await prisma.customers.findMany({ orderBy: { total_spent: 'desc' } });
     res.json({ customers });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/orders', auth, adminOnly, (req, res) => {
+router.get('/orders', auth, adminOnly, async (req, res) => {
   try {
     const { status } = req.query;
-    let where = status ? ['order_status = ?'] : [];
-    let params = status ? [status] : [];
-    const orders = db.prepare(`SELECT * FROM orders ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC`).all(...params);
+    const where = status ? { order_status: status } : {};
+    const orders = await prisma.orders.findMany({ where, orderBy: { created_at: 'desc' } });
     res.json({ orders });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/stock', auth, adminOnly, (req, res) => {
+router.get('/stock', auth, adminOnly, async (req, res) => {
   try {
-    const products = db.prepare(`SELECT p.id, p.name, p.sku, p.stock_quantity, p.cost_price, p.price, c.name as category_name,
-      (p.stock_quantity * p.cost_price) as stock_value
-      FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1 ORDER BY p.stock_quantity`).all();
-    const totalValue = products.reduce((sum, p) => sum + p.stock_value, 0);
-    res.json({ products, totalValue });
+    const products = await prisma.products.findMany({
+      where: { is_active: 1 },
+      include: { categories: { select: { name: true } } },
+      orderBy: { stock_quantity: 'asc' }
+    });
+    const mapped = products.map(p => ({
+      id: p.id, name: p.name, sku: p.sku, stock_quantity: p.stock_quantity,
+      cost_price: p.cost_price, price: p.price,
+      category_name: p.categories?.name || null,
+      stock_value: (p.stock_quantity || 0) * (p.cost_price || 0)
+    }));
+    const totalValue = mapped.reduce((sum, p) => sum + p.stock_value, 0);
+    res.json({ products: mapped, totalValue });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

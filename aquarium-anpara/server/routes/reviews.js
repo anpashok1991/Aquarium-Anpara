@@ -1,59 +1,87 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly, optionalAuth } = require('../middleware/auth');
 
-router.get('/product/:productId', (req, res) => {
+router.get('/product/:productId', async (req, res) => {
   try {
-    const reviews = db.prepare(`SELECT r.*, u.name as user_name FROM reviews r LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.product_id = ? AND r.is_approved = 1 ORDER BY r.created_at DESC`).all(req.params.productId);
-    res.json({ reviews });
+    const reviews = await prisma.reviews.findMany({
+      where: { product_id: Number(req.params.productId), is_approved: 1 },
+      include: { users: { select: { name: true } } },
+      orderBy: { created_at: 'desc' }
+    });
+    const mapped = reviews.map(r => ({ ...r, user_name: r.users?.name || null, users: undefined }));
+    res.json({ reviews: mapped });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', optionalAuth, (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const { product_id, rating, title, comment, customer_name } = req.body;
     if (!product_id || !rating) return res.status(400).json({ error: 'Product and rating required' });
-    const result = db.prepare('INSERT INTO reviews (product_id, user_id, customer_name, rating, title, comment) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(product_id, req.user?.id || null, customer_name || req.user?.name || 'Anonymous', rating, title, comment);
+    const review = await prisma.reviews.create({
+      data: {
+        product_id: Number(product_id), rating: Number(rating),
+        user_id: req.user?.id || null,
+        customer_name: customer_name || req.user?.name || 'Anonymous',
+        title, comment
+      }
+    });
 
-    const avg = db.prepare('SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM reviews WHERE product_id = ? AND is_approved = 1').get(product_id);
-    db.prepare('UPDATE products SET rating = ?, review_count = ? WHERE id = ?').run(avg.avg_rating || 0, avg.count, product_id);
+    const agg = await prisma.reviews.aggregate({
+      _avg: { rating: true },
+      _count: { id: true },
+      where: { product_id: Number(product_id), is_approved: 1 }
+    });
+    await prisma.products.update({
+      where: { id: Number(product_id) },
+      data: { rating: agg._avg.rating || 0, review_count: agg._count.id }
+    });
 
-    res.status(201).json({ review: db.prepare('SELECT * FROM reviews WHERE id = ?').get(result.lastInsertRowid) });
+    res.status(201).json({ review });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/pending', auth, adminOnly, (req, res) => {
+router.get('/pending', auth, adminOnly, async (req, res) => {
   try {
-    const reviews = db.prepare(`SELECT r.*, p.name as product_name FROM reviews r LEFT JOIN products p ON r.product_id = p.id
-      WHERE r.is_approved = 0 ORDER BY r.created_at DESC`).all();
-    res.json({ reviews });
+    const reviews = await prisma.reviews.findMany({
+      where: { is_approved: 0 },
+      include: { products: { select: { name: true } } },
+      orderBy: { created_at: 'desc' }
+    });
+    const mapped = reviews.map(r => ({ ...r, product_name: r.products?.name || null, products: undefined }));
+    res.json({ reviews: mapped });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/approve', auth, adminOnly, (req, res) => {
+router.put('/:id/approve', auth, adminOnly, async (req, res) => {
   try {
-    db.prepare('UPDATE reviews SET is_approved = 1 WHERE id = ?').run(req.params.id);
+    await prisma.reviews.update({ where: { id: Number(req.params.id) }, data: { is_approved: 1 } });
     res.json({ message: 'Review approved' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/reply', auth, adminOnly, (req, res) => {
+router.put('/:id/reply', auth, adminOnly, async (req, res) => {
   try {
-    db.prepare('UPDATE reviews SET admin_reply = ? WHERE id = ?').run(req.body.reply, req.params.id);
+    await prisma.reviews.update({ where: { id: Number(req.params.id) }, data: { admin_reply: req.body.reply } });
     res.json({ message: 'Reply added' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
-    const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(req.params.id);
-    db.prepare('DELETE FROM reviews WHERE id = ?').run(req.params.id);
+    const review = await prisma.reviews.findUnique({ where: { id: Number(req.params.id) } });
+    await prisma.reviews.delete({ where: { id: Number(req.params.id) } });
     if (review) {
-      const avg = db.prepare('SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM reviews WHERE product_id = ? AND is_approved = 1').get(review.product_id);
-      db.prepare('UPDATE products SET rating = ?, review_count = ? WHERE id = ?').run(avg.avg_rating || 0, avg.count, review.product_id);
+      const agg = await prisma.reviews.aggregate({
+        _avg: { rating: true },
+        _count: { id: true },
+        where: { product_id: review.product_id, is_approved: 1 }
+      });
+      await prisma.products.update({
+        where: { id: review.product_id },
+        data: { rating: agg._avg.rating || 0, review_count: agg._count.id }
+      });
     }
     res.json({ message: 'Review deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }

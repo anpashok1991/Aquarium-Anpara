@@ -1,43 +1,54 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const banners = db.prepare('SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order').all();
+    const banners = await prisma.banners.findMany({
+      where: { is_active: 1 },
+      orderBy: { sort_order: 'asc' }
+    });
     res.json({ banners });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/all', auth, adminOnly, (req, res) => {
+router.get('/all', auth, adminOnly, async (req, res) => {
   try {
-    const banners = db.prepare('SELECT * FROM banners ORDER BY sort_order').all();
+    const banners = await prisma.banners.findMany({ orderBy: { sort_order: 'asc' } });
     res.json({ banners });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, (req, res) => {
+router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { title, subtitle, image, link, sort_order } = req.body;
-    const result = db.prepare('INSERT INTO banners (title, subtitle, image, link, sort_order) VALUES (?, ?, ?, ?, ?)')
-      .run(title, subtitle, image, link, sort_order || 0);
-    res.status(201).json({ banner: db.prepare('SELECT * FROM banners WHERE id = ?').get(result.lastInsertRowid) });
+    const result = await prisma.banners.create({
+      data: { title, subtitle, image, link, sort_order: sort_order || 0 }
+    });
+    res.status(201).json({ banner: await prisma.banners.findUnique({ where: { id: result.id } }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, (req, res) => {
+router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
+    const paramId = Number(req.params.id);
     const { title, subtitle, image, link, sort_order, is_active } = req.body;
-    db.prepare('UPDATE banners SET title=COALESCE(?,title), subtitle=COALESCE(?,subtitle), image=COALESCE(?,image), link=COALESCE(?,link), sort_order=COALESCE(?,sort_order), is_active=COALESCE(?,is_active) WHERE id=?')
-      .run(title, subtitle, image, link, sort_order, is_active !== undefined ? (is_active ? 1 : 0) : null, req.params.id);
-    res.json({ banner: db.prepare('SELECT * FROM banners WHERE id = ?').get(req.params.id) });
+    const data = {};
+    if (title !== undefined) data.title = title;
+    if (subtitle !== undefined) data.subtitle = subtitle;
+    if (image !== undefined) data.image = image;
+    if (link !== undefined) data.link = link;
+    if (sort_order !== undefined) data.sort_order = sort_order;
+    if (is_active !== undefined) data.is_active = is_active ? 1 : 0;
+    await prisma.banners.update({ where: { id: paramId }, data });
+    res.json({ banner: await prisma.banners.findUnique({ where: { id: paramId } }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
-    db.prepare('DELETE FROM banners WHERE id = ?').run(req.params.id);
+    await prisma.banners.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Banner deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

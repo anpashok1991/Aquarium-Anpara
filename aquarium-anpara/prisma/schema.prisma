@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model addresses {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  label      String?   @default("Home")
+  name       String
+  phone      String
+  address    String
+  city       String
+  state      String
+  pincode    String
+  is_primary Int?      @default(0)
+  created_at DateTime? @default(now())
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model audit_logs {
+  id         Int       @id @default(autoincrement())
+  user_id    Int?
+  action     String
+  entity     String?
+  entity_id  Int?
+  details    String?
+  ip_address String?
+  created_at DateTime? @default(now())
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model banners {
+  id         Int       @id @default(autoincrement())
+  title      String?
+  subtitle   String?
+  image      String?
+  link       String?
+  sort_order Int?      @default(0)
+  is_active  Int?      @default(1)
+  created_at DateTime? @default(now())
+}
+
+model brands {
+  id          Int        @id @default(autoincrement())
+  name        String
+  slug        String     @unique(map: "sqlite_autoindex_brands_1")
+  logo        String?
+  description String?
+  is_active   Int?       @default(1)
+  created_at  DateTime?  @default(now())
+  products    products[]
+}
+
+model cart {
+  id              Int       @id @default(autoincrement())
+  session_id      String
+  user_id         Int?
+  product_id      Int
+  quantity        Int?      @default(1)
+  saved_for_later Int?      @default(0)
+  created_at      DateTime? @default(now())
+  products        products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([session_id], map: "idx_cart_session")
+}
+
+model categories {
+  id               Int          @id @default(autoincrement())
+  name             String
+  slug             String       @unique(map: "sqlite_autoindex_categories_1")
+  description      String?
+  image            String?
+  parent_id        Int?
+  sort_order       Int?         @default(0)
+  is_active        Int?         @default(1)
+  created_at       DateTime?    @default(now())
+  categories       categories?  @relation("categoriesTocategories", fields: [parent_id], references: [id], onUpdate: NoAction)
+  other_categories categories[] @relation("categoriesTocategories")
+  products         products[]
+}
+
+model contact_messages {
+  id         Int       @id @default(autoincrement())
+  name       String
+  email      String?
+  phone      String?
+  subject    String?
+  message    String
+  is_read    Int?      @default(0)
+  created_at DateTime? @default(now())
+}
+
+model coupons {
+  id             Int       @id @default(autoincrement())
+  code           String    @unique(map: "sqlite_autoindex_coupons_1")
+  description    String?
+  discount_type  String?   @default("percentage")
+  discount_value Float
+  min_order      Float?    @default(0)
+  max_discount   Float?    @default(0)
+  usage_limit    Int?      @default(0)
+  used_count     Int?      @default(0)
+  start_date     DateTime?
+  end_date       DateTime?
+  is_active      Int?      @default(1)
+  created_at     DateTime? @default(now())
+}
+
+model customers {
+  id           Int       @id @default(autoincrement())
+  user_id      Int?
+  name         String
+  email        String?
+  phone        String?
+  whatsapp     String?
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  total_orders Int?      @default(0)
+  total_spent  Float?    @default(0)
+  created_at   DateTime? @default(now())
+  is_active    Int?      @default(1)
+  users        users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+}
+
+model gallery {
+  id         Int       @id @default(autoincrement())
+  title      String?
+  image      String
+  category   String?
+  sort_order Int?      @default(0)
+  created_at DateTime? @default(now())
+}
+
+model inventory_logs {
+  id         Int       @id @default(autoincrement())
+  product_id Int
+  type       String
+  quantity   Int
+  reference  String?
+  notes      String?
+  created_by Int?
+  created_at DateTime? @default(now())
+  users      users?    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products   products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notifications {
+  id         Int       @id @default(autoincrement())
+  user_id    Int?
+  title      String
+  message    String
+  type       String?   @default("info")
+  is_read    Int?      @default(0)
+  created_at DateTime? @default(now())
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model order_items {
+  id            Int      @id @default(autoincrement())
+  order_id      Int
+  product_id    Int
+  product_name  String
+  product_image String?
+  quantity      Int      @default(1)
+  price         Float
+  discount      Float?   @default(0)
+  total         Float
+  products      products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orders        orders   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model orders {
+  id                Int           @id @default(autoincrement())
+  order_number      String        @unique(map: "sqlite_autoindex_orders_1")
+  user_id           Int?
+  customer_name     String
+  customer_email    String?
+  customer_phone    String
+  customer_whatsapp String?
+  shipping_address  String
+  shipping_city     String
+  shipping_state    String
+  shipping_pincode  String
+  subtotal          Float         @default(0)
+  discount          Float?        @default(0)
+  shipping_charge   Float?        @default(0)
+  tax               Float?        @default(0)
+  total             Float         @default(0)
+  payment_method    String?       @default("cod")
+  payment_status    String?       @default("pending")
+  order_status      String?       @default("pending")
+  notes             String?
+  coupon_code       String?
+  created_at        DateTime?     @default(now())
+  updated_at        DateTime?     @default(now())
+  order_items       order_items[]
+  users             users?        @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  payments          payments[]
+
+  @@index([order_status], map: "idx_orders_status")
+  @@index([user_id], map: "idx_orders_user")
+}
+
+model payments {
+  id             Int       @id @default(autoincrement())
+  order_id       Int
+  amount         Float
+  method         String
+  status         String?   @default("pending")
+  transaction_id String?
+  created_at     DateTime? @default(now())
+  orders         orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model product_images {
+  id         Int      @id @default(autoincrement())
+  product_id Int
+  image_url  String
+  is_primary Int?     @default(0)
+  sort_order Int?     @default(0)
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model products {
+  id                  Int              @id @default(autoincrement())
+  name                String
+  slug                String           @unique(map: "sqlite_autoindex_products_1")
+  description         String?
+  short_description   String?
+  sku                 String?          @unique(map: "sqlite_autoindex_products_2")
+  barcode             String?
+  price               Float            @default(0)
+  discount_price      Float?           @default(0)
+  cost_price          Float?           @default(0)
+  category_id         Int?
+  brand_id            Int?
+  stock_quantity      Int?             @default(0)
+  low_stock_threshold Int?             @default(5)
+  weight              Float?           @default(0)
+  is_featured         Int?             @default(0)
+  is_best_seller      Int?             @default(0)
+  is_new_arrival      Int?             @default(0)
+  is_active           Int?             @default(1)
+  rating              Float?           @default(0)
+  review_count        Int?             @default(0)
+  sold_count          Int?             @default(0)
+  meta_title          String?
+  meta_description    String?
+  created_at          DateTime?        @default(now())
+  updated_at          DateTime?        @default(now())
+  cart                cart[]
+  inventory_logs      inventory_logs[]
+  order_items         order_items[]
+  product_images      product_images[]
+  brands              brands?          @relation(fields: [brand_id], references: [id], onUpdate: NoAction)
+  categories          categories?      @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  reviews             reviews[]
+  wishlists           wishlists[]
+
+  @@index([slug], map: "idx_products_slug")
+  @@index([brand_id], map: "idx_products_brand")
+  @@index([category_id], map: "idx_products_category")
+}
+
+model reviews {
+  id            Int       @id @default(autoincrement())
+  product_id    Int
+  user_id       Int?
+  customer_name String
+  rating        Int
+  title         String?
+  comment       String?
+  is_approved   Int?      @default(0)
+  admin_reply   String?
+  created_at    DateTime? @default(now())
+  users         users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  products      products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([product_id], map: "idx_reviews_product")
+}
+
+model settings {
+  id         Int       @id @default(autoincrement())
+  key        String    @unique(map: "sqlite_autoindex_settings_1")
+  value      String?
+  updated_at DateTime? @default(now())
+}
+
+model users {
+  id             Int              @id @default(autoincrement())
+  name           String
+  email          String?          @unique(map: "sqlite_autoindex_users_1")
+  phone          String?          @unique(map: "sqlite_autoindex_users_2")
+  password       String?
+  role           String?          @default("customer")
+  avatar         String?
+  auth_provider  String?          @default("local")
+  is_active      Int?             @default(1)
+  created_at     DateTime?        @default(now())
+  updated_at     DateTime?        @default(now())
+  addresses      addresses[]
+  audit_logs     audit_logs[]
+  cart           cart[]
+  customers      customers[]
+  inventory_logs inventory_logs[]
+  notifications  notifications[]
+  orders         orders[]
+  reviews        reviews[]
+  wishlists      wishlists[]
+}
+
+model wishlists {
+  id         Int       @id @default(autoincrement())
+  user_id    Int?
+  product_id Int
+  created_at DateTime? @default(now())
+  products   products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, product_id], map: "sqlite_autoindex_wishlists_1")
+}

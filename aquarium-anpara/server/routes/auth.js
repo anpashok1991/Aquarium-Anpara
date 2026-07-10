@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
-const db = require('../database');
+const prisma = require('../database');
 const { auth, generateToken } = require('../middleware/auth');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -11,25 +11,34 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
     if (!name || !password || (!email && !phone)) return res.status(400).json({ error: 'Name, password and email or phone required' });
-    
-    const existing = email ? db.prepare('SELECT id FROM users WHERE email = ?').get(email) : db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+
+    const existing = email
+      ? await prisma.users.findUnique({ where: { email }, select: { id: true } })
+      : await prisma.users.findUnique({ where: { phone }, select: { id: true } });
     if (existing) return res.status(400).json({ error: 'User already exists' });
-    
+
     const hash = bcrypt.hashSync(password, 10);
-    const result = db.prepare('INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)').run(name, email || null, phone || null, hash);
-    
-    const user = db.prepare('SELECT id, name, email, phone, role FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const result = await prisma.users.create({
+      data: { name, email: email || null, phone: phone || null, password: hash }
+    });
+
+    const user = await prisma.users.findUnique({
+      where: { id: result.id },
+      select: { id: true, name: true, email: true, phone: true, role: true }
+    });
     const token = generateToken(user);
-    
-    db.prepare('INSERT INTO customers (user_id, name, email, phone) VALUES (?, ?, ?, ?)').run(user.id, name, email || null, phone || null);
-    
+
+    await prisma.customers.create({
+      data: { user_id: user.id, name, email: email || null, phone: phone || null }
+    });
+
     res.cookie('token', token, COOKIE_OPTIONS);
     res.json({ token, user });
   } catch (e) {
@@ -37,17 +46,19 @@ router.post('/register', (req, res) => {
   }
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { login, password } = req.body;
     if (!login || !password) return res.status(400).json({ error: 'Login and password required' });
-    
-    const user = db.prepare('SELECT * FROM users WHERE email = ? OR phone = ?').get(login, login);
+
+    const user = await prisma.users.findFirst({
+      where: { OR: [{ email: login }, { phone: login }] }
+    });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (!user.is_active) return res.status(401).json({ error: 'Account disabled' });
-    
+
     if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' });
-    
+
     const token = generateToken(user);
     const { password: _, ...safeUser } = user;
     res.cookie('token', token, COOKIE_OPTIONS);
@@ -57,37 +68,62 @@ router.post('/login', (req, res) => {
   }
 });
 
-router.get('/me', auth, (req, res) => {
-  const addr = db.prepare('SELECT id, label, name, phone, address, city, state, pincode, is_primary FROM addresses WHERE user_id = ? AND is_primary = 1 LIMIT 1').get(req.user.id);
-  res.json({ user: { ...req.user, primary_address: addr || null } });
+router.get('/me', auth, async (req, res) => {
+  try {
+    const addr = await prisma.addresses.findFirst({
+      where: { user_id: req.user.id, is_primary: 1 },
+      select: { id: true, label: true, name: true, phone: true, address: true, city: true, state: true, pincode: true, is_primary: true }
+    });
+    res.json({ user: { ...req.user, primary_address: addr || null } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.put('/profile', auth, (req, res) => {
+router.put('/profile', auth, async (req, res) => {
   try {
     const { name, email, phone, avatar, address, city, state, pincode, whatsapp } = req.body;
-    db.prepare('UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone), avatar = COALESCE(?, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .run(name, email, phone, avatar, req.user.id);
-    db.prepare(`UPDATE customers SET
-      name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone),
-      whatsapp = COALESCE(?, whatsapp), address = COALESCE(?, address),
-      city = COALESCE(?, city), state = COALESCE(?, state), pincode = COALESCE(?, pincode)
-      WHERE user_id = ?`)
-      .run(name, email, phone, whatsapp, address, city, state, pincode, req.user.id);
-    const user = db.prepare('SELECT id, name, email, phone, role, avatar FROM users WHERE id = ?').get(req.user.id);
-    const customer = db.prepare('SELECT address, city, state, pincode, whatsapp FROM customers WHERE user_id = ?').get(req.user.id);
+
+    const userData = {};
+    if (name !== undefined) userData.name = name;
+    if (email !== undefined) userData.email = email;
+    if (phone !== undefined) userData.phone = phone;
+    if (avatar !== undefined) userData.avatar = avatar;
+    userData.updated_at = new Date();
+    await prisma.users.update({ where: { id: req.user.id }, data: userData });
+
+    const customerData = {};
+    if (name !== undefined) customerData.name = name;
+    if (email !== undefined) customerData.email = email;
+    if (phone !== undefined) customerData.phone = phone;
+    if (whatsapp !== undefined) customerData.whatsapp = whatsapp;
+    if (address !== undefined) customerData.address = address;
+    if (city !== undefined) customerData.city = city;
+    if (state !== undefined) customerData.state = state;
+    if (pincode !== undefined) customerData.pincode = pincode;
+    await prisma.customers.updateMany({ where: { user_id: req.user.id }, data: customerData });
+
+    const user = await prisma.users.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, name: true, email: true, phone: true, role: true, avatar: true }
+    });
+    const customer = await prisma.customers.findFirst({
+      where: { user_id: req.user.id },
+      select: { address: true, city: true, state: true, pincode: true, whatsapp: true }
+    });
     res.json({ user: { ...user, ...(customer || {}) } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-router.put('/change-password', auth, (req, res) => {
+router.put('/change-password', auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const user = db.prepare('SELECT password FROM users WHERE id = ?').get(req.user.id);
+    const user = await prisma.users.findUnique({ where: { id: req.user.id }, select: { password: true } });
     if (!bcrypt.compareSync(currentPassword, user.password)) return res.status(400).json({ error: 'Current password incorrect' });
     const hash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hash, req.user.id);
+    await prisma.users.update({ where: { id: req.user.id }, data: { password: hash, updated_at: new Date() } });
     res.json({ message: 'Password updated' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -111,13 +147,17 @@ router.post('/google', async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, sub: googleId, picture } = payload;
 
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let user = await prisma.users.findUnique({ where: { email } });
     if (!user) {
-      const result = db.prepare('INSERT INTO users (name, email, password, auth_provider, avatar) VALUES (?, ?, NULL, ?, ?)').run(name, email, 'google', picture || null);
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
-      db.prepare('INSERT INTO customers (user_id, name, email) VALUES (?, ?, ?)').run(user.id, name, email);
+      const result = await prisma.users.create({
+        data: { name, email, password: null, auth_provider: 'google', avatar: picture || null }
+      });
+      user = await prisma.users.findUnique({ where: { id: result.id } });
+      await prisma.customers.create({ data: { user_id: user.id, name, email } });
     } else if (user.auth_provider !== 'google') {
-      db.prepare('UPDATE users SET auth_provider = ?, avatar = COALESCE(?, avatar) WHERE id = ?').run('google', picture, user.id);
+      const updateData = { auth_provider: 'google' };
+      if (picture) updateData.avatar = picture;
+      await prisma.users.update({ where: { id: user.id }, data: updateData });
     }
 
     if (!user.is_active) return res.status(401).json({ error: 'Account disabled' });

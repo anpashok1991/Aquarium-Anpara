@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly, optionalAuth } = require('../middleware/auth');
 
 function generateOrderNumber() {
@@ -11,11 +11,11 @@ function generateOrderNumber() {
   return `${prefix}${datePart}${random}`;
 }
 
-router.post('/', optionalAuth, (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const { customer_name, customer_email, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode,
       payment_method, coupon_code, notes } = req.body;
-    
+
     if (!customer_name || !customer_phone || !shipping_address || !shipping_city || !shipping_state || !shipping_pincode) {
       return res.status(400).json({ error: 'All shipping details are required' });
     }
@@ -23,32 +23,71 @@ router.post('/', optionalAuth, (req, res) => {
     const sessionId = req.headers['x-session-id'] || 'guest';
     let cartItems;
     if (req.user) {
-      cartItems = db.prepare(`SELECT c.*, p.name, p.price, p.discount_price, p.stock_quantity, p.is_active,
-        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? AND c.saved_for_later = 0`).all(req.user.id);
+      const items = await prisma.cart.findMany({
+        where: { user_id: req.user.id, saved_for_later: 0 },
+        include: {
+          products: {
+            include: {
+              product_images: { where: { is_primary: 1 }, take: 1 }
+            }
+          }
+        }
+      });
+      cartItems = items.map(c => ({
+        ...c,
+        name: c.products.name,
+        price: c.products.price,
+        discount_price: c.products.discount_price,
+        stock_quantity: c.products.stock_quantity,
+        is_active: c.products.is_active,
+        image: c.products.product_images[0]?.image_url || null,
+        products: undefined
+      }));
     } else {
-      cartItems = db.prepare(`SELECT c.*, p.name, p.price, p.discount_price, p.stock_quantity, p.is_active,
-        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? AND c.user_id IS NULL AND c.saved_for_later = 0`).all(sessionId);
+      const items = await prisma.cart.findMany({
+        where: { session_id: sessionId, user_id: null, saved_for_later: 0 },
+        include: {
+          products: {
+            include: {
+              product_images: { where: { is_primary: 1 }, take: 1 }
+            }
+          }
+        }
+      });
+      cartItems = items.map(c => ({
+        ...c,
+        name: c.products.name,
+        price: c.products.price,
+        discount_price: c.products.discount_price,
+        stock_quantity: c.products.stock_quantity,
+        is_active: c.products.is_active,
+        image: c.products.product_images[0]?.image_url || null,
+        products: undefined
+      }));
     }
 
     if (!cartItems.length) return res.status(400).json({ error: 'Cart is empty' });
 
     let subtotal = 0;
     let discount = 0;
-    
+
     cartItems.forEach(item => {
       const unitPrice = item.discount_price > 0 ? item.discount_price : item.price;
       subtotal += unitPrice * item.quantity;
     });
 
     if (coupon_code) {
-      const coupon = db.prepare('SELECT * FROM coupons WHERE code = ? AND is_active = 1').get(coupon_code);
+      const coupon = await prisma.coupons.findFirst({
+        where: { code: coupon_code, is_active: 1 }
+      });
       if (coupon) {
         if (subtotal >= coupon.min_order) {
           discount = coupon.discount_type === 'percentage' ? (subtotal * coupon.discount_value / 100) : coupon.discount_value;
           if (coupon.max_discount > 0) discount = Math.min(discount, coupon.max_discount);
-          db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(coupon.id);
+          await prisma.coupons.update({
+            where: { id: coupon.id },
+            data: { used_count: { increment: 1 } }
+          });
         }
       }
     }
@@ -57,124 +96,194 @@ router.post('/', optionalAuth, (req, res) => {
     const total = subtotal - discount + shipping_charge;
     const orderNumber = generateOrderNumber();
 
-    const result = db.prepare(`INSERT INTO orders (order_number, user_id, customer_name, customer_email, customer_phone, customer_whatsapp,
-      shipping_address, shipping_city, shipping_state, shipping_pincode, subtotal, discount, shipping_charge, total,
-      payment_method, coupon_code, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-      orderNumber, req.user?.id || null, customer_name, customer_email || null, customer_phone, customer_whatsapp || customer_phone,
-      shipping_address, shipping_city, shipping_state, shipping_pincode, subtotal, discount, shipping_charge, total,
-      payment_method || 'cod', coupon_code || null, notes || null
-    );
+    const newOrder = await prisma.orders.create({
+      data: {
+        order_number: orderNumber,
+        user_id: req.user?.id || null,
+        customer_name,
+        customer_email: customer_email || null,
+        customer_phone,
+        customer_whatsapp: customer_whatsapp || customer_phone,
+        shipping_address,
+        shipping_city,
+        shipping_state,
+        shipping_pincode,
+        subtotal,
+        discount,
+        shipping_charge,
+        total,
+        payment_method: payment_method || 'cod',
+        coupon_code: coupon_code || null,
+        notes: notes || null
+      }
+    });
 
-    const orderId = result.lastInsertRowid;
-    const stmtItem = db.prepare('INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, price, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    const stmtStock = db.prepare('UPDATE products SET stock_quantity = stock_quantity - ?, sold_count = sold_count + ? WHERE id = ?');
-    const stmtLog = db.prepare('INSERT INTO inventory_logs (product_id, type, quantity, reference, notes) VALUES (?, ?, ?, ?, ?)');
+    const orderId = newOrder.id;
 
-    const insertItems = db.transaction(() => {
-      cartItems.forEach(item => {
+    const insertItems = async (tx) => {
+      for (const item of cartItems) {
         const unitPrice = item.discount_price > 0 ? item.discount_price : item.price;
         const itemDiscount = item.price - unitPrice;
         const itemTotal = unitPrice * item.quantity;
-        stmtItem.run(orderId, item.product_id, item.name, item.image, item.quantity, item.price, itemDiscount, itemTotal);
-        stmtStock.run(item.quantity, item.quantity, item.product_id);
-        stmtLog.run(item.product_id, 'sale', item.quantity, orderNumber, `Order #${orderNumber}`);
-      });
+        await tx.order_items.create({
+          data: {
+            order_id: orderId,
+            product_id: item.product_id,
+            product_name: item.name,
+            product_image: item.image,
+            quantity: item.quantity,
+            price: item.price,
+            discount: itemDiscount,
+            total: itemTotal
+          }
+        });
+        await tx.products.update({
+          where: { id: item.product_id },
+          data: {
+            stock_quantity: { decrement: item.quantity },
+            sold_count: { increment: item.quantity }
+          }
+        });
+        await tx.inventory_logs.create({
+          data: {
+            product_id: item.product_id,
+            type: 'sale',
+            quantity: item.quantity,
+            reference: orderNumber,
+            notes: `Order #${orderNumber}`
+          }
+        });
+      }
+    };
+
+    await prisma.$transaction(async (tx) => {
+      await insertItems(tx);
     });
-    insertItems();
 
     if (req.user) {
-      db.prepare('DELETE FROM cart WHERE user_id = ? AND saved_for_later = 0').run(req.user.id);
+      await prisma.cart.deleteMany({ where: { user_id: req.user.id, saved_for_later: 0 } });
     } else {
-      db.prepare('DELETE FROM cart WHERE session_id = ? AND user_id IS NULL AND saved_for_later = 0').run(sessionId);
+      await prisma.cart.deleteMany({ where: { session_id: sessionId, user_id: null, saved_for_later: 0 } });
     }
 
     if (req.user) {
-      db.prepare('UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ? WHERE user_id = ?').run(total, req.user.id);
+      const customer = await prisma.customers.findFirst({ where: { user_id: req.user.id } });
+      if (customer) {
+        await prisma.customers.update({
+          where: { id: customer.id },
+          data: { total_orders: { increment: 1 }, total_spent: { increment: total } }
+        });
+      }
     }
 
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
-    order.items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
+    const order = await prisma.orders.findFirst({ where: { id: orderId } });
+    order.items = await prisma.order_items.findMany({ where: { order_id: orderId } });
 
     res.status(201).json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    let where = [];
-    let params = [];
-    
-    if (req.user.role === 'customer') {
-      where.push('o.user_id = ?');
-      params.push(req.user.id);
-    }
-    if (status) { where.push('o.order_status = ?'); params.push(status); }
+    let where = {};
 
-    const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    if (req.user.role === 'customer') {
+      where.user_id = req.user.id;
+    }
+    if (status) {
+      where.order_status = status;
+    }
+
     const offset = (Number(page) - 1) * Number(limit);
-    const total = db.prepare(`SELECT COUNT(*) as total FROM orders o ${whereClause}`).get(...params).total;
-    
-    const orders = db.prepare(`SELECT o.* FROM orders o ${whereClause} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`).all(...params, Number(limit), offset);
+    const total = await prisma.orders.count({ where });
+
+    const orders = await prisma.orders.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take: Number(limit),
+      skip: offset
+    });
+
     res.json({ orders, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', auth, (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    const order = await prisma.orders.findFirst({ where: { id: Number(req.params.id) } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (req.user.role === 'customer' && order.user_id !== req.user.id) return res.status(403).json({ error: 'Access denied' });
-    order.items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+    order.items = await prisma.order_items.findMany({ where: { order_id: order.id } });
     res.json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/track/:orderNumber', (req, res) => {
+router.get('/track/:orderNumber', async (req, res) => {
   try {
-    const order = db.prepare('SELECT order_number, order_status, payment_status, total, created_at, updated_at FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+    const order = await prisma.orders.findFirst({
+      where: { order_number: req.params.orderNumber },
+      select: { order_number: true, order_status: true, payment_status: true, total: true, created_at: true, updated_at: true }
+    });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/status', auth, adminOnly, (req, res) => {
+router.put('/:id/status', auth, adminOnly, async (req, res) => {
   try {
     const { order_status, payment_status } = req.body;
-    if (order_status) {
-      db.prepare('UPDATE orders SET order_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(order_status, req.params.id);
+    const data = { updated_at: new Date() };
+    if (order_status) data.order_status = order_status;
+    if (payment_status) data.payment_status = payment_status;
+    if (order_status || payment_status) {
+      await prisma.orders.update({
+        where: { id: Number(req.params.id) },
+        data
+      });
     }
-    if (payment_status) {
-      db.prepare('UPDATE orders SET payment_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(payment_status, req.params.id);
-    }
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    const order = await prisma.orders.findFirst({ where: { id: Number(req.params.id) } });
     res.json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/cancel/:orderNumber', auth, (req, res) => {
+router.put('/cancel/:orderNumber', auth, async (req, res) => {
   try {
-    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+    const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
     if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be cancelled' });
-    db.prepare("UPDATE orders SET order_status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(order.id);
-    res.json({ order: db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id) });
+    await prisma.orders.update({
+      where: { id: order.id },
+      data: { order_status: 'cancelled', updated_at: new Date() }
+    });
+    const updated = await prisma.orders.findFirst({ where: { id: order.id } });
+    res.json({ order: updated });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/shipping/:orderNumber', auth, (req, res) => {
+router.put('/shipping/:orderNumber', auth, async (req, res) => {
   try {
-    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(req.params.orderNumber);
+    const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
     if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be updated' });
     const { customer_name, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode } = req.body;
     if (!shipping_address || !shipping_city || !shipping_state || !shipping_pincode) return res.status(400).json({ error: 'All address fields required' });
-    db.prepare(`UPDATE orders SET customer_name=COALESCE(?,customer_name), customer_phone=COALESCE(?,customer_phone),
-      customer_whatsapp=COALESCE(?,customer_whatsapp), shipping_address=?, shipping_city=?, shipping_state=?, shipping_pincode=?,
-      updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(customer_name, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode, order.id);
-    res.json({ order: db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id) });
+    const data = { updated_at: new Date() };
+    if (customer_name !== undefined) data.customer_name = customer_name;
+    if (customer_phone !== undefined) data.customer_phone = customer_phone;
+    if (customer_whatsapp !== undefined) data.customer_whatsapp = customer_whatsapp;
+    data.shipping_address = shipping_address;
+    data.shipping_city = shipping_city;
+    data.shipping_state = shipping_state;
+    data.shipping_pincode = shipping_pincode;
+    await prisma.orders.update({
+      where: { id: order.id },
+      data
+    });
+    const updated = await prisma.orders.findFirst({ where: { id: order.id } });
+    res.json({ order: updated });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

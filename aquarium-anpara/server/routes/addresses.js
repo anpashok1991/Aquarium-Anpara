@@ -1,59 +1,84 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, optionalAuth } = require('../middleware/auth');
 
-router.get('/', optionalAuth, (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     if (!req.user) return res.json({ addresses: [] });
-    const addresses = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at DESC').all(req.user.id);
+    const addresses = await prisma.addresses.findMany({
+      where: { user_id: req.user.id },
+      orderBy: [{ is_primary: 'desc' }, { created_at: 'desc' }]
+    });
     res.json({ addresses });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { label, name, phone, address, city, state, pincode } = req.body;
     if (!name || !phone || !address || !city || !state || !pincode) return res.status(400).json({ error: 'All address fields required' });
-    const existing = db.prepare('SELECT COUNT(*) as c FROM addresses WHERE user_id = ?').get(req.user.id).c;
-    const result = db.prepare('INSERT INTO addresses (user_id, label, name, phone, address, city, state, pincode, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-      req.user.id, label || 'Home', name, phone, address, city, state, pincode, existing === 0 ? 1 : 0
-    );
-    const addr = db.prepare('SELECT * FROM addresses WHERE id = ?').get(result.lastInsertRowid);
+    const existing = await prisma.addresses.count({ where: { user_id: req.user.id } });
+    const result = await prisma.addresses.create({
+      data: {
+        user_id: req.user.id,
+        label: label || 'Home',
+        name,
+        phone,
+        address,
+        city,
+        state,
+        pincode,
+        is_primary: existing === 0 ? 1 : 0
+      }
+    });
+    const addr = await prisma.addresses.findUnique({ where: { id: result.id } });
     res.status(201).json({ address: addr });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
-    const addr = db.prepare('SELECT * FROM addresses WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const paramId = Number(req.params.id);
+    const addr = await prisma.addresses.findFirst({ where: { id: paramId, user_id: req.user.id } });
     if (!addr) return res.status(404).json({ error: 'Address not found' });
     const { label, name, phone, address, city, state, pincode } = req.body;
-    db.prepare('UPDATE addresses SET label=COALESCE(?,label), name=COALESCE(?,name), phone=COALESCE(?,phone), address=COALESCE(?,address), city=COALESCE(?,city), state=COALESCE(?,state), pincode=COALESCE(?,pincode) WHERE id=?').run(
-      label, name, phone, address, city, state, pincode, req.params.id
-    );
-    res.json({ address: db.prepare('SELECT * FROM addresses WHERE id = ?').get(req.params.id) });
+    const data = {};
+    if (label !== undefined) data.label = label;
+    if (name !== undefined) data.name = name;
+    if (phone !== undefined) data.phone = phone;
+    if (address !== undefined) data.address = address;
+    if (city !== undefined) data.city = city;
+    if (state !== undefined) data.state = state;
+    if (pincode !== undefined) data.pincode = pincode;
+    await prisma.addresses.update({ where: { id: paramId }, data });
+    res.json({ address: await prisma.addresses.findUnique({ where: { id: paramId } }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/primary', auth, (req, res) => {
+router.put('/:id/primary', auth, async (req, res) => {
   try {
-    const addr = db.prepare('SELECT * FROM addresses WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const paramId = Number(req.params.id);
+    const addr = await prisma.addresses.findFirst({ where: { id: paramId, user_id: req.user.id } });
     if (!addr) return res.status(404).json({ error: 'Address not found' });
-    db.prepare('UPDATE addresses SET is_primary = 0 WHERE user_id = ?').run(req.user.id);
-    db.prepare('UPDATE addresses SET is_primary = 1 WHERE id = ?').run(req.params.id);
-    res.json({ address: db.prepare('SELECT * FROM addresses WHERE id = ?').get(req.params.id) });
+    await prisma.addresses.updateMany({ where: { user_id: req.user.id }, data: { is_primary: 0 } });
+    await prisma.addresses.update({ where: { id: paramId }, data: { is_primary: 1 } });
+    res.json({ address: await prisma.addresses.findUnique({ where: { id: paramId } }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const addr = db.prepare('SELECT * FROM addresses WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const paramId = Number(req.params.id);
+    const addr = await prisma.addresses.findFirst({ where: { id: paramId, user_id: req.user.id } });
     if (!addr) return res.status(404).json({ error: 'Address not found' });
-    db.prepare('DELETE FROM addresses WHERE id = ?').run(req.params.id);
+    await prisma.addresses.delete({ where: { id: paramId } });
     if (addr.is_primary) {
-      const next = db.prepare('SELECT id FROM addresses WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(req.user.id);
-      if (next) db.prepare('UPDATE addresses SET is_primary = 1 WHERE id = ?').run(next.id);
+      const next = await prisma.addresses.findFirst({
+        where: { user_id: req.user.id },
+        orderBy: { created_at: 'desc' }
+      });
+      if (next) await prisma.addresses.update({ where: { id: next.id }, data: { is_primary: 1 } });
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

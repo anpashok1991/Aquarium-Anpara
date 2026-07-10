@@ -1,34 +1,54 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth } = require('../middleware/auth');
 
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
-    const items = db.prepare(`SELECT w.*, p.name, p.slug, p.price, p.discount_price, p.is_active,
-      (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-      FROM wishlists w JOIN products p ON w.product_id = p.id WHERE w.user_id = ? ORDER BY w.created_at DESC`).all(req.user.id);
-    res.json({ items });
+    const items = await prisma.wishlists.findMany({
+      where: { user_id: req.user.id },
+      include: {
+        products: {
+          select: {
+            name: true, slug: true, price: true, discount_price: true, is_active: true,
+            product_images: { where: { is_primary: 1 }, take: 1, select: { image_url: true } }
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    const mapped = items.map(item => ({
+      id: item.id, user_id: item.user_id, product_id: item.product_id, created_at: item.created_at,
+      name: item.products.name, slug: item.products.slug,
+      price: item.products.price, discount_price: item.products.discount_price,
+      is_active: item.products.is_active,
+      image: item.products.product_images[0]?.image_url || null
+    }));
+    res.json({ items: mapped });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { product_id } = req.body;
-    const existing = db.prepare('SELECT * FROM wishlists WHERE user_id = ? AND product_id = ?').get(req.user.id, product_id);
+    const existing = await prisma.wishlists.findFirst({
+      where: { user_id: req.user.id, product_id: Number(product_id) }
+    });
     if (existing) {
-      db.prepare('DELETE FROM wishlists WHERE id = ?').run(existing.id);
+      await prisma.wishlists.delete({ where: { id: existing.id } });
       res.json({ message: 'Removed from wishlist', active: false });
     } else {
-      db.prepare('INSERT INTO wishlists (user_id, product_id) VALUES (?, ?)').run(req.user.id, product_id);
+      await prisma.wishlists.create({ data: { user_id: req.user.id, product_id: Number(product_id) } });
       res.json({ message: 'Added to wishlist', active: true });
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/check/:productId', auth, (req, res) => {
+router.get('/check/:productId', auth, async (req, res) => {
   try {
-    const exists = db.prepare('SELECT * FROM wishlists WHERE user_id = ? AND product_id = ?').get(req.user.id, req.params.productId);
+    const exists = await prisma.wishlists.findFirst({
+      where: { user_id: req.user.id, product_id: Number(req.params.productId) }
+    });
     res.json({ isWishlisted: !!exists });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

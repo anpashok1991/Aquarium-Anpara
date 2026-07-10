@@ -1,14 +1,17 @@
 # Aquarium Anpara
 
-A full-featured e-commerce web application for a pet and aquarium store, built with Node.js, Express, EJS, and SQLite.
+A full-featured e-commerce web application for a pet and aquarium store, built with Node.js, Express, EJS, Prisma ORM, and SQLite.
 
 ## Features
 
 ### Customer Features
 - Product browsing with search, filter, sort, and pagination
 - Product detail pages with images, reviews, and related products
-- Shopping cart (session-based for guests, persistent for logged-in users)
-- Checkout with shipping details and payment method selection
+- Shopping cart (session-based for guests, persistent for logged-in users) with **Save for Later**
+- Quantity adjustment with +/- buttons and **manual number input**
+- Guest checkout — place orders without logging in
+- Checkout with saved addresses or manual shipping details
+- **"Go to Cart"** button replaces "Add" after item is added to cart
 - Order tracking by order number
 - Wishlist functionality
 - User registration and login (email/phone + password)
@@ -19,7 +22,7 @@ A full-featured e-commerce web application for a pet and aquarium store, built w
 ### Admin Features
 - Dashboard with key metrics (orders, revenue, products, customers)
 - Product CRUD with image upload
-- Category management with parent-child hierarchy
+- Category management with parent-child hierarchy and **image upload**
 - Brand management
 - Order management with status updates
 - Customer viewing
@@ -27,7 +30,8 @@ A full-featured e-commerce web application for a pet and aquarium store, built w
 - Coupon management with validation
 - Review moderation (approve/delete/reply)
 - Reports (sales, products, stock)
-- Banner and gallery management
+- Banner management with image upload
+- Gallery management
 - Settings management
 - User management (create admin/staff accounts, change roles, activate/deactivate)
 - Contact message management
@@ -50,6 +54,7 @@ A full-featured e-commerce web application for a pet and aquarium store, built w
 | Runtime | Node.js |
 | Framework | Express.js v4.18.2 |
 | Template Engine | EJS |
+| ORM | Prisma v7 (`@prisma/client` + `@prisma/adapter-better-sqlite3`) |
 | Database | SQLite (better-sqlite3) |
 | Authentication | JWT + bcryptjs |
 | Google Auth | google-auth-library |
@@ -61,47 +66,64 @@ A full-featured e-commerce web application for a pet and aquarium store, built w
 
 ```
 aquarium-anpara/
-├── .env                    # Environment variables
-├── package.json            # Dependencies and scripts
-├── server.js               # Main Express server
-├── data/                   # SQLite database files
-├── uploads/                # User-uploaded files
+├── .env                        # Environment variables
+├── .gitignore
+├── package.json                # Dependencies and scripts
+├── prisma/
+│   ├── schema.prisma           # Prisma schema (21 models)
+│   └── prisma.config.ts        # Prisma config
+├── server.js                   # Main Express server
+├── data/                       # SQLite database files
+├── uploads/                    # User-uploaded files
 │   ├── banners/
+│   ├── categories/
 │   ├── gallery/
 │   ├── products/
 │   └── settings/
-├── public/                 # Static assets
-│   ├── css/style.css
+├── public/                     # Static assets
+│   ├── css/style.css           # Premium glassmorphism UI
 │   └── js/app.js
 ├── server/
-│   ├── database.js         # Schema, migrations, indexes
-│   ├── seed.js             # Database seeder
+│   ├── database.js             # Prisma client wrapper
+│   ├── seed.js                 # Database seeder
 │   ├── middleware/
-│   │   └── auth.js         # JWT auth + role middleware
+│   │   └── auth.js             # JWT auth + role middleware (async)
 │   └── routes/
-│       ├── auth.js         # Login, register, Google auth, logout
-│       ├── admin.js        # Admin user management API
-│       ├── products.js     # Product CRUD
-│       ├── categories.js   # Category CRUD
-│       ├── brands.js       # Brand CRUD
-│       ├── cart.js         # Shopping cart
-│       ├── orders.js       # Order management
-│       ├── coupons.js      # Coupon management
-│       ├── inventory.js    # Stock management
-│       ├── reviews.js      # Review moderation
-│       ├── reports.js      # Dashboard reports
-│       ├── pages.js        # EJS page routes
-│       └── ...             # Other API routes
-└── views/                  # EJS templates
-    ├── partials/           # Header, footer
-    ├── admin/              # Admin panel pages
-    └── ...                 # Customer-facing pages
+│       ├── addresses.js        # Saved addresses CRUD
+│       ├── admin.js            # Admin user management
+│       ├── auth.js             # Login, register, Google auth
+│       ├── banners.js          # Banner CRUD
+│       ├── brands.js           # Brand CRUD
+│       ├── cart.js             # Cart with save-for-later
+│       ├── categories.js       # Category CRUD (tree)
+│       ├── contact.js          # Contact messages
+│       ├── coupons.js          # Coupon CRUD + validation
+│       ├── customers.js        # Customer management
+│       ├── gallery.js          # Gallery CRUD
+│       ├── inventory.js        # Stock management
+│       ├── notifications.js    # User notifications
+│       ├── orders.js           # Orders CRUD + tracking
+│       ├── pages.js            # EJS page routes (async)
+│       ├── products.js         # Product CRUD (search/paginate)
+│       ├── reports.js          # Dashboard analytics
+│       ├── reviews.js          # Review moderation
+│       ├── settings.js         # App settings
+│       └── wishlist.js         # Wishlist toggle
+└── views/                      # EJS templates
+    ├── partials/               # Header, footer
+    ├── admin/                  # Admin panel pages
+    ├── index.ejs               # Homepage with hero carousel
+    ├── shop.ejs                # Product listing
+    ├── cart.ejs                # Cart + save-for-later
+    ├── checkout.ejs            # Checkout form
+    ├── product.ejs             # Product detail
+    ├── about.ejs, contact.ejs, gallery.ejs, etc.
 ```
 
 ## Setup & Installation
 
 ### Prerequisites
-- Node.js (v16+)
+- Node.js (v20+)
 - npm
 
 ### Steps
@@ -121,8 +143,9 @@ aquarium-anpara/
    GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
    ```
 
-3. **Seed the database:**
+3. **Generate Prisma client & seed the database:**
    ```bash
+   npx prisma generate
    node server/seed.js
    ```
 
@@ -142,6 +165,45 @@ aquarium-anpara/
 | Admin | admin@aquariumanpara.com | admin123 |
 | Customer | rahul@test.com | customer123 |
 | Customer | priya@test.com | customer123 |
+
+## Switching to Another Database (PostgreSQL / SQL Server)
+
+Prisma ORM makes database switching configuration-only. To migrate:
+
+1. **Install the appropriate adapter:**
+   ```bash
+   npm install @prisma/adapter-pg pg          # PostgreSQL
+   # or
+   npm install @prisma/adapter-mssql mssql    # SQL Server
+   ```
+
+2. **Update `prisma/schema.prisma`** — change the datasource provider:
+   ```prisma
+   datasource db {
+     provider = "postgresql"   // or "sqlserver"
+   }
+   ```
+
+3. **Update `server/database.js`** — swap the adapter:
+   ```js
+   const { PrismaPg } = require('@prisma/adapter-pg');
+   const { Pool } = require('pg');
+   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+   const adapter = new PrismaPg(pool);
+   const prisma = new PrismaClient({ adapter });
+   ```
+
+4. **Run Prisma migrations** to create/update the schema:
+   ```bash
+   npx prisma migrate dev --name init
+   ```
+
+5. **Seed the database:**
+   ```bash
+   node server/seed.js
+   ```
+
+No code changes to routes, queries, or business logic are needed — Prisma handles the SQL dialect differences.
 
 ## Google Sign-In Setup
 
@@ -187,26 +249,48 @@ All `/admin/*` page routes require a valid JWT token with `admin` or `staff` rol
 
 ## Database
 
-SQLite database stored at `./data/aquarium.db` with WAL mode. Schema includes 17 tables:
+The database schema is defined in `prisma/schema.prisma` and managed by Prisma. It includes 21 models:
 
-- `users` - User accounts with role, auth_provider, is_active
-- `products` - Product catalog with pricing, stock, SEO
-- `categories` - Hierarchical categories
-- `brands` - Product brands
-- `customers` - Customer profiles
-- `orders` / `order_items` - Order management
-- `cart` - Shopping cart (session or user-based)
-- `wishlists` - User wishlists
-- `coupons` - Discount codes
-- `reviews` - Product reviews
-- `inventory_logs` - Stock movement tracking
-- `payments` - Payment records
-- `notifications` - User notifications
-- `audit_logs` - Action audit trail
-- `banners` - Homepage banners
-- `gallery` - Gallery images
-- `contact_messages` - Contact form submissions
+- `users` — User accounts with role, auth_provider, is_active
+- `products` — Product catalog with pricing, stock, SEO
+- `categories` — Hierarchical categories (self-referencing)
+- `brands` — Product brands
+- `customers` — Customer profiles
+- `orders` / `order_items` — Order management
+- `cart` — Shopping cart (session or user-based, with `saved_for_later`)
+- `wishlists` — User wishlists
+- `coupons` — Discount codes
+- `reviews` — Product reviews
+- `inventory_logs` — Stock movement tracking
+- `payments` — Payment records
+- `notifications` — User notifications
+- `audit_logs` — Action audit trail
+- `banners` — Homepage banners
+- `gallery` — Gallery images
+- `contact_messages` — Contact form submissions
+- `product_images` — Product image gallery
+- `addresses` — Saved user addresses
+- `settings` — Key-value app settings
+
+SQLite database is stored at `./data/aquarium.db` with WAL mode enabled.
+
+## UI Design
+
+The frontend uses a premium glassmorphism design with:
+
+- Blue, aqua, teal, and white color palette
+- Glass cards with backdrop-filter blur
+- Gradient overlays and soft shadows
+- Rounded corners throughout
+- Smooth scroll and fade-in animations
+- Button ripple effects
+- Loading skeleton placeholders
+- Hero carousel with gradient overlay
+- Horizontal scroll categories with snap-scroll
+- Centralized image configuration block in `views/index.ejs`
+- Fully responsive (desktop, tablet, mobile)
+- Dark/light mode toggle with localStorage persistence
 
 ## License
 
-Private - Aquarium Anpara
+Private — Aquarium Anpara

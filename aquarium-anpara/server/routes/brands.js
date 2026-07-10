@@ -1,40 +1,63 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const brands = db.prepare(`SELECT b.*, (SELECT COUNT(*) FROM products WHERE brand_id = b.id AND is_active = 1) as product_count
-      FROM brands b WHERE b.is_active = 1 ORDER BY b.name`).all();
-    res.json({ brands });
+    const brands = await prisma.brands.findMany({
+      where: { is_active: 1 },
+      include: {
+        _count: {
+          select: {
+            products: { where: { is_active: 1 } }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json({
+      brands: brands.map(b => ({
+        ...b,
+        product_count: b._count.products,
+        _count: undefined
+      }))
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, (req, res) => {
+router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { name, logo, description } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     let finalSlug = slug, counter = 1;
-    while (db.prepare('SELECT id FROM brands WHERE slug = ?').get(finalSlug)) finalSlug = `${slug}-${counter++}`;
-    const result = db.prepare('INSERT INTO brands (name, slug, logo, description) VALUES (?, ?, ?, ?)').run(name, finalSlug, logo, description);
-    res.status(201).json({ brand: db.prepare('SELECT * FROM brands WHERE id = ?').get(result.lastInsertRowid) });
+    while (await prisma.brands.findUnique({ where: { slug: finalSlug }, select: { id: true } })) finalSlug = `${slug}-${counter++}`;
+    const result = await prisma.brands.create({
+      data: { name, slug: finalSlug, logo, description }
+    });
+    res.status(201).json({ brand: await prisma.brands.findUnique({ where: { id: result.id } }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, (req, res) => {
+router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
+    const paramId = Number(req.params.id);
     const { name, logo, description, is_active } = req.body;
-    db.prepare('UPDATE brands SET name=COALESCE(?,name), logo=COALESCE(?,logo), description=COALESCE(?,description), is_active=COALESCE(?,is_active) WHERE id=?')
-      .run(name, logo, description, is_active !== undefined ? (is_active ? 1 : 0) : null, req.params.id);
-    res.json({ brand: db.prepare('SELECT * FROM brands WHERE id = ?').get(req.params.id) });
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (logo !== undefined) data.logo = logo;
+    if (description !== undefined) data.description = description;
+    if (is_active !== undefined) data.is_active = is_active ? 1 : 0;
+    await prisma.brands.update({ where: { id: paramId }, data });
+    res.json({ brand: await prisma.brands.findUnique({ where: { id: paramId } }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
-    db.prepare('UPDATE products SET brand_id = NULL WHERE brand_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM brands WHERE id = ?').run(req.params.id);
+    const paramId = Number(req.params.id);
+    await prisma.products.updateMany({ where: { brand_id: paramId }, data: { brand_id: null } });
+    await prisma.brands.delete({ where: { id: paramId } });
     res.json({ message: 'Brand deleted' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

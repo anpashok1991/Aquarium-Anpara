@@ -9,8 +9,10 @@
     "seed": "node server/seed.js"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^12.2.0",
+    "better-sqlite3": "^12.11.1",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -23,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.1",
     "pdfkit": "^0.15.0",
+    "prisma": "^7.8.0",
     "uuid": "^11.0.0"
   },
   "allowScripts": {

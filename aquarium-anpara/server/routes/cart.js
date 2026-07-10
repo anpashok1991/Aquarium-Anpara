@@ -1,23 +1,65 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, optionalAuth } = require('../middleware/auth');
 
 const getSessionId = (req) => req.headers['x-session-id'] || req.query.session || 'guest';
 
-router.get('/', optionalAuth, (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     const userId = req.user?.id;
     let items;
     if (userId) {
-      items = db.prepare(`SELECT c.*, p.name, p.slug, p.price, p.discount_price, p.stock_quantity, p.is_active,
-        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? AND c.saved_for_later = 0 ORDER BY c.created_at DESC`).all(userId);
+      const cartItems = await prisma.cart.findMany({
+        where: { user_id: userId, saved_for_later: 0 },
+        include: {
+          products: {
+            include: {
+              product_images: { where: { is_primary: 1 }, take: 1, select: { image_url: true } }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+      items = cartItems.map(c => {
+        const { products, ...cartFields } = c;
+        return {
+          ...cartFields,
+          name: products.name,
+          slug: products.slug,
+          price: products.price,
+          discount_price: products.discount_price,
+          stock_quantity: products.stock_quantity,
+          is_active: products.is_active,
+          image: products.product_images[0]?.image_url || null
+        };
+      });
     } else {
-      items = db.prepare(`SELECT c.*, p.name, p.slug, p.price, p.discount_price, p.stock_quantity, p.is_active,
-        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? AND c.user_id IS NULL AND c.saved_for_later = 0 ORDER BY c.created_at DESC`).all(sessionId);
+      const cartItems = await prisma.cart.findMany({
+        where: { session_id: sessionId, user_id: null, saved_for_later: 0 },
+        include: {
+          products: {
+            include: {
+              product_images: { where: { is_primary: 1 }, take: 1, select: { image_url: true } }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+      items = cartItems.map(c => {
+        const { products, ...cartFields } = c;
+        return {
+          ...cartFields,
+          name: products.name,
+          slug: products.slug,
+          price: products.price,
+          discount_price: products.discount_price,
+          stock_quantity: products.stock_quantity,
+          is_active: products.is_active,
+          image: products.product_images[0]?.image_url || null
+        };
+      });
     }
     let subtotal = 0;
     items.forEach(item => {
@@ -29,105 +71,168 @@ router.get('/', optionalAuth, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/add', optionalAuth, (req, res) => {
+router.post('/add', optionalAuth, async (req, res) => {
   try {
     const { product_id, quantity = 1 } = req.body;
     const sessionId = getSessionId(req);
     const userId = req.user?.id;
-    const product = db.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1').get(product_id);
+    const product = await prisma.products.findFirst({ where: { id: product_id, is_active: 1 } });
     if (!product) return res.status(404).json({ error: 'Product not found' });
     if (product.stock_quantity < quantity) return res.status(400).json({ error: 'Insufficient stock' });
 
     let existing;
     if (userId) {
-      existing = db.prepare('SELECT * FROM cart WHERE user_id = ? AND product_id = ? AND saved_for_later = 0').get(userId, product_id);
+      existing = await prisma.cart.findFirst({
+        where: { user_id: userId, product_id, saved_for_later: 0 }
+      });
     } else {
-      existing = db.prepare('SELECT * FROM cart WHERE session_id = ? AND user_id IS NULL AND product_id = ? AND saved_for_later = 0').get(sessionId, product_id);
+      existing = await prisma.cart.findFirst({
+        where: { session_id: sessionId, user_id: null, product_id, saved_for_later: 0 }
+      });
     }
 
     if (existing) {
       const newQty = existing.quantity + quantity;
       if (newQty > product.stock_quantity) return res.status(400).json({ error: 'Insufficient stock' });
-      db.prepare('UPDATE cart SET quantity = ? WHERE id = ?').run(newQty, existing.id);
+      await prisma.cart.update({ where: { id: existing.id }, data: { quantity: newQty } });
     } else {
-      db.prepare('INSERT INTO cart (session_id, user_id, product_id, quantity) VALUES (?, ?, ?, ?)').run(sessionId, userId || null, product_id, quantity);
+      await prisma.cart.create({
+        data: { session_id: sessionId, user_id: userId || null, product_id, quantity }
+      });
     }
     res.json({ message: 'Added to cart' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', optionalAuth, (req, res) => {
+router.put('/:id', optionalAuth, async (req, res) => {
   try {
     const { quantity } = req.body;
-    const item = db.prepare('SELECT c.*, p.stock_quantity FROM cart c JOIN products p ON c.product_id = p.id WHERE c.id = ?').get(req.params.id);
+    const item = await prisma.cart.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { products: { select: { stock_quantity: true } } }
+    });
     if (!item) return res.status(404).json({ error: 'Cart item not found' });
-    if (quantity > item.stock_quantity) return res.status(400).json({ error: 'Insufficient stock' });
+    if (quantity > item.products.stock_quantity) return res.status(400).json({ error: 'Insufficient stock' });
     if (quantity <= 0) {
-      db.prepare('DELETE FROM cart WHERE id = ?').run(req.params.id);
+      await prisma.cart.delete({ where: { id: item.id } });
     } else {
-      db.prepare('UPDATE cart SET quantity = ? WHERE id = ?').run(quantity, req.params.id);
+      await prisma.cart.update({ where: { id: item.id }, data: { quantity } });
     }
     res.json({ message: 'Cart updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', optionalAuth, (req, res) => {
+router.delete('/:id', optionalAuth, async (req, res) => {
   try {
-    db.prepare('DELETE FROM cart WHERE id = ?').run(req.params.id);
+    await prisma.cart.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Removed from cart' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/saved', optionalAuth, (req, res) => {
+router.get('/saved', optionalAuth, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     const userId = req.user?.id;
     let items;
     if (userId) {
-      items = db.prepare(`SELECT c.*, p.name, p.slug, p.price, p.discount_price, p.stock_quantity, p.is_active,
-        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? AND c.saved_for_later = 1 ORDER BY c.created_at DESC`).all(userId);
+      const cartItems = await prisma.cart.findMany({
+        where: { user_id: userId, saved_for_later: 1 },
+        include: {
+          products: {
+            include: {
+              product_images: { where: { is_primary: 1 }, take: 1, select: { image_url: true } }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+      items = cartItems.map(c => {
+        const { products, ...cartFields } = c;
+        return {
+          ...cartFields,
+          name: products.name,
+          slug: products.slug,
+          price: products.price,
+          discount_price: products.discount_price,
+          stock_quantity: products.stock_quantity,
+          is_active: products.is_active,
+          image: products.product_images[0]?.image_url || null
+        };
+      });
     } else {
-      items = db.prepare(`SELECT c.*, p.name, p.slug, p.price, p.discount_price, p.stock_quantity, p.is_active,
-        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
-        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? AND c.user_id IS NULL AND c.saved_for_later = 1 ORDER BY c.created_at DESC`).all(sessionId);
+      const cartItems = await prisma.cart.findMany({
+        where: { session_id: sessionId, user_id: null, saved_for_later: 1 },
+        include: {
+          products: {
+            include: {
+              product_images: { where: { is_primary: 1 }, take: 1, select: { image_url: true } }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+      items = cartItems.map(c => {
+        const { products, ...cartFields } = c;
+        return {
+          ...cartFields,
+          name: products.name,
+          slug: products.slug,
+          price: products.price,
+          discount_price: products.discount_price,
+          stock_quantity: products.stock_quantity,
+          is_active: products.is_active,
+          image: products.product_images[0]?.image_url || null
+        };
+      });
     }
     items.forEach(item => { item.unit_price = item.discount_price > 0 ? item.discount_price : item.price; });
     res.json({ items });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/save-later/:id', optionalAuth, (req, res) => {
+router.post('/save-later/:id', optionalAuth, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     if (req.user) {
-      db.prepare('UPDATE cart SET saved_for_later = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+      await prisma.cart.updateMany({
+        where: { id: Number(req.params.id), user_id: req.user.id },
+        data: { saved_for_later: 1 }
+      });
     } else {
-      db.prepare('UPDATE cart SET saved_for_later = 1 WHERE id = ? AND session_id = ? AND user_id IS NULL').run(req.params.id, sessionId);
+      await prisma.cart.updateMany({
+        where: { id: Number(req.params.id), session_id: sessionId, user_id: null },
+        data: { saved_for_later: 1 }
+      });
     }
     res.json({ message: 'Saved for later' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/move-to-cart/:id', optionalAuth, (req, res) => {
+router.post('/move-to-cart/:id', optionalAuth, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     if (req.user) {
-      db.prepare('UPDATE cart SET saved_for_later = 0 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+      await prisma.cart.updateMany({
+        where: { id: Number(req.params.id), user_id: req.user.id },
+        data: { saved_for_later: 0 }
+      });
     } else {
-      db.prepare('UPDATE cart SET saved_for_later = 0 WHERE id = ? AND session_id = ? AND user_id IS NULL').run(req.params.id, sessionId);
+      await prisma.cart.updateMany({
+        where: { id: Number(req.params.id), session_id: sessionId, user_id: null },
+        data: { saved_for_later: 0 }
+      });
     }
     res.json({ message: 'Moved to cart' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/clear', optionalAuth, (req, res) => {
+router.post('/clear', optionalAuth, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     if (req.user) {
-      db.prepare('DELETE FROM cart WHERE user_id = ?').run(req.user.id);
+      await prisma.cart.deleteMany({ where: { user_id: req.user.id } });
     } else {
-      db.prepare('DELETE FROM cart WHERE session_id = ? AND user_id IS NULL').run(sessionId);
+      await prisma.cart.deleteMany({ where: { session_id: sessionId, user_id: null } });
     }
     res.json({ message: 'Cart cleared' });
   } catch (e) { res.status(500).json({ error: e.message }); }

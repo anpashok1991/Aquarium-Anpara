@@ -1,35 +1,54 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const prisma = require('../database');
 const { auth, adminOnly } = require('../middleware/auth');
 
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
-    const notifications = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50').all(req.user.id);
-    const unread = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(req.user.id).count;
+    const notifications = await prisma.notifications.findMany({
+      where: { user_id: req.user.id },
+      orderBy: { created_at: 'desc' },
+      take: 50
+    });
+    const unread = await prisma.notifications.count({
+      where: { user_id: req.user.id, is_read: 0 }
+    });
     res.json({ notifications, unread });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/read', auth, (req, res) => {
+router.put('/:id/read', auth, async (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    await prisma.notifications.updateMany({
+      where: { id: Number(req.params.id), user_id: req.user.id },
+      data: { is_read: 1 }
+    });
     res.json({ message: 'Marked as read' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/read-all', auth, (req, res) => {
+router.put('/read-all', auth, async (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(req.user.id);
+    await prisma.notifications.updateMany({
+      where: { user_id: req.user.id },
+      data: { is_read: 1 }
+    });
     res.json({ message: 'All marked as read' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, (req, res) => {
+router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { user_id, title, message, type } = req.body;
-    const result = db.prepare('INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)').run(user_id, title, message, type || 'info');
-    res.status(201).json({ notification: db.prepare('SELECT * FROM notifications WHERE id = ?').get(result.lastInsertRowid) });
+    const notification = await prisma.notifications.create({
+      data: {
+        user_id,
+        title,
+        message,
+        type: type || 'info'
+      }
+    });
+    res.status(201).json({ notification });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
