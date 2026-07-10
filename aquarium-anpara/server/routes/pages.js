@@ -9,12 +9,14 @@ router.get('/', async (req, res) => {
       prisma.products.findMany({ where: { is_active: 1, is_featured: 1 }, orderBy: { sold_count: 'desc' }, take: 8, include: { product_images: { where: { is_primary: 1 }, take: 1 } } }),
       prisma.products.findMany({ where: { is_active: 1, is_best_seller: 1 }, orderBy: { sold_count: 'desc' }, take: 8, include: { product_images: { where: { is_primary: 1 }, take: 1 } } }),
       prisma.products.findMany({ where: { is_active: 1, is_new_arrival: 1 }, orderBy: { created_at: 'desc' }, take: 8, include: { product_images: { where: { is_primary: 1 }, take: 1 } } }),
-      prisma.categories.findMany({ where: { is_active: 1, parent_id: null }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }], take: 12 }),
+      prisma.categories.findMany({ where: { is_active: 1, parent_id: null }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
       prisma.banners.findMany({ where: { is_active: 1 }, orderBy: { sort_order: 'asc' } }),
       prisma.reviews.findMany({ where: { is_approved: 1 }, orderBy: { created_at: 'desc' }, take: 6, include: { products: { select: { name: true } } } })
     ]);
     const catWithCount = await Promise.all(categories.map(async c => {
-      const product_count = await prisma.products.count({ where: { category_id: c.id, is_active: 1 } });
+      const subIds = await prisma.categories.findMany({ where: { parent_id: c.id, is_active: 1 }, select: { id: true } });
+      const ids = [c.id, ...subIds.map(s => s.id)];
+      const product_count = await prisma.products.count({ where: { category_id: { in: ids }, is_active: 1 } });
       return { ...c, product_count };
     }));
     const featuredMapped = featured.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
@@ -30,7 +32,7 @@ router.get('/about', (req, res) => { res.render('about', { title: 'About Us' });
 router.get('/shop', async (req, res) => {
   try {
     const [categories, brands] = await Promise.all([
-      prisma.categories.findMany({ where: { is_active: 1, parent_id: null }, orderBy: { name: 'asc' } }),
+      prisma.categories.findMany({ where: { is_active: 1 }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
       prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } })
     ]);
     res.render('shop', { title: 'Shop', categories, brands, selectedCategory: '' });
@@ -72,7 +74,7 @@ router.get('/category/:slug', async (req, res) => {
     const category = await prisma.categories.findFirst({ where: { slug: req.params.slug } });
     if (!category) return res.status(404).render('error', { title: 'Not Found', error: 'Category not found' });
     const [categories, brands] = await Promise.all([
-      prisma.categories.findMany({ where: { is_active: 1, parent_id: null }, orderBy: { name: 'asc' } }),
+      prisma.categories.findMany({ where: { is_active: 1 }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
       prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } })
     ]);
     res.render('shop', { title: category.name, categories, brands, selectedCategory: req.params.slug });
@@ -97,7 +99,7 @@ router.get('/admin/products', requireAdminPage, (req, res) => { res.render('admi
 router.get('/admin/products/new', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Add Product', product: null }); });
 router.get('/admin/products/edit/:id', requireAdminPage, async (req, res) => {
   try {
-    const product = await prisma.products.findFirst({ where: { id: Number(req.params.id) }, include: { product_images: { where: { is_primary: 1 }, take: 1 } } });
+    const product = await prisma.products.findFirst({ where: { id: Number(req.params.id) }, include: { product_images: { orderBy: { sort_order: 'asc' } } } });
     if (!product) return res.redirect('/admin/products');
     const p = { ...product, primary_image: product.product_images[0]?.image_url || null };
     res.render('admin/product-form', { title: 'Edit Product', product: p, productId: req.params.id });

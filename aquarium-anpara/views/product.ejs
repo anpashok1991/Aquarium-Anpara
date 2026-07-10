@@ -16,10 +16,17 @@
         <img id="mainImage" src="<%= product.images && product.images[0] ? product.images[0].image_url : '/images/no-image.png' %>" 
              alt="<%= product.name %>" class="img-fluid rounded" onerror="this.style.display='none'">
       </div>
+      <% if (product.video_url) { %>
+      <div class="mb-3">
+        <div class="ratio ratio-16x9 rounded overflow-hidden">
+          <iframe src="<%= product.video_url %>" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+      <% } %>
       <% if (product.images && product.images.length > 1) { %>
       <div class="d-flex gap-2 flex-wrap">
         <% product.images.forEach(img => { %>
-        <img src="<%= img.image_url %>" class="rounded" style="width:80px;height:80px;object-fit:cover;cursor:pointer;border:2px solid transparent"
+        <img src="<%= img.image_url %>" class="rounded thumb-img" style="width:80px;height:80px;object-fit:cover;cursor:pointer;border:2px solid transparent"
              onclick="document.getElementById('mainImage').src=this.src;document.querySelectorAll('.thumb-img').forEach(t=>t.style.borderColor='transparent');this.style.borderColor='var(--primary)'"
              onerror="this.style.display='none'" alt="thumb">
         <% }) %>
@@ -146,6 +153,34 @@ function changeQty(delta) {
   const newVal = parseInt(input.value) + delta;
   if (newVal >= 1 && newVal <= parseInt(input.max || 999)) input.value = newVal;
 }
+(function() {
+  const container = document.querySelector('.product-detail-img');
+  const img = container?.querySelector('img');
+  if (!container || !img) return;
+  const lens = document.createElement('div');
+  lens.className = 'zoom-lens';
+  container.appendChild(lens);
+  let lensBg = '';
+  function updateZoom(e) {
+    const rect = container.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    lens.style.backgroundImage = lensBg;
+    lens.style.backgroundSize = rect.width * 2.5 + 'px ' + rect.height * 2.5 + 'px';
+    lens.style.backgroundPosition = -x * rect.width * 1.5 + 'px ' + -y * rect.height * 1.5 + 'px';
+  }
+  img.addEventListener('load', function() { lensBg = 'url(' + this.src + ')'; });
+  if (img.complete) lensBg = 'url(' + img.src + ')';
+  container.addEventListener('mouseenter', () => container.classList.add('zoomed'));
+  container.addEventListener('mouseleave', () => container.classList.remove('zoomed'));
+  container.addEventListener('mousemove', updateZoom);
+  document.querySelectorAll('.thumb-img').forEach(t => {
+    t.addEventListener('click', function() {
+      lensBg = 'url(' + this.src + ')';
+      lens.style.backgroundImage = lensBg;
+    });
+  });
+})();
 </script>
 
 <%- include('partials/footer') %>

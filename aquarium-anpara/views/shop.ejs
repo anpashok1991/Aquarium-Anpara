@@ -27,7 +27,7 @@
             <select class="form-select" id="categoryFilter">
               <option value="">All Categories</option>
               <% categories.forEach(cat => { %>
-              <option value="<%= cat.slug %>"><%= cat.name %></option>
+              <option value="<%= cat.slug %>"><%- cat.parent_id ? '&nbsp;&nbsp;&nbsp;' : '' %><%= cat.name %></option>
               <% }) %>
             </select>
           </div>

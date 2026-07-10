@@ -26,8 +26,16 @@ router.get('/', async (req, res) => {
     else if (sort === 'newest') orderBy = { created_at: 'desc' };
 
     const offset = (Number(page) - 1) * Number(limit);
-    const categoryFilter = category ? { categories: { slug: category } } : {};
     const brandFilter = brand ? { brands: { slug: brand } } : {};
+    let categoryFilter = {};
+    if (category) {
+      const cat = await prisma.categories.findFirst({ where: { slug: category } });
+      if (cat) {
+        const subIds = await prisma.categories.findMany({ where: { parent_id: cat.id, is_active: 1 }, select: { id: true } });
+        const ids = [cat.id, ...subIds.map(s => s.id)];
+        categoryFilter = { category_id: { in: ids } };
+      }
+    }
 
     const [products, total] = await Promise.all([
       prisma.products.findMany({
@@ -185,7 +193,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
     const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id,
-      stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description } = req.body;
+      stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, images, video_url } = req.body;
 
     const data = {};
     if (name !== undefined) data.name = name;
@@ -207,9 +215,22 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     if (is_active !== undefined) data.is_active = is_active ? 1 : 0;
     if (meta_title !== undefined) data.meta_title = meta_title;
     if (meta_description !== undefined) data.meta_description = meta_description;
+    if (video_url !== undefined) data.video_url = video_url;
     data.updated_at = new Date();
 
     const product = await prisma.products.update({ where: { id: Number(req.params.id) }, data });
+
+    if (images !== undefined) {
+      await prisma.product_images.deleteMany({ where: { product_id: product.id } });
+      if (images.length) {
+        await prisma.product_images.createMany({
+          data: images.map((img, i) => ({
+            product_id: product.id, image_url: img.url || img, is_primary: i === 0 ? 1 : 0, sort_order: i
+          }))
+        });
+      }
+    }
+
     res.json({ product });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

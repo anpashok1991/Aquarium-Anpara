@@ -18,7 +18,15 @@
         <div class="col-md-4"><label class="form-label">Barcode</label><input type="text" class="form-control" id="barcode"></div>
         <div class="col-md-4"><label class="form-label">Low Stock Threshold</label><input type="number" class="form-control" id="lowStock" value="5"></div>
         <div class="col-md-4"><label class="form-label">Weight (kg)</label><input type="number" class="form-control" id="weight" step="0.01" value="0"></div>
-        <div class="col-md-4"><label class="form-label">Product Image</label><input type="file" class="form-control" id="imageFile" accept="image/*"><div id="imagePreview" class="mt-2"></div><input type="hidden" id="imageUrl"></div>
+        <div class="col-md-4"><label class="form-label">Product Video URL</label><input type="url" class="form-control" id="videoUrl" placeholder="https://www.youtube.com/embed/..."><small class="text-muted">YouTube embed URL or any direct video URL</small></div>
+        <div class="col-12"><label class="form-label">Product Images <small class="text-muted">(first image is primary, drag to reorder)</small></label>
+          <div class="d-flex flex-wrap gap-2 mb-2" id="imageList"></div>
+          <div class="d-flex gap-2">
+            <input type="file" class="form-control" id="imageFile" accept="image/*" multiple>
+            <input type="url" class="form-control" id="imageUrlInput" placeholder="Or enter image URL" style="max-width:300px">
+            <button type="button" class="btn btn-outline-secondary" onclick="addImageUrl()"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
         <div class="col-12">
           <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="isFeatured"><label class="form-check-label">Featured</label></div>
           <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" id="isBestSeller"><label class="form-check-label">Best Seller</label></div>
@@ -37,6 +45,9 @@
 </div>
 <script>
 const product = <%- JSON.stringify(product || null) %>;
+let pendingImages = [];
+let deletedImageIds = [];
+
 async function loadForm() {
   const [cData, bData] = await Promise.all([api('/categories'), api('/brands')]);
   const catSel = document.getElementById('category');
@@ -56,6 +67,7 @@ async function loadForm() {
     document.getElementById('barcode').value = product.barcode || '';
     document.getElementById('lowStock').value = product.low_stock_threshold || 5;
     document.getElementById('weight').value = product.weight || 0;
+    document.getElementById('videoUrl').value = product.video_url || '';
     if (product.category_id) catSel.value = product.category_id;
     if (product.brand_id) brandSel.value = product.brand_id;
     document.getElementById('isFeatured').checked = !!product.is_featured;
@@ -64,13 +76,47 @@ async function loadForm() {
     document.getElementById('isActive').checked = product.is_active !== 0;
     document.getElementById('metaTitle').value = product.meta_title || '';
     document.getElementById('metaDesc').value = product.meta_description || '';
-    if (product.primary_image) {
-      document.getElementById('imagePreview').innerHTML = `<img src="${product.primary_image}" style="max-height:100px;border-radius:8px">`;
+    if (product.product_images && product.product_images.length) {
+      product.product_images.forEach(img => addImagePreview(img.image_url, true));
     }
   }
 }
+
+function addImagePreview(url, existing = false) {
+  const list = document.getElementById('imageList');
+  const div = document.createElement('div');
+  div.className = 'position-relative';
+  div.style.cssText = 'width:100px;height:100px;cursor:grab';
+  div.draggable = true;
+  div.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;border:2px solid #dee2e6" onerror="this.parentElement.remove()">
+    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" style="border-radius:50%;padding:2px 6px;font-size:10px;transform:translate(25%,-25%)" onclick="this.parentElement.remove()">&times;</button>
+    <div class="position-absolute bottom-0 start-0 end-0 text-center" style="font-size:10px;background:rgba(0,0,0,0.5);color:#fff;border-radius:0 0 8px 8px">${existing ? 'saved' : 'new'}</div>`;
+  div.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', Array.from(list.children).indexOf(div)); });
+  div.addEventListener('dragover', e => { e.preventDefault(); const after = Array.from(list.children).find(c => c !== div && c.getBoundingClientRect().left > e.clientX); list.insertBefore(div, after || null); });
+  list.appendChild(div);
+}
+
+document.getElementById('imageFile').addEventListener('change', async function() {
+  for (const file of this.files) {
+    const url = await uploadFile(file, 'products');
+    pendingImages.push(url);
+    addImagePreview(url);
+  }
+  this.value = '';
+});
+
+function addImageUrl() {
+  const input = document.getElementById('imageUrlInput');
+  if (!input.value.trim()) return;
+  addImagePreview(input.value.trim());
+  input.value = '';
+}
+
 document.getElementById('productForm').addEventListener('submit', async(e) => {
   e.preventDefault();
+  const imageItems = document.querySelectorAll('#imageList img');
+  const images = [];
+  imageItems.forEach(img => images.push({ url: img.src }));
   const body = {
     name: document.getElementById('name').value,
     description: document.getElementById('description').value,
@@ -91,16 +137,10 @@ document.getElementById('productForm').addEventListener('submit', async(e) => {
     is_active: document.getElementById('isActive').checked,
     meta_title: document.getElementById('metaTitle').value,
     meta_description: document.getElementById('metaDesc').value,
+    video_url: document.getElementById('videoUrl').value || null,
+    images
   };
   try {
-    const fileInput = document.getElementById('imageFile');
-    if (fileInput.files.length > 0) {
-      const url = await uploadFile(fileInput.files[0], 'products');
-      body.images = [{ url }];
-    } else {
-      const imgUrl = document.getElementById('imageUrl').value;
-      if (imgUrl) body.images = [{ url: imgUrl }];
-    }
     if (product) { await api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify(body) }); }
     else { await api('/products', { method: 'POST', body: JSON.stringify(body) }); }
     showToast('Product saved!');

@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 
 // Ensure uploads directories exist
 const uploadsDir = path.join(__dirname, 'uploads');
-['products', 'banners', 'gallery', 'settings', 'categories', 'general'].forEach(dir => {
+['products', 'banners', 'gallery', 'settings', 'categories', 'general', 'videos'].forEach(dir => {
   const p = path.join(uploadsDir, dir);
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });

@@ -253,6 +253,7 @@ model products {
   sold_count          Int?             @default(0)
   meta_title          String?
   meta_description    String?
+  video_url           String?
   created_at          DateTime?        @default(now())
   updated_at          DateTime?        @default(now())
   cart                cart[]
