@@ -115,15 +115,15 @@
   <nav class="navbar navbar-expand-lg navbar-light bg-white" id="mainNavbar">
     <div class="container">
       <a class="navbar-brand" href="/">
-        <i class="fas fa-fish"></i> <%= shopName %>
+        <i class="fas fa-fish"></i> <span class="brand-text"><%= shopName %></span>
       </a>
-      <div class="d-flex align-items-center gap-1 d-lg-none">
-        <a href="/cart" class="nav-icon position-relative" title="Cart">
+      <div class="d-flex align-items-center d-lg-none ms-auto">
+        <a href="/cart" class="nav-icon position-relative me-2" title="Cart">
           <i class="fas fa-shopping-cart"></i>
           <span class="nav-badge cart-count">0</span>
         </a>
         <div class="dropdown auth-only" style="display:none">
-          <a class="nav-link dropdown-toggle px-1" href="#" data-bs-toggle="dropdown">
+          <a class="nav-link dropdown-toggle p-1" href="#" data-bs-toggle="dropdown">
             <i class="fas fa-user-circle fs-5"></i>
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
@@ -136,9 +136,8 @@
           </ul>
         </div>
         <div class="guest-only">
-          <a href="/login" class="btn btn-outline-primary btn-sm px-2">Login</a>
+          <a href="/login" class="btn btn-outline-primary btn-sm px-1 py-0 me-1">Login</a>
         </div>
-        <span id="headerPincodeMobile" class="text-muted small ms-1 d-none d-sm-inline"></span>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
           <span class="navbar-toggler-icon"></span>
         </button>
