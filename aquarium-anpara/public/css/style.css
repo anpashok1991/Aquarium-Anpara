@@ -975,6 +975,24 @@ img { max-width: 100%; height: auto; }
   background: var(--light);
   padding: 0.3rem;
 }
+.cart-item input[type="number"] {
+  border: 1px solid #dee2e6;
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.3rem;
+  -moz-appearance: textfield;
+}
+.cart-item input[type="number"]::-webkit-inner-spin-button,
+.cart-item input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.saved-item {
+  opacity: 0.85;
+  background: rgba(255,255,255,0.5);
+}
+.saved-item:hover {
+  opacity: 1;
+}
 
 /* Glass Card */
 .glass-card {

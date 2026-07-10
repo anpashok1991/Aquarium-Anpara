@@ -125,6 +125,7 @@ function showManualForm() {
 async function loadCheckout() {
   try {
     const [cartData, addrData] = await Promise.all([api('/cart'), api('/addresses')]);
+    if (!cartData.items.length) { window.location.href = '/cart'; return; }
     cartItems = cartData.items;
     subtotal = cartData.subtotal;
     savedAddresses = addrData.addresses || [];
@@ -161,7 +162,7 @@ async function loadCheckout() {
       }
     }
     renderSummary();
-  } catch (e) { window.location.href = '/cart'; }
+  } catch (e) { showToast(e.message || 'Failed to load checkout', 'error'); }
 }
 
 function renderSummary() {

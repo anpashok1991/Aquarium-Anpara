@@ -78,16 +78,45 @@ router.delete('/:id', optionalAuth, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/save-later/:id', auth, (req, res) => {
+router.get('/saved', optionalAuth, (req, res) => {
   try {
-    db.prepare('UPDATE cart SET saved_for_later = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    const sessionId = getSessionId(req);
+    const userId = req.user?.id;
+    let items;
+    if (userId) {
+      items = db.prepare(`SELECT c.*, p.name, p.slug, p.price, p.discount_price, p.stock_quantity, p.is_active,
+        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
+        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? AND c.saved_for_later = 1 ORDER BY c.created_at DESC`).all(userId);
+    } else {
+      items = db.prepare(`SELECT c.*, p.name, p.slug, p.price, p.discount_price, p.stock_quantity, p.is_active,
+        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
+        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? AND c.user_id IS NULL AND c.saved_for_later = 1 ORDER BY c.created_at DESC`).all(sessionId);
+    }
+    items.forEach(item => { item.unit_price = item.discount_price > 0 ? item.discount_price : item.price; });
+    res.json({ items });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/save-later/:id', optionalAuth, (req, res) => {
+  try {
+    const sessionId = getSessionId(req);
+    if (req.user) {
+      db.prepare('UPDATE cart SET saved_for_later = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    } else {
+      db.prepare('UPDATE cart SET saved_for_later = 1 WHERE id = ? AND session_id = ? AND user_id IS NULL').run(req.params.id, sessionId);
+    }
     res.json({ message: 'Saved for later' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/move-to-cart/:id', auth, (req, res) => {
+router.post('/move-to-cart/:id', optionalAuth, (req, res) => {
   try {
-    db.prepare('UPDATE cart SET saved_for_later = 0 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    const sessionId = getSessionId(req);
+    if (req.user) {
+      db.prepare('UPDATE cart SET saved_for_later = 0 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    } else {
+      db.prepare('UPDATE cart SET saved_for_later = 0 WHERE id = ? AND session_id = ? AND user_id IS NULL').run(req.params.id, sessionId);
+    }
     res.json({ message: 'Moved to cart' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

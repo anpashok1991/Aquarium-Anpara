@@ -11,6 +11,12 @@
         <p class="text-muted">Start adding products to your cart</p>
         <a href="/shop" class="btn btn-primary">Continue Shopping</a>
       </div>
+
+      <!-- Saved for Later -->
+      <div id="savedSection" class="mt-4" style="display:none">
+        <h5 class="fw-bold mb-3"><i class="fas fa-clock me-2 text-muted"></i>Saved for Later</h5>
+        <div id="savedItems"></div>
+      </div>
     </div>
     <div class="col-lg-4">
       <div class="glass-card p-4">
@@ -20,7 +26,7 @@
         <div class="d-flex justify-content-between mb-3"><span>Discount</span><span id="discount" class="text-danger">-₹0</span></div>
         <hr>
         <div class="d-flex justify-content-between fw-bold fs-5 mb-3"><span>Total</span><span id="total">₹0</span></div>
-        
+
         <div class="mb-3">
           <div class="input-group">
             <input type="text" class="form-control" id="couponCode" placeholder="Coupon code">
@@ -41,6 +47,7 @@
 <script>
 let cartData = { items: [], subtotal: 0 };
 let appliedCoupon = null;
+let savedItems = [];
 
 async function loadCart() {
   try {
@@ -52,6 +59,7 @@ async function loadCart() {
       localStorage.removeItem('coupon');
     }
     renderCart();
+    loadSavedItems();
   } catch (e) { console.error(e); }
 }
 
@@ -71,13 +79,14 @@ function renderCart() {
         ${item.discount_price > 0 ? `<span class="text-muted text-decoration-line-through ms-2">₹${item.price.toLocaleString()}</span>` : ''}
         ${item.stock_quantity <= 5 ? `<span class="badge bg-warning text-dark ms-2">Only ${item.stock_quantity} left</span>` : ''}
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-outline-secondary btn-sm" onclick="updateCartItem(${item.id}, ${item.quantity - 1})">-</button>
-        <span class="fw-bold">${item.quantity}</span>
+      <div class="d-flex align-items-center gap-1">
+        <button class="btn btn-outline-secondary btn-sm" onclick="updateCartItem(${item.id}, ${item.quantity - 1})">−</button>
+        <input type="number" class="form-control form-control-sm text-center" style="width:55px" value="${item.quantity}" min="1" max="${item.stock_quantity}" onchange="updateCartItem(${item.id}, +this.value || 1)" onfocus="this.select()">
         <button class="btn btn-outline-secondary btn-sm" onclick="updateCartItem(${item.id}, ${item.quantity + 1})">+</button>
       </div>
-      <div class="text-end" style="min-width:80px">
+      <div class="text-end" style="min-width:90px">
         <strong>₹${(item.item_total || item.unit_price * item.quantity).toLocaleString()}</strong>
+        <br><button class="btn btn-link text-muted btn-sm p-0" onclick="saveForLater(${item.id})"><small>Save for later</small></button>
         <br><button class="btn btn-link text-danger btn-sm p-0" onclick="removeFromCart(${item.id})"><small>Remove</small></button>
       </div>
     </div>
@@ -96,6 +105,14 @@ function updateSummary() {
   document.getElementById('total').textContent = '₹' + (cartData.subtotal - discount + delivery).toLocaleString();
 }
 
+async function updateCartItem(itemId, qty) {
+  if (qty < 1) qty = 1;
+  try {
+    await api(`/cart/${itemId}`, { method: 'PUT', body: JSON.stringify({ quantity: qty }) });
+    if (typeof loadCart === 'function') loadCart();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
 async function applyCoupon() {
   const code = document.getElementById('couponCode').value.trim();
   if (!code) return;
@@ -106,6 +123,46 @@ async function applyCoupon() {
     localStorage.setItem('coupon', JSON.stringify({ code: appliedCoupon.code, discount: appliedCoupon.discount }));
     updateSummary();
   } catch (e) { document.getElementById('couponMsg').textContent = e.message; document.getElementById('couponMsg').className = 'text-danger'; appliedCoupon = null; localStorage.removeItem('coupon'); updateSummary(); }
+}
+
+async function saveForLater(itemId) {
+  try {
+    await api(`/cart/save-later/${itemId}`, { method: 'POST' });
+    showToast('Saved for later');
+    loadCart();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function loadSavedItems() {
+  try {
+    const data = await api('/cart/saved');
+    savedItems = data.items || [];
+    const section = document.getElementById('savedSection');
+    const container = document.getElementById('savedItems');
+    if (!savedItems.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    container.innerHTML = savedItems.map(item => `
+      <div class="cart-item saved-item">
+        <img src="${item.image || '/images/no-image.png'}" alt="${item.name}" onerror="this.style.display='none'">
+        <div class="flex-grow-1">
+          <h6 class="mb-1"><a href="/product/${item.slug}" class="text-decoration-none">${item.name}</a></h6>
+          <span class="text-primary fw-bold">₹${(item.unit_price || item.price).toLocaleString()}</span>
+        </div>
+        <div class="text-end" style="min-width:90px">
+          <button class="btn btn-sm btn-outline-primary mb-1" onclick="moveToCart(${item.id})">Move to Cart</button>
+          <br><button class="btn btn-link text-danger btn-sm p-0" onclick="removeFromCart(${item.id})"><small>Remove</small></button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function moveToCart(itemId) {
+  try {
+    await api(`/cart/move-to-cart/${itemId}`, { method: 'POST' });
+    showToast('Moved to cart');
+    loadCart();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 document.addEventListener('DOMContentLoaded', loadCart);

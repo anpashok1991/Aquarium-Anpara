@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { auth } = require('../middleware/auth');
+const { auth, optionalAuth } = require('../middleware/auth');
 
-router.get('/', auth, (req, res) => {
+router.get('/', optionalAuth, (req, res) => {
   try {
+    if (!req.user) return res.json({ addresses: [] });
     const addresses = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at DESC').all(req.user.id);
     res.json({ addresses });
   } catch (e) { res.status(500).json({ error: e.message }); }
