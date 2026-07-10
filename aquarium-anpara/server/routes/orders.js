@@ -236,7 +236,13 @@ router.put('/:id/status', auth, adminOnly, async (req, res) => {
     const data = { updated_at: new Date() };
     if (order_status) data.order_status = order_status;
     if (payment_status) data.payment_status = payment_status;
-    if (order_status || payment_status) {
+    if (order_status === 'delivered' || order_status === 'completed') {
+      const current = await prisma.orders.findFirst({ where: { id: Number(req.params.id) }, select: { payment_method: true, payment_status: true } });
+      if (current && current.payment_method === 'cod' && current.payment_status !== 'paid') {
+        data.payment_status = 'paid';
+      }
+    }
+    if (Object.keys(data).length > 1) {
       await prisma.orders.update({
         where: { id: Number(req.params.id) },
         data
