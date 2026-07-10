@@ -3,6 +3,15 @@ const router = express.Router();
 const prisma = require('../database');
 const { requireAdminPage } = require('../middleware/auth');
 
+function buildBreadcrumb(items) {
+  return items.map((item, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "name": item.name,
+    "item": item.url
+  }));
+}
+
 router.get('/', async (req, res) => {
   try {
     const [featured, bestSellers, newArrivals, categories, banners, reviews] = await Promise.all([
@@ -23,11 +32,27 @@ router.get('/', async (req, res) => {
     const bestMapped = bestSellers.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
     const newMapped = newArrivals.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
     const reviewsMapped = reviews.map(r => { const o = { ...r, product_name: r.products?.name }; delete o.products; return o; });
-    res.render('index', { title: 'Home', featured: featuredMapped, bestSellers: bestMapped, newArrivals: newMapped, categories: catWithCount, banners, reviews: reviewsMapped });
-  } catch (e) { res.render('index', { title: 'Home', featured: [], bestSellers: [], newArrivals: [], categories: [], banners: [], reviews: [] }); }
+    const seo = {
+      title: 'Home',
+      description: `${res.locals.shopName} - Premium pet and aquarium store in Anpara. Shop aquarium fish, dogs, cats, birds, pet food, aquarium supplies, decorations, and accessories with doorstep delivery.`,
+      keywords: 'aquarium shop Anpara, pet store, aquarium fish, tropical fish, pet supplies, aquarium tanks, fish food, pet food, aquarium plants, aquarium accessories, pet store near me',
+      breadcrumb: buildBreadcrumb([{ name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' }])
+    };
+    res.render('index', { title: 'Home', seo, featured: featuredMapped, bestSellers: bestMapped, newArrivals: newMapped, categories: catWithCount, banners, reviews: reviewsMapped });
+  } catch (e) { res.render('index', { title: 'Home', seo: { title: 'Home' }, featured: [], bestSellers: [], newArrivals: [], categories: [], banners: [], reviews: [] }); }
 });
 
-router.get('/about', (req, res) => { res.render('about', { title: 'About Us' }); });
+router.get('/about', (req, res) => {
+  const seo = {
+    title: 'About Us',
+    description: `Learn more about ${res.locals.shopName} - your trusted pet and aquarium store in Anpara. Discover our story, mission, and commitment to quality pet care and aquarium supplies.`,
+    breadcrumb: buildBreadcrumb([
+      { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+      { name: 'About Us', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/about' }
+    ])
+  };
+  res.render('about', { title: 'About Us', seo });
+});
 
 router.get('/shop', async (req, res) => {
   try {
@@ -35,8 +60,16 @@ router.get('/shop', async (req, res) => {
       prisma.categories.findMany({ where: { is_active: 1 }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
       prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } })
     ]);
-    res.render('shop', { title: 'Shop', categories, brands, selectedCategory: '' });
-  } catch (e) { res.render('shop', { title: 'Shop', categories: [], brands: [], selectedCategory: '' }); }
+    const seo = {
+      title: 'Shop',
+      description: `Browse our wide selection of pet and aquarium products at ${res.locals.shopName}. Shop aquarium fish, pet food, accessories, medicines, decorations, and more with easy online ordering and doorstep delivery.`,
+      breadcrumb: buildBreadcrumb([
+        { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+        { name: 'Shop', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/shop' }
+      ])
+    };
+    res.render('shop', { title: 'Shop', seo, categories, brands, selectedCategory: '' });
+  } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], selectedCategory: '' }); }
 });
 
 router.get('/product/:slug', async (req, res) => {
@@ -48,12 +81,36 @@ router.get('/product/:slug', async (req, res) => {
         brands: { select: { name: true } }
       }
     });
-    if (!product) return res.status(404).render('error', { title: 'Not Found', error: 'Product not found' });
+    if (!product) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found', robots: 'noindex' }, error: 'Product not found' });
     const [images, reviews, related] = await Promise.all([
       prisma.product_images.findMany({ where: { product_id: product.id }, orderBy: [{ is_primary: 'desc' }, { sort_order: 'asc' }] }),
       prisma.reviews.findMany({ where: { product_id: product.id, is_approved: 1 }, orderBy: { created_at: 'desc' }, include: { users: { select: { name: true } } } }),
       prisma.products.findMany({ where: { category_id: product.category_id, id: { not: product.id }, is_active: 1 }, take: 4, include: { product_images: { where: { is_primary: 1 }, take: 1 } } })
     ]);
+    const primaryImage = images.find(i => i.is_primary)?.image_url || images[0]?.image_url || null;
+    const productSeo = {
+      name: product.name,
+      description: (product.meta_description || product.description || '').replace(/<[^>]*>/g, '').substring(0, 200),
+      sku: product.sku || '',
+      brand: product.brands?.name || '',
+      images: images.length ? images.map(i => 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + i.image_url) : ['/images/no-image.png'],
+      slug: product.slug,
+      price: product.discount_price > 0 ? product.discount_price : product.price,
+      stock: product.stock_quantity
+    };
+    const seo = {
+      title: product.meta_title || product.name,
+      description: (product.meta_description || product.description || '').replace(/<[^>]*>/g, '').substring(0, 200),
+      og_image: primaryImage,
+      og_type: 'product',
+      keywords: `${product.name}, ${product.categories?.name || ''}, buy ${product.name} online, aquarium products, pet supplies`,
+      product: productSeo,
+      breadcrumb: buildBreadcrumb([
+        { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+        { name: product.categories?.name || 'Shop', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + (product.categories?.slug ? '/category/' + product.categories.slug : '/shop') },
+        { name: product.name, url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/product/' + product.slug }
+      ])
+    };
     const productData = {
       ...product,
       category_name: product.categories?.name,
@@ -65,58 +122,160 @@ router.get('/product/:slug', async (req, res) => {
     };
     delete productData.categories;
     delete productData.brands;
-    res.render('product', { title: product.name, product: productData });
-  } catch (e) { res.status(500).render('error', { title: 'Error', error: e.message }); }
+    res.render('product', { title: product.name, seo, product: productData });
+  } catch (e) { res.status(500).render('error', { title: 'Error', seo: { title: 'Error' }, error: e.message }); }
 });
 
 router.get('/category/:slug', async (req, res) => {
   try {
     const category = await prisma.categories.findFirst({ where: { slug: req.params.slug } });
-    if (!category) return res.status(404).render('error', { title: 'Not Found', error: 'Category not found' });
+    if (!category) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found', robots: 'noindex' }, error: 'Category not found' });
     const [categories, brands] = await Promise.all([
       prisma.categories.findMany({ where: { is_active: 1 }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
       prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } })
     ]);
-    res.render('shop', { title: category.name, categories, brands, selectedCategory: req.params.slug });
-  } catch (e) { res.render('shop', { title: 'Shop', categories: [], brands: [], selectedCategory: '' }); }
+    const seo = {
+      title: category.name,
+      description: `Shop ${category.name} at ${res.locals.shopName}. ${category.description || `Browse our collection of ${category.name} products with easy online ordering and doorstep delivery.`}`,
+      keywords: `${category.name}, buy ${category.name} online, ${category.name} products, aquarium shop, pet supplies`,
+      og_image: category.image || null,
+      breadcrumb: buildBreadcrumb([
+        { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+        { name: 'Shop', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/shop' },
+        { name: category.name, url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/category/' + category.slug }
+      ])
+    };
+    res.render('shop', { title: category.name, seo, categories, brands, selectedCategory: req.params.slug });
+  } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], selectedCategory: '' }); }
 });
 
-router.get('/cart', (req, res) => { res.render('cart', { title: 'Shopping Cart' }); });
-router.get('/checkout', (req, res) => { res.render('checkout', { title: 'Checkout' }); });
-router.get('/order-confirmation/:orderNumber', (req, res) => { res.render('order-confirmation', { title: 'Order Confirmed', orderNumber: req.params.orderNumber }); });
-router.get('/orders', (req, res) => { res.render('orders', { title: 'My Orders' }); });
-router.get('/orders/:orderNumber', (req, res) => { res.render('order-detail', { title: 'Order Details', orderNumber: req.params.orderNumber }); });
-router.get('/profile', (req, res) => { res.render('profile', { title: 'My Profile' }); });
-router.get('/wishlist', (req, res) => { res.render('wishlist', { title: 'Wishlist' }); });
-router.get('/gallery', (req, res) => { res.render('gallery', { title: 'Gallery' }); });
-router.get('/contact', (req, res) => { res.render('contact', { title: 'Contact Us' }); });
-router.get('/login', (req, res) => { res.render('login', { title: 'Login' }); });
-router.get('/register', (req, res) => { res.render('register', { title: 'Register' }); });
-router.get('/track-order', (req, res) => { res.render('track-order', { title: 'Track Order' }); });
+router.get('/cart', (req, res) => {
+  const seo = { title: 'Shopping Cart', robots: 'noindex' };
+  res.render('cart', { title: 'Shopping Cart', seo });
+});
+router.get('/checkout', (req, res) => {
+  const seo = { title: 'Checkout', robots: 'noindex' };
+  res.render('checkout', { title: 'Checkout', seo });
+});
+router.get('/order-confirmation/:orderNumber', (req, res) => {
+  const seo = { title: 'Order Confirmed', robots: 'noindex' };
+  res.render('order-confirmation', { title: 'Order Confirmed', seo, orderNumber: req.params.orderNumber });
+});
+router.get('/orders', (req, res) => {
+  const seo = { title: 'My Orders', robots: 'noindex' };
+  res.render('orders', { title: 'My Orders', seo });
+});
+router.get('/orders/:orderNumber', (req, res) => {
+  const seo = { title: 'Order Details', robots: 'noindex' };
+  res.render('order-detail', { title: 'Order Details', seo, orderNumber: req.params.orderNumber });
+});
+router.get('/profile', (req, res) => {
+  const seo = { title: 'My Profile', robots: 'noindex' };
+  res.render('profile', { title: 'My Profile', seo });
+});
+router.get('/wishlist', (req, res) => {
+  const seo = { title: 'Wishlist', robots: 'noindex' };
+  res.render('wishlist', { title: 'Wishlist', seo });
+});
+router.get('/gallery', (req, res) => {
+  const seo = {
+    title: 'Gallery',
+    description: `Browse our photo gallery at ${res.locals.shopName}. See our aquarium setups, pets, products, and customer highlights.`,
+    breadcrumb: buildBreadcrumb([
+      { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+      { name: 'Gallery', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/gallery' }
+    ])
+  };
+  res.render('gallery', { title: 'Gallery', seo });
+});
+router.get('/contact', (req, res) => {
+  const seo = {
+    title: 'Contact Us',
+    description: `Get in touch with ${res.locals.shopName}. Visit our store in Anpara, call us, or send us a message. We're here to help with all your pet and aquarium needs.`,
+    breadcrumb: buildBreadcrumb([
+      { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+      { name: 'Contact Us', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/contact' }
+    ])
+  };
+  res.render('contact', { title: 'Contact Us', seo });
+});
+router.get('/login', (req, res) => {
+  const seo = { title: 'Login', robots: 'noindex' };
+  res.render('login', { title: 'Login', seo });
+});
+router.get('/register', (req, res) => {
+  const seo = { title: 'Register', robots: 'noindex' };
+  res.render('register', { title: 'Register', seo });
+});
+router.get('/track-order', (req, res) => {
+  const seo = {
+    title: 'Track Order',
+    description: `Track your order at ${res.locals.shopName}. Enter your order number to check the status and delivery updates.`,
+    breadcrumb: buildBreadcrumb([
+      { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
+      { name: 'Track Order', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/track-order' }
+    ])
+  };
+  res.render('track-order', { title: 'Track Order', seo });
+});
 
-router.get('/admin', requireAdminPage, (req, res) => { res.render('admin/dashboard', { title: 'Admin Dashboard' }); });
-router.get('/admin/products', requireAdminPage, (req, res) => { res.render('admin/products', { title: 'Manage Products' }); });
-router.get('/admin/products/new', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Add Product', product: null }); });
+// Sitemap
+router.get('/sitemap.xml', async (req, res) => {
+  try {
+    const domain = res.locals.shopDomain || 'aquarium-anpara.com';
+    const [products, categories] = await Promise.all([
+      prisma.products.findMany({ where: { is_active: 1 }, select: { slug: true, updated_at: true } }),
+      prisma.categories.findMany({ where: { is_active: 1 }, select: { slug: true } })
+    ]);
+    const staticPages = ['/', '/shop', '/about', '/gallery', '/contact', '/track-order'];
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    staticPages.forEach(p => {
+      xml += `  <url><loc>https://${domain}${p}</loc><priority>${p === '/' ? '1.0' : '0.8'}</priority></url>\n`;
+    });
+    categories.forEach(c => {
+      xml += `  <url><loc>https://${domain}/category/${c.slug}</loc><priority>0.7</priority></url>\n`;
+    });
+    products.forEach(p => {
+      xml += `  <url><loc>https://${domain}/product/${p.slug}</loc><priority>0.6</priority><lastmod>${(p.updated_at || new Date()).toISOString()}</lastmod></url>\n`;
+    });
+    xml += '</urlset>';
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (e) {
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
+// robots.txt
+router.get('/robots.txt', (req, res) => {
+  const domain = res.locals.shopDomain || 'aquarium-anpara.com';
+  res.header('Content-Type', 'text/plain');
+  res.send(`User-agent: *\nAllow: /\nSitemap: https://${domain}/sitemap.xml\n`);
+});
+
+router.get('/admin', requireAdminPage, (req, res) => { res.render('admin/dashboard', { title: 'Admin Dashboard', seo: { robots: 'noindex' } }); });
+router.get('/admin/products', requireAdminPage, (req, res) => { res.render('admin/products', { title: 'Manage Products', seo: { robots: 'noindex' } }); });
+router.get('/admin/products/new', requireAdminPage, (req, res) => { res.render('admin/product-form', { title: 'Add Product', seo: { robots: 'noindex' }, product: null }); });
 router.get('/admin/products/edit/:id', requireAdminPage, async (req, res) => {
   try {
     const product = await prisma.products.findFirst({ where: { id: Number(req.params.id) }, include: { product_images: { orderBy: { sort_order: 'asc' } } } });
     if (!product) return res.redirect('/admin/products');
     const p = { ...product, primary_image: product.product_images[0]?.image_url || null };
-    res.render('admin/product-form', { title: 'Edit Product', product: p, productId: req.params.id });
+    res.render('admin/product-form', { title: 'Edit Product', seo: { robots: 'noindex' }, product: p, productId: req.params.id });
   } catch (e) { res.redirect('/admin/products'); }
 });
-router.get('/admin/categories', requireAdminPage, (req, res) => { res.render('admin/categories', { title: 'Manage Categories' }); });
-router.get('/admin/brands', requireAdminPage, (req, res) => { res.render('admin/brands', { title: 'Manage Brands' }); });
-router.get('/admin/orders', requireAdminPage, (req, res) => { res.render('admin/orders', { title: 'Manage Orders' }); });
-router.get('/admin/customers', requireAdminPage, (req, res) => { res.render('admin/customers', { title: 'Manage Customers' }); });
-router.get('/admin/inventory', requireAdminPage, (req, res) => { res.render('admin/inventory', { title: 'Inventory Management' }); });
-router.get('/admin/coupons', requireAdminPage, (req, res) => { res.render('admin/coupons', { title: 'Manage Coupons' }); });
-router.get('/admin/reviews', requireAdminPage, (req, res) => { res.render('admin/reviews', { title: 'Manage Reviews' }); });
-router.get('/admin/reports', requireAdminPage, (req, res) => { res.render('admin/reports', { title: 'Reports' }); });
-router.get('/admin/banners', requireAdminPage, (req, res) => { res.render('admin/banners', { title: 'Manage Banners' }); });
-router.get('/admin/gallery', requireAdminPage, (req, res) => { res.render('admin/gallery', { title: 'Manage Gallery' }); });
-router.get('/admin/settings', requireAdminPage, (req, res) => { res.render('admin/settings', { title: 'Settings' }); });
-router.get('/admin/messages', requireAdminPage, (req, res) => { res.render('admin/messages', { title: 'Contact Messages' }); });
-router.get('/admin/users', requireAdminPage, (req, res) => { res.render('admin/users', { title: 'Manage Users' }); });
+router.get('/admin/categories', requireAdminPage, (req, res) => { res.render('admin/categories', { title: 'Manage Categories', seo: { robots: 'noindex' } }); });
+router.get('/admin/brands', requireAdminPage, (req, res) => { res.render('admin/brands', { title: 'Manage Brands', seo: { robots: 'noindex' } }); });
+router.get('/admin/orders', requireAdminPage, (req, res) => { res.render('admin/orders', { title: 'Manage Orders', seo: { robots: 'noindex' } }); });
+router.get('/admin/customers', requireAdminPage, (req, res) => { res.render('admin/customers', { title: 'Manage Customers', seo: { robots: 'noindex' } }); });
+router.get('/admin/inventory', requireAdminPage, (req, res) => { res.render('admin/inventory', { title: 'Inventory Management', seo: { robots: 'noindex' } }); });
+router.get('/admin/coupons', requireAdminPage, (req, res) => { res.render('admin/coupons', { title: 'Manage Coupons', seo: { robots: 'noindex' } }); });
+router.get('/admin/reviews', requireAdminPage, (req, res) => { res.render('admin/reviews', { title: 'Manage Reviews', seo: { robots: 'noindex' } }); });
+router.get('/admin/reports', requireAdminPage, (req, res) => { res.render('admin/reports', { title: 'Reports', seo: { robots: 'noindex' } }); });
+router.get('/admin/banners', requireAdminPage, (req, res) => { res.render('admin/banners', { title: 'Manage Banners', seo: { robots: 'noindex' } }); });
+router.get('/admin/gallery', requireAdminPage, (req, res) => { res.render('admin/gallery', { title: 'Manage Gallery', seo: { robots: 'noindex' } }); });
+router.get('/admin/settings', requireAdminPage, (req, res) => { res.render('admin/settings', { title: 'Settings', seo: { robots: 'noindex' } }); });
+router.get('/admin/messages', requireAdminPage, (req, res) => { res.render('admin/messages', { title: 'Contact Messages', seo: { robots: 'noindex' } }); });
+router.get('/admin/users', requireAdminPage, (req, res) => { res.render('admin/users', { title: 'Manage Users', seo: { robots: 'noindex' } }); });
 
 module.exports = router;

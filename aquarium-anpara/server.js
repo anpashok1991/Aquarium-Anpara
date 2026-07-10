@@ -116,6 +116,10 @@ app.use(async (req, res, next) => {
     res.locals.whatsappNumber = s.whatsapp_number || process.env.WHATSAPP_NUMBER || '';
     res.locals.minOrderFreeDelivery = s.min_order_free_delivery || '500';
     res.locals.deliveryCharge = s.delivery_charge || '50';
+    res.locals.googleVerification = s.google_verification || '';
+    res.locals.gaId = s.ga_id || '';
+    res.locals.fbPixel = s.fb_pixel || '';
+    res.locals.metaKeywords = s.meta_keywords || '';
   } catch (e) {
     res.locals.shopName = process.env.SHOP_NAME || 'Aquarium Anpara';
     res.locals.shopPhone = process.env.SHOP_PHONE || '';
@@ -124,6 +128,10 @@ app.use(async (req, res, next) => {
     res.locals.whatsappNumber = process.env.WHATSAPP_NUMBER || '';
     res.locals.minOrderFreeDelivery = '500';
     res.locals.deliveryCharge = '50';
+    res.locals.googleVerification = '';
+    res.locals.gaId = '';
+    res.locals.fbPixel = '';
+    res.locals.metaKeywords = '';
   }
   res.locals.googleClientId = process.env.GOOGLE_CLIENT_ID || '';
   res.locals.user = req.user || null;
