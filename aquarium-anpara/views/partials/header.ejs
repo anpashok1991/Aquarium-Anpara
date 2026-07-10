@@ -115,7 +115,12 @@
   <nav class="navbar navbar-expand-lg navbar-light bg-white" id="mainNavbar">
     <div class="container">
       <a class="navbar-brand" href="/">
-        <i class="fas fa-fish"></i> <span class="brand-text"><%= shopName %></span>
+        <% if (shopLogo) { %>
+        <img src="<%= shopLogo %>" alt="<%= shopName %>" class="brand-logo">
+        <% } else { %>
+        <i class="fas fa-fish"></i>
+        <% } %>
+        <span class="brand-text"><%= shopName %></span>
       </a>
       <div class="d-flex align-items-center d-lg-none ms-auto">
         <a href="/cart" class="nav-icon position-relative me-2" title="Cart">

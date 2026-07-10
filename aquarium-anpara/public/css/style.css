@@ -8,7 +8,7 @@
   --teal: #20c997;
   --ocean: #006994;
   --dark: #212529;
-  --light: #f8f9fa;
+  --light: #f0f6fc;
   --white: #ffffff;
   --gray: #6c757d;
   --gray-light: #dee2e6;
@@ -45,6 +45,21 @@ body {
   color: var(--dark);
   line-height: 1.6;
   overflow-x: hidden;
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.04) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(13,202,240,0.04) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(32,201,151,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+.container, .container-fluid, footer, nav, .admin-content, .modal, .offcanvas, .dropdown-menu, .toast {
+  position: relative;
+  z-index: 1;
 }
 
 a { text-decoration: none; color: inherit; transition: var(--transition); }
@@ -64,11 +79,21 @@ img { max-width: 100%; height: auto; }
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .navbar-brand i {
   -webkit-text-fill-color: initial;
   color: var(--aqua);
-  margin-right: 4px;
+}
+.brand-logo {
+  height: 40px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  -webkit-text-fill-color: initial;
+  border-radius: 4px;
 }
 .navbar {
   padding: 0.6rem 0;
@@ -1211,6 +1236,7 @@ img { max-width: 100%; height: auto; }
   .navbar { padding-top: 0.4rem; padding-bottom: 0.4rem; }
   .navbar-brand { max-width: 50%; overflow: hidden; font-size: 1rem; }
   .navbar-brand .brand-text { display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; vertical-align: middle; }
+  .brand-logo { height: 32px; max-width: 120px; }
 }
 
 @media (max-width: 767px) {

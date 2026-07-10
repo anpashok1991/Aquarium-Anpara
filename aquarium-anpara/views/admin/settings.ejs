@@ -10,7 +10,16 @@
         <div class="col-md-6"><label class="form-label">Shop Email</label><input type="email" class="form-control" id="shopEmail"></div>
         <div class="col-md-6"><label class="form-label">WhatsApp Number</label><input type="text" class="form-control" id="whatsappNumber"></div>
         <div class="col-12"><label class="form-label">Shop Address</label><textarea class="form-control" id="shopAddress" rows="2"></textarea></div>
-        <div class="col-md-6"><label class="form-label">Shop Logo</label><input type="file" class="form-control" id="shopLogoFile" accept="image/*"><div id="logoPreview" class="mt-2"></div><input type="hidden" id="shopLogo"></div>
+        <div class="col-md-6"><label class="form-label">Shop Logo</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="file" class="form-control" id="shopLogoFile" accept="image/*" onchange="previewLogoFile(this)">
+            <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeLogo()" title="Remove logo"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="d-flex align-items-center gap-3 mt-2" id="logoPreviewWrap" style="display:none">
+            <img src="" id="logoPreviewImg" style="height:40px;width:auto;max-width:160px;object-fit:contain;border-radius:4px;border:1px solid var(--gray-light)">
+            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="document.getElementById('shopLogoFile').click()">Change</button>
+          </div>
+          <input type="hidden" id="shopLogo"></div>
         <div class="col-md-6"><label class="form-label">Free Delivery Min Order (₹)</label><input type="number" class="form-control" id="minOrder"></div>
         <div class="col-md-6"><label class="form-label">Delivery Charge (₹)</label><input type="number" class="form-control" id="deliveryCharge"></div>
         <div class="col-12"><hr><h5 class="fw-bold">SEO Settings</h5></div>
@@ -24,7 +33,30 @@
   </div>
 </div>
 <script>
-async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';if(s.shop_logo){document.getElementById('logoPreview').innerHTML=`<img src="${s.shop_logo}" style="max-height:60px;border-radius:4px" onerror="this.style.display='none'">`;}}catch(e){}}
+function showLogoPreview(url) {
+  const wrap = document.getElementById('logoPreviewWrap');
+  const img = document.getElementById('logoPreviewImg');
+  if (url) {
+    img.src = url;
+    wrap.style.display = 'flex';
+    document.getElementById('shopLogo').value = url;
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('shopLogo').value = '';
+  }
+}
+function previewLogoFile(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => showLogoPreview(e.target.result);
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function removeLogo() {
+  document.getElementById('shopLogoFile').value = '';
+  showLogoPreview('');
+}
+async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';if(s.shop_logo){showLogoPreview(s.shop_logo);}}catch(e){}}
 async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}await api('/settings',{method:'PUT',body:JSON.stringify({shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value})});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
 document.addEventListener('DOMContentLoaded',loadSettings);
 </script>
