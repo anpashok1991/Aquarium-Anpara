@@ -57,7 +57,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
-.container, .container-fluid, footer, nav, .admin-content, .modal, .offcanvas, .dropdown-menu, .toast {
+.container, .container-fluid, footer, nav, .admin-content {
   position: relative;
   z-index: 1;
 }
