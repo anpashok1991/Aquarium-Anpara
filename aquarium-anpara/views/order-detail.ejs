@@ -109,34 +109,41 @@ async function loadItems() {
   } catch(e) {}
 }
 
-let reviewImages = [];
-
-function addReviewImage(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    reviewImages.push(e.target.result);
-    renderReviewPreview();
-  };
-  reader.readAsDataURL(file);
-}
-
-function removeReviewImage(index) {
-  reviewImages.splice(index, 1);
-  renderReviewPreview();
-}
-
-function renderReviewPreview() {
-  const container = document.getElementById('reviewImagePreview');
-  if (!container) return;
-  container.innerHTML = reviewImages.map((img, i) =>
-    `<div style="position:relative;display:inline-block;margin:4px">
-      <img src="${img}" style="height:60px;width:60px;object-fit:cover;border-radius:8px;border:1px solid #dee2e6">
-      <button type="button" style="position:absolute;top:-6px;right:-6px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:20px;text-align:center;cursor:pointer;padding:0" onclick="removeReviewImage(${i})">&times;</button>
-    </div>`
-  ).join('');
-}
-
-function getReviewForm(productId, productName) {
+function getReviewForm(productId, productName, existing) {
+  if (existing) {
+    const imgs = existing.images || [];
+    const starHtml = [1,2,3,4,5].map(s =>
+      `<i class="fas fa-star ${s <= existing.rating ? 'text-warning' : 'text-muted'}" data-star="${s}" style="cursor:pointer;font-size:1.3rem;margin-right:2px" onclick="setRating(${productId},${s})"></i>`
+    ).join('');
+    window._existingReviewImages = window._existingReviewImages || {};
+    window._existingReviewImages[productId] = (imgs || []).slice();
+    return `
+      <div class="border-top pt-3 mb-3" id="reviewForm-${productId}" data-review-id="${existing.id}">
+        <div class="mb-2 d-flex align-items-center gap-2">
+          <img src="/images/no-image.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+          <strong>${productName}</strong>
+          <span class="badge bg-success ms-2"><i class="fas fa-check me-1"></i>Reviewed</span>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Rating</label>
+          <div class="star-rating" id="stars-${productId}">${starHtml}</div>
+        </div>
+        <div class="mb-2">
+          <input type="text" class="form-control form-control-sm" id="reviewTitle-${productId}" placeholder="Review title (optional)" value="${existing.title || ''}">
+        </div>
+        <div class="mb-2">
+          <textarea class="form-control form-control-sm" id="reviewComment-${productId}" rows="2" placeholder="Share your experience with this product">${existing.comment || ''}</textarea>
+        </div>
+        <div class="mb-2">
+          <div id="existingImages-${productId}" class="d-flex gap-2 mb-2 flex-wrap">
+            ${imgs.map((img, i) => `<div style="position:relative;display:inline-block" data-img-index="${i}"><img src="${img}" style="height:50px;width:50px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6"><button type="button" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;cursor:pointer;padding:0" onclick="removeExistingImage(${productId},${i})">&times;</button></div>`).join('')}
+          </div>
+          <input type="file" class="form-control form-control-sm" accept="image/*" multiple onchange="handleReviewFiles(this, ${productId})">
+          <div id="reviewImagePreview-${productId}" class="mt-1"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="updateReview(${productId})"><i class="fas fa-save me-1"></i>Update Review</button>
+      </div>`;
+  }
   return `
     <div class="border-top pt-3 mb-3" id="reviewForm-${productId}">
       <div class="mb-2 d-flex align-items-center gap-2">
@@ -161,6 +168,20 @@ function getReviewForm(productId, productName) {
       </div>
       <button class="btn btn-primary btn-sm" onclick="submitReview(${productId})"><i class="fas fa-paper-plane me-1"></i>Submit Review</button>
     </div>`;
+}
+
+function removeExistingImage(productId, index) {
+  if (!window._existingReviewImages?.[productId]) return;
+  window._existingReviewImages[productId].splice(index, 1);
+  const container = document.getElementById(`existingImages-${productId}`);
+  if (!container) return;
+  const imgs = container.querySelectorAll('[data-img-index]');
+  let removed = 0;
+  imgs.forEach(el => {
+    const idx = parseInt(el.dataset.imgIndex);
+    if (idx === index) { el.remove(); removed = 1; }
+    else if (idx > index) el.dataset.imgIndex = idx - removed;
+  });
 }
 
 function handleReviewFiles(input, productId) {
@@ -219,8 +240,25 @@ async function submitReview(productId) {
   try {
     const body = { product_id: productId, rating, title, comment, images: images.length ? images : undefined };
     await api('/reviews', { method: 'POST', body: JSON.stringify(body) });
-    showToast('Review submitted! Awaiting approval.');
+    showToast('Review submitted!');
     document.getElementById(`reviewForm-${productId}`).innerHTML = '<p class="text-success small"><i class="fas fa-check-circle me-1"></i>Review submitted. Thank you!</p>';
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function updateReview(productId) {
+  const form = document.getElementById(`reviewForm-${productId}`);
+  const reviewId = form.dataset.reviewId;
+  const rating = currentRatings[productId];
+  if (!rating) { showToast('Please select a rating', 'error'); return; }
+  const title = document.getElementById(`reviewTitle-${productId}`).value;
+  const comment = document.getElementById(`reviewComment-${productId}`).value;
+  const existingImgs = window._existingReviewImages?.[productId] || [];
+  const newImgs = window._reviewFiles?.[productId] || [];
+  const images = [...existingImgs, ...newImgs];
+  try {
+    await api(`/reviews/${reviewId}`, { method: 'PUT', body: JSON.stringify({ rating, title, comment, images }) });
+    showToast('Review updated!');
+    form.innerHTML = '<p class="text-success small"><i class="fas fa-check-circle me-1"></i>Review updated successfully.</p>';
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -231,8 +269,14 @@ async function loadReviewForm() {
     const container = document.getElementById('reviewSection');
     if (!container) return;
     if (!items.length) { container.innerHTML = ''; return; }
+    const productIds = items.map(i => i.product_id);
+    let existingMap = {};
+    try {
+      const reviewData = await api('/reviews/my?product_ids=' + productIds.join(','));
+      (reviewData.reviews || []).forEach(r => { existingMap[r.product_id] = r; });
+    } catch(e) {}
     container.innerHTML = '<p class="text-muted small mb-3">Rate the products you received:</p>' +
-      items.map(i => getReviewForm(i.product_id, i.product_name)).join('');
+      items.map(i => getReviewForm(i.product_id, i.product_name, existingMap[i.product_id])).join('');
   } catch(e) {}
 }
 

@@ -39,6 +39,9 @@
 
 html { scroll-behavior: smooth; }
 #page-content { overflow-x: hidden; }
+@media (min-width: 992px) {
+  body.page-admin .navbar-brand { padding-left: 270px; }
+}
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
