@@ -170,6 +170,7 @@ app.use('/api/auth', require('./server/routes/auth'));
 app.use('/api/products', require('./server/routes/products'));
 app.use('/api/categories', require('./server/routes/categories'));
 app.use('/api/brands', require('./server/routes/brands'));
+app.use('/api/breeds', require('./server/routes/breeds'));
 app.use('/api/cart', require('./server/routes/cart'));
 app.use('/api/orders', require('./server/routes/orders'));
 app.use('/api/customers', require('./server/routes/customers'));

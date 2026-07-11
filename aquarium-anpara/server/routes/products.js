@@ -5,7 +5,7 @@ const { auth, adminOnly } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
   try {
-    const { search, category, brand, min_price, max_price, sort, page = 1, limit = 20, featured, best_seller, new_arrival, in_stock, on_sale } = req.query;
+    const { search, category, brand, breed, min_price, max_price, sort, page = 1, limit = 20, featured, best_seller, new_arrival, in_stock, on_sale } = req.query;
     const where = { is_active: 1 };
     if (search) where.OR = [{ name: { contains: search } }, { description: { contains: search } }];
     if (min_price) where.price = { ...where.price, gte: Number(min_price) };
@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
 
     const offset = (Number(page) - 1) * Number(limit);
     const brandFilter = brand ? { brands: { slug: brand } } : {};
+    const breedFilter = breed ? { breeds: { slug: breed } } : {};
     let categoryFilter = {};
     if (category) {
       const cat = await prisma.categories.findFirst({ where: { slug: category } });
@@ -39,27 +40,31 @@ router.get('/', async (req, res) => {
 
     const [products, total] = await Promise.all([
       prisma.products.findMany({
-        where: { ...where, ...categoryFilter, ...brandFilter },
+        where: { ...where, ...categoryFilter, ...brandFilter, ...breedFilter },
         orderBy,
         skip: offset,
         take: Number(limit),
         include: {
-          categories: { select: { name: true, slug: true } },
+          categories: { select: { name: true, slug: true, is_live: true } },
           brands: { select: { name: true, slug: true } },
+          breeds: { select: { name: true, slug: true } },
           product_images: { where: { is_primary: 1 }, take: 1 }
         }
       }),
-      prisma.products.count({ where: { ...where, ...categoryFilter, ...brandFilter } })
+      prisma.products.count({ where: { ...where, ...categoryFilter, ...brandFilter, ...breedFilter } })
     ]);
 
     const mapped = products.map(p => ({
       ...p,
       category_name: p.categories?.name,
       category_slug: p.categories?.slug,
+      is_live: p.categories?.is_live ? true : false,
       brand_name: p.brands?.name,
       brand_slug: p.brands?.slug,
+      breed_name: p.breeds?.name,
+      breed_slug: p.breeds?.slug,
       primary_image: p.product_images[0]?.image_url || null,
-      categories: undefined, brands: undefined, product_images: undefined
+      categories: undefined, brands: undefined, breeds: undefined, product_images: undefined
     }));
 
     res.json({ products: mapped, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
@@ -75,11 +80,12 @@ router.get('/featured', async (req, res) => {
       orderBy: { sold_count: 'desc' },
       take: 8,
       include: {
-        categories: { select: { name: true } },
+        categories: { select: { name: true, is_live: true } },
+        breeds: { select: { name: true } },
         product_images: { where: { is_primary: 1 }, take: 1 }
       }
     });
-    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, primary_image: p.product_images[0]?.image_url || null, categories: undefined, product_images: undefined })) });
+    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -90,11 +96,12 @@ router.get('/best-sellers', async (req, res) => {
       orderBy: { sold_count: 'desc' },
       take: 8,
       include: {
-        categories: { select: { name: true } },
+        categories: { select: { name: true, is_live: true } },
+        breeds: { select: { name: true } },
         product_images: { where: { is_primary: 1 }, take: 1 }
       }
     });
-    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, primary_image: p.product_images[0]?.image_url || null, categories: undefined, product_images: undefined })) });
+    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -105,11 +112,12 @@ router.get('/new-arrivals', async (req, res) => {
       orderBy: { created_at: 'desc' },
       take: 8,
       include: {
-        categories: { select: { name: true } },
+        categories: { select: { name: true, is_live: true } },
+        breeds: { select: { name: true } },
         product_images: { where: { is_primary: 1 }, take: 1 }
       }
     });
-    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, primary_image: p.product_images[0]?.image_url || null, categories: undefined, product_images: undefined })) });
+    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -118,8 +126,9 @@ router.get('/:slug', async (req, res) => {
     const product = await prisma.products.findFirst({
       where: { slug: req.params.slug, is_active: 1 },
       include: {
-        categories: { select: { name: true, slug: true } },
-        brands: { select: { name: true } }
+        categories: { select: { name: true, slug: true, is_live: true } },
+        brands: { select: { name: true } },
+        breeds: { select: { name: true } }
       }
     });
     if (!product) return res.status(404).json({ error: 'Product not found' });
@@ -138,20 +147,23 @@ router.get('/:slug', async (req, res) => {
       ...product,
       category_name: product.categories?.name,
       category_slug: product.categories?.slug,
+      is_live: product.categories?.is_live ? true : false,
       brand_name: product.brands?.name,
+      breed_name: product.breeds?.name,
       images,
       reviews: reviews.map(r => ({ ...r, user_name: r.users?.name })),
       related: related.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }))
     };
     delete result.categories;
     delete result.brands;
+    delete result.breeds;
     res.json({ product: result });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
-    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id,
+    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id, breed_id,
       stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, video_url, images } = req.body;
 
     let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -165,7 +177,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
       data: {
         name, slug: finalSlug, description, short_description, sku, barcode,
         price: price || 0, discount_price: discount_price || 0, cost_price: cost_price || 0,
-        category_id, brand_id, stock_quantity: stock_quantity || 0,
+        category_id, brand_id, breed_id, stock_quantity: stock_quantity || 0,
         low_stock_threshold: low_stock_threshold || 5, weight: weight || 0,
         is_featured: is_featured ? 1 : 0, is_best_seller: is_best_seller ? 1 : 0,
         is_new_arrival: is_new_arrival ? 1 : 0, is_active: is_active !== undefined ? (is_active ? 1 : 0) : 1,
@@ -193,7 +205,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
 
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
-    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id,
+    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id, breed_id,
       stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, images, video_url } = req.body;
 
     const data = {};
@@ -207,6 +219,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     if (cost_price !== undefined) data.cost_price = cost_price;
     if (category_id !== undefined) data.category_id = category_id;
     if (brand_id !== undefined) data.brand_id = brand_id;
+    if (breed_id !== undefined) data.breed_id = breed_id || null;
     if (stock_quantity !== undefined) data.stock_quantity = stock_quantity;
     if (low_stock_threshold !== undefined) data.low_stock_threshold = low_stock_threshold;
     if (weight !== undefined) data.weight = weight;

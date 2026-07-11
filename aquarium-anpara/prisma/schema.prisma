@@ -69,6 +69,17 @@ model cart {
   @@index([session_id], map: "idx_cart_session")
 }
 
+model breeds {
+  id         Int        @id @default(autoincrement())
+  name       String
+  slug       String     @unique
+  category_id Int?
+  is_active  Int?       @default(1)
+  created_at DateTime?  @default(now())
+  categories categories? @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  products   products[]
+}
+
 model categories {
   id               Int          @id @default(autoincrement())
   name             String
@@ -78,10 +89,12 @@ model categories {
   parent_id        Int?
   sort_order       Int?         @default(0)
   is_active        Int?         @default(1)
+  is_live          Int?         @default(0)
   created_at       DateTime?    @default(now())
   categories       categories?  @relation("categoriesTocategories", fields: [parent_id], references: [id], onUpdate: NoAction)
   other_categories categories[] @relation("categoriesTocategories")
   products         products[]
+  breeds           breeds[]
 }
 
 model contact_messages {
@@ -241,6 +254,7 @@ model products {
   cost_price          Float?           @default(0)
   category_id         Int?
   brand_id            Int?
+  breed_id            Int?
   stock_quantity      Int?             @default(0)
   low_stock_threshold Int?             @default(5)
   weight              Float?           @default(0)
@@ -261,6 +275,7 @@ model products {
   order_items         order_items[]
   product_images      product_images[]
   brands              brands?          @relation(fields: [brand_id], references: [id], onUpdate: NoAction)
+  breeds              breeds?          @relation(fields: [breed_id], references: [id], onUpdate: NoAction)
   categories          categories?      @relation(fields: [category_id], references: [id], onUpdate: NoAction)
   reviews             reviews[]
   wishlists           wishlists[]
@@ -268,6 +283,7 @@ model products {
   @@index([slug], map: "idx_products_slug")
   @@index([brand_id], map: "idx_products_brand")
   @@index([category_id], map: "idx_products_category")
+  @@index([breed_id], map: "idx_products_breed")
 }
 
 model reviews {

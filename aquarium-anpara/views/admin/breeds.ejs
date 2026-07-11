@@ -1,0 +1,75 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex align-items-center"><button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button><h3 class="fw-bold mb-0">Breeds</h3></div>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#breedModal" onclick="document.getElementById('breedId').value='';document.getElementById('breedName').value='';document.getElementById('breedCategory').value=''"><i class="fas fa-plus me-1"></i>Add Breed</button>
+    </div>
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <table class="table table-hover mb-0"><thead><tr><th>Name</th><th>Category</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="breedTable"></tbody></table>
+    </div></div>
+  </div>
+</div>
+<div class="modal fade" id="breedModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Add Breed</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="breedId">
+    <div class="mb-3"><label class="form-label">Name *</label><input type="text" class="form-control" id="breedName" required></div>
+    <div class="mb-3"><label class="form-label">Category</label>
+      <select class="form-select" id="breedCategory">
+        <option value="">-- Select --</option>
+        <% categories.forEach(c => { if (c.is_live) { %>
+        <option value="<%= c.id %>"><%= c.name %></option>
+        <% } }) %>
+      </select>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveBreed()">Save</button></div>
+</div></div></div>
+<script>
+async function loadBreeds() {
+  const data = await api('/breeds/all');
+  document.getElementById('breedTable').innerHTML = data.breeds.map(b => `
+  <tr>
+    <td><strong>${b.name}</strong></td>
+    <td>${b.category_name || '-'}</td>
+    <td>${b.product_count || 0}</td>
+    <td><span class="badge bg-${b.is_active?'success':'secondary'}">${b.is_active?'Active':'Inactive'}</span></td>
+    <td>
+      <button class="btn btn-sm btn-outline-primary" onclick="editBreed(${b.id},'${b.name.replace(/'/g,"\\'")}','${b.category_id||''}')"><i class="fas fa-edit"></i></button>
+      <button class="btn btn-sm btn-outline-danger" onclick="deleteBreed(${b.id})"><i class="fas fa-trash"></i></button>
+    </td>
+  </tr>`).join('');
+}
+function editBreed(id,name,categoryId){
+  document.getElementById('breedId').value=id;
+  document.getElementById('breedName').value=name;
+  document.getElementById('breedCategory').value=categoryId;
+  new bootstrap.Modal(document.getElementById('breedModal')).show();
+}
+async function saveBreed() {
+  const id = document.getElementById('breedId').value;
+  const body = {
+    name: document.getElementById('breedName').value,
+    category_id: document.getElementById('breedCategory').value || null
+  };
+  try {
+    if (id) await api(`/breeds/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    else await api('/breeds', { method: 'POST', body: JSON.stringify(body) });
+    bootstrap.Modal.getInstance(document.getElementById('breedModal')).hide();
+    showToast('Breed saved!'); loadBreeds();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function deleteBreed(id) { if(!confirm('Delete?'))return; try{await api(`/breeds/${id}`,{method:'DELETE'});showToast('Deleted');loadBreeds();}catch(e){showToast(e.message,'error');} }
+document.addEventListener('DOMContentLoaded', function() {
+  loadBreeds();
+  document.getElementById('breedModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('breedId').value='';
+    document.getElementById('breedName').value='';
+    document.getElementById('breedCategory').value='';
+  });
+});
+</script>
+<%- include('../partials/footer') %>

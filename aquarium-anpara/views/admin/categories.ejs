@@ -42,6 +42,7 @@
       <input type="url" class="form-control mt-1" id="catImageUrlDirect" placeholder="Or paste image URL here" oninput="previewDirectUrl(this.value)">
     </div>
     <div class="form-check"><input class="form-check-input" type="checkbox" id="catActive" checked><label class="form-check-label">Active</label></div>
+    <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="catLive"><label class="form-check-label">Live Animal Category <small class="text-muted">(shows breeds instead of brands)</small></label></div>
   </div>
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveCategory()">Save</button></div>
 </div></div></div>
@@ -51,6 +52,7 @@ function resetCatForm() {
   document.getElementById('catName').value = '';
   document.getElementById('catDesc').value = '';
   document.getElementById('catActive').checked = true;
+  document.getElementById('catLive').checked = false;
   document.getElementById('catImageUrl').value = '';
   document.getElementById('catImageUrlDirect').value = '';
   document.getElementById('catImageInput').value = '';
@@ -80,7 +82,7 @@ async function loadCategories() {
         ${c.image ? `<img src="${c.image}" alt="${c.name}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.parentElement.innerHTML='<span class=\\'text-muted\\' style=\\'font-size:0.8rem\\'>No img</span>'">`
           : '<span class="text-muted" style="font-size:0.8rem">No img</span>'}
       </td>
-      <td><strong>${c.name}</strong>${c.is_featured ? ' <span class="badge bg-warning text-dark">Featured</span>' : ''}</td>
+      <td><strong>${c.name}</strong>${c.is_featured ? ' <span class="badge bg-warning text-dark">Featured</span>' : ''}${c.is_live ? ' <span class="badge bg-info"><i class="fas fa-paw"></i> Live</span>' : ''}</td>
       <td>${c.slug}</td>
       <td>${c.parent_id ? data.flat.find(x=>x.id===c.parent_id)?.name || '-' : '-'}</td>
       <td>${c.product_count || 0}</td>
@@ -101,6 +103,7 @@ function editCategory(id) {
     document.getElementById('catDesc').value = c.description || '';
     document.getElementById('catParent').value = c.parent_id || '';
     document.getElementById('catActive').checked = !!c.is_active;
+    document.getElementById('catLive').checked = !!c.is_live;
     document.getElementById('catImageUrl').value = c.image || '';
     document.getElementById('catImageUrlDirect').value = c.image || '';
     const preview = document.getElementById('catImagePreview');
@@ -134,7 +137,8 @@ async function saveCategory() {
     description: document.getElementById('catDesc').value,
     image: imageUrl,
     parent_id: parseInt(document.getElementById('catParent').value) || null,
-    is_active: document.getElementById('catActive').checked
+    is_active: document.getElementById('catActive').checked,
+    is_live: document.getElementById('catLive').checked ? 1 : 0
   };
   try {
     if (id) await api(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) });

@@ -13,8 +13,9 @@
         <div class="col-md-3"><label class="form-label">Discount Price</label><input type="number" class="form-control" id="discountPrice" step="0.01"></div>
         <div class="col-md-3"><label class="form-label">Cost Price</label><input type="number" class="form-control" id="costPrice" step="0.01"></div>
         <div class="col-md-3"><label class="form-label">Stock *</label><input type="number" class="form-control" id="stock" value="0" required></div>
-        <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="category"></select></div>
-        <div class="col-md-4"><label class="form-label">Brand</label><select class="form-select" id="brand"></select></div>
+        <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="category" onchange="toggleBreedBrand()"></select></div>
+        <div class="col-md-4" id="brandField"><label class="form-label">Brand</label><select class="form-select" id="brand"></select></div>
+        <div class="col-md-4" id="breedField" style="display:none"><label class="form-label">Breed</label><select class="form-select" id="breed"></select></div>
         <div class="col-md-4"><label class="form-label">Barcode</label><input type="text" class="form-control" id="barcode"></div>
         <div class="col-md-4"><label class="form-label">Low Stock Threshold</label><input type="number" class="form-control" id="lowStock" value="5"></div>
         <div class="col-md-4"><label class="form-label">Weight (kg)</label><input type="number" class="form-control" id="weight" step="0.01" value="0"></div>
@@ -49,11 +50,22 @@ let pendingImages = [];
 let deletedImageIds = [];
 
 async function loadForm() {
-  const [cData, bData] = await Promise.all([api('/categories'), api('/brands')]);
+  const [cData, bData, breedData] = await Promise.all([api('/categories'), api('/brands'), api('/breeds')]);
   const catSel = document.getElementById('category');
   const brandSel = document.getElementById('brand');
-  cData.flat.forEach(c => catSel.add(new Option(c.name, c.id)));
+  const breedSel = document.getElementById('breed');
+  window._catLiveMap = {};
+  cData.flat.forEach(c => {
+    catSel.add(new Option(c.name, c.id));
+    window._catLiveMap[c.id] = c.is_live ? true : false;
+  });
   bData.brands.forEach(b => brandSel.add(new Option(b.name, b.id)));
+  breedData.breeds.forEach(b => breedSel.add(new Option(b.name, b.id)));
+  window._breedMap = {};
+  breedData.breeds.forEach(b => {
+    if (!window._breedMap[b.category_id]) window._breedMap[b.category_id] = {};
+    window._breedMap[b.category_id][b.name.toLowerCase()] = b.id;
+  });
   if (product) {
     document.getElementById('formTitle').textContent = 'Edit Product';
     document.getElementById('name').value = product.name || '';
@@ -70,6 +82,7 @@ async function loadForm() {
     document.getElementById('videoUrl').value = product.video_url || '';
     if (product.category_id) catSel.value = product.category_id;
     if (product.brand_id) brandSel.value = product.brand_id;
+    if (product.breed_id) breedSel.value = product.breed_id;
     document.getElementById('isFeatured').checked = !!product.is_featured;
     document.getElementById('isBestSeller').checked = !!product.is_best_seller;
     document.getElementById('isNewArrival').checked = !!product.is_new_arrival;
@@ -80,6 +93,25 @@ async function loadForm() {
       product.product_images.forEach(img => addImagePreview(img.image_url, true));
     }
   }
+  toggleBreedBrand();
+}
+
+function autoSelectBreed() {
+  const catId = document.getElementById('category').value;
+  if (!window._catLiveMap[catId]) return;
+  const name = document.getElementById('name').value.trim().toLowerCase();
+  const catBreeds = window._breedMap[catId];
+  if (!catBreeds) return;
+  const match = catBreeds[name];
+  document.getElementById('breed').value = match || '';
+}
+
+function toggleBreedBrand() {
+  const catId = document.getElementById('category').value;
+  const isLive = window._catLiveMap[catId];
+  document.getElementById('brandField').style.display = isLive ? 'none' : '';
+  document.getElementById('breedField').style.display = isLive ? '' : 'none';
+  autoSelectBreed();
 }
 
 function addImagePreview(url, existing = false) {
@@ -112,6 +144,8 @@ function addImageUrl() {
   input.value = '';
 }
 
+document.getElementById('name').addEventListener('input', autoSelectBreed);
+document.getElementById('category').addEventListener('change', autoSelectBreed);
 document.getElementById('productForm').addEventListener('submit', async(e) => {
   e.preventDefault();
   const imageItems = document.querySelectorAll('#imageList img');
@@ -128,6 +162,7 @@ document.getElementById('productForm').addEventListener('submit', async(e) => {
     cost_price: parseFloat(document.getElementById('costPrice').value) || 0,
     category_id: parseInt(document.getElementById('category').value) || null,
     brand_id: parseInt(document.getElementById('brand').value) || null,
+    breed_id: parseInt(document.getElementById('breed').value) || null,
     stock_quantity: parseInt(document.getElementById('stock').value),
     low_stock_threshold: parseInt(document.getElementById('lowStock').value),
     weight: parseFloat(document.getElementById('weight').value) || 0,

@@ -62,10 +62,12 @@ router.get('/about', (req, res) => {
 
 router.get('/shop', async (req, res) => {
   try {
-    const [categories, brands] = await Promise.all([
+    const [categories, brands, allBreeds] = await Promise.all([
       prisma.categories.findMany({ where: { is_active: 1 }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
-      prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } })
+      prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } }),
+      prisma.breeds.findMany({ where: { is_active: 1 }, include: { categories: { select: { is_live: true } } }, orderBy: { name: 'asc' } })
     ]);
+    const breeds = allBreeds.filter(b => b.categories?.is_live).map(b => ({ ...b, categories: undefined }));
     const seo = {
       title: 'Shop',
       description: `Browse our wide selection of pet and aquarium products at ${res.locals.shopName}. Shop aquarium fish, pet food, accessories, medicines, decorations, and more with easy online ordering and doorstep delivery.`,
@@ -74,8 +76,8 @@ router.get('/shop', async (req, res) => {
         { name: 'Shop', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/shop' }
       ])
     };
-    res.render('shop', { title: 'Shop', seo, categories, brands, selectedCategory: '' });
-  } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], selectedCategory: '' }); }
+    res.render('shop', { title: 'Shop', seo, categories, brands, breeds, selectedCategory: '' });
+  } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], breeds: [], selectedCategory: '' }); }
 });
 
 router.get('/product/:slug', async (req, res) => {
@@ -83,8 +85,9 @@ router.get('/product/:slug', async (req, res) => {
     const product = await prisma.products.findFirst({
       where: { slug: req.params.slug, is_active: 1 },
       include: {
-        categories: { select: { name: true, slug: true } },
-        brands: { select: { name: true } }
+        categories: { select: { name: true, slug: true, is_live: true } },
+        brands: { select: { name: true } },
+        breeds: { select: { name: true } }
       }
     });
     if (!product) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found', robots: 'noindex' }, error: 'Product not found' });
@@ -121,13 +124,16 @@ router.get('/product/:slug', async (req, res) => {
       ...product,
       category_name: product.categories?.name,
       category_slug: product.categories?.slug,
+      is_live: product.categories?.is_live ? true : false,
       brand_name: product.brands?.name,
+      breed_name: product.breeds?.name,
       images,
       reviews: reviews.map(r => ({ ...r, user_name: r.users?.name })),
       related: related.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }))
     };
     delete productData.categories;
     delete productData.brands;
+    delete productData.breeds;
     res.render('product', { title: product.name, seo, product: productData });
   } catch (e) { res.status(500).render('error', { title: 'Error', seo: { title: 'Error' }, error: e.message }); }
 });
@@ -136,10 +142,12 @@ router.get('/category/:slug', async (req, res) => {
   try {
     const category = await prisma.categories.findFirst({ where: { slug: req.params.slug } });
     if (!category) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found', robots: 'noindex' }, error: 'Category not found' });
-    const [categories, brands] = await Promise.all([
+    const [categories, brands, allBreeds] = await Promise.all([
       prisma.categories.findMany({ where: { is_active: 1 }, orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] }),
-      prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } })
+      prisma.brands.findMany({ where: { is_active: 1 }, orderBy: { name: 'asc' } }),
+      prisma.breeds.findMany({ where: { is_active: 1 }, include: { categories: { select: { is_live: true } } }, orderBy: { name: 'asc' } })
     ]);
+    const breeds = allBreeds.filter(b => b.categories?.is_live).map(b => ({ ...b, categories: undefined }));
     const seo = {
       title: category.name,
       description: `Shop ${category.name} at ${res.locals.shopName}. ${category.description || `Browse our collection of ${category.name} products with easy online ordering and doorstep delivery.`}`,
@@ -151,8 +159,8 @@ router.get('/category/:slug', async (req, res) => {
         { name: category.name, url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/category/' + category.slug }
       ])
     };
-    res.render('shop', { title: category.name, seo, categories, brands, selectedCategory: req.params.slug });
-  } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], selectedCategory: '' }); }
+    res.render('shop', { title: category.name, seo, categories, brands, breeds, selectedCategory: req.params.slug });
+  } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], breeds: [], selectedCategory: '' }); }
 });
 
 router.get('/cart', (req, res) => {
@@ -287,6 +295,10 @@ router.get('/admin/products/edit/:id', requireAdminPage, async (req, res) => {
 });
 router.get('/admin/categories', requireAdminPage, (req, res) => { res.render('admin/categories', { title: 'Manage Categories', seo: { robots: 'noindex' } }); });
 router.get('/admin/brands', requireAdminPage, (req, res) => { res.render('admin/brands', { title: 'Manage Brands', seo: { robots: 'noindex' } }); });
+router.get('/admin/breeds', requireAdminPage, async (req, res) => {
+  const categories = await prisma.categories.findMany({ where: { is_active: 1, is_live: 1 }, orderBy: { name: 'asc' } });
+  res.render('admin/breeds', { title: 'Manage Breeds', seo: { robots: 'noindex' }, categories });
+});
 router.get('/admin/orders', requireAdminPage, (req, res) => { res.render('admin/orders', { title: 'Manage Orders', seo: { robots: 'noindex' } }); });
 router.get('/admin/customers', requireAdminPage, (req, res) => { res.render('admin/customers', { title: 'Manage Customers', seo: { robots: 'noindex' } }); });
 router.get('/admin/inventory', requireAdminPage, (req, res) => { res.render('admin/inventory', { title: 'Inventory Management', seo: { robots: 'noindex' } }); });

@@ -44,12 +44,21 @@
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" id="brandFilterWrap">
             <label class="form-label fw-semibold">Brand</label>
             <select class="form-select" id="brandFilter">
               <option value="">All Brands</option>
               <% brands.forEach(b => { %>
               <option value="<%= b.slug %>"><%= b.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3" id="breedFilterWrap" style="display:none">
+            <label class="form-label fw-semibold">Breed</label>
+            <select class="form-select" id="breedFilter">
+              <option value="">All Breeds</option>
+              <% breeds.filter(b => b.is_active).forEach(b => { %>
+              <option value="<%= b.slug %>" data-cat="<%= b.category_id %>"><%= b.name %></option>
               <% }) %>
             </select>
           </div>
@@ -106,12 +115,21 @@
             <% }) %>
           </select>
         </div>
-        <div class="mb-3">
+        <div class="mb-3" id="mobileBrandFilterWrap">
           <label class="form-label fw-semibold">Brand</label>
           <select class="form-select" id="mobileBrandFilter">
             <option value="">All Brands</option>
             <% brands.forEach(b => { %>
             <option value="<%= b.slug %>"><%= b.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-3" id="mobileBreedFilterWrap" style="display:none">
+          <label class="form-label fw-semibold">Breed</label>
+          <select class="form-select" id="mobileBreedFilter">
+            <option value="">All Breeds</option>
+            <% breeds.filter(b => b.is_active).forEach(b => { %>
+            <option value="<%= b.slug %>" data-cat="<%= b.category_id %>"><%= b.name %></option>
             <% }) %>
           </select>
         </div>
@@ -159,6 +177,8 @@
 <script>
 let currentPage = 1;
 let currentView = 'grid';
+const catLiveMap = { <% categories.forEach(c => { %>'<%= c.slug %>': <%= c.is_live ? 'true' : 'false' %>, <% }) %> };
+const catIdMap = { <% categories.forEach(c => { %>'<%= c.slug %>': <%= c.id %>, <% }) %> };
 
 function setView(view) {
   currentView = view;
@@ -167,12 +187,37 @@ function setView(view) {
   loadShopProducts();
 }
 
+function toggleBreedBrand() {
+  const cat = document.getElementById('categoryFilter').value;
+  const isLive = catLiveMap[cat];
+  const catId = catIdMap[cat];
+  document.getElementById('brandFilterWrap').style.display = isLive ? 'none' : '';
+  document.getElementById('breedFilterWrap').style.display = isLive ? '' : 'none';
+  document.getElementById('mobileBrandFilterWrap').style.display = isLive ? 'none' : '';
+  document.getElementById('mobileBreedFilterWrap').style.display = isLive ? '' : 'none';
+  if (!isLive) {
+    document.getElementById('breedFilter').value = '';
+    document.getElementById('mobileBreedFilter').value = '';
+  } else {
+    document.getElementById('brandFilter').value = '';
+    document.getElementById('mobileBrandFilter').value = '';
+    // Show only breeds matching selected category
+    document.querySelectorAll('#breedFilter option, #mobileBreedFilter option').forEach(o => {
+      if (!o.value) return;
+      o.style.display = Number(o.dataset.cat) === Number(catId) ? '' : 'none';
+    });
+    document.getElementById('breedFilter').value = '';
+    document.getElementById('mobileBreedFilter').value = '';
+  }
+}
+
 function resetFilters() {
   const defaultCat = '<%= selectedCategory || "" %>';
   document.getElementById('searchInput').value = '';
   document.getElementById('mobileSearchInput').value = '';
   document.getElementById('categoryFilter').value = defaultCat;
   document.getElementById('brandFilter').value = '';
+  document.getElementById('breedFilter').value = '';
   document.getElementById('minPrice').value = '';
   document.getElementById('maxPrice').value = '';
   document.getElementById('sortFilter').value = 'newest';
@@ -180,12 +225,14 @@ function resetFilters() {
   document.getElementById('onSale').checked = false;
   document.getElementById('mobileCategoryFilter').value = defaultCat;
   document.getElementById('mobileBrandFilter').value = '';
+  document.getElementById('mobileBreedFilter').value = '';
   document.getElementById('mobileMinPrice').value = '';
   document.getElementById('mobileMaxPrice').value = '';
   document.getElementById('mobileSortFilter').value = 'newest';
   document.getElementById('mobileInStock').checked = false;
   document.getElementById('mobileOnSale').checked = false;
   currentPage = 1;
+  toggleBreedBrand();
   loadShopProducts();
 }
 
@@ -200,12 +247,14 @@ function applyMobileFilters() {
   document.getElementById('searchInput').value = document.getElementById('mobileSearchInput').value;
   document.getElementById('categoryFilter').value = document.getElementById('mobileCategoryFilter').value;
   document.getElementById('brandFilter').value = document.getElementById('mobileBrandFilter').value;
+  document.getElementById('breedFilter').value = document.getElementById('mobileBreedFilter').value;
   document.getElementById('minPrice').value = document.getElementById('mobileMinPrice').value;
   document.getElementById('maxPrice').value = document.getElementById('mobileMaxPrice').value;
   document.getElementById('sortFilter').value = document.getElementById('mobileSortFilter').value;
   document.getElementById('inStock').checked = document.getElementById('mobileInStock').checked;
   document.getElementById('onSale').checked = document.getElementById('mobileOnSale').checked;
   currentPage = 1;
+  toggleBreedBrand();
   const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('filterOffcanvas'));
   if (offcanvas) offcanvas.hide();
   loadShopProducts();
@@ -214,11 +263,13 @@ function applyMobileFilters() {
 function resetMobileFilters() {
   document.getElementById('mobileCategoryFilter').value = '';
   document.getElementById('mobileBrandFilter').value = '';
+  document.getElementById('mobileBreedFilter').value = '';
   document.getElementById('mobileMinPrice').value = '';
   document.getElementById('mobileMaxPrice').value = '';
   document.getElementById('mobileSortFilter').value = 'newest';
   document.getElementById('mobileInStock').checked = false;
   document.getElementById('mobileOnSale').checked = false;
+  toggleBreedBrand();
 }
 
 async function loadShopProducts() {
@@ -231,6 +282,7 @@ async function loadShopProducts() {
   const search = document.getElementById('searchInput').value;
   const category = document.getElementById('categoryFilter').value;
   const brand = document.getElementById('brandFilter').value;
+  const breed = document.getElementById('breedFilter').value;
   const minPrice = document.getElementById('minPrice').value;
   const maxPrice = document.getElementById('maxPrice').value;
   const sort = document.getElementById('sortFilter').value;
@@ -239,6 +291,7 @@ async function loadShopProducts() {
   if (search) params.set('search', search);
   if (category) params.set('category', category);
   if (brand) params.set('brand', brand);
+  if (breed) params.set('breed', breed);
   if (minPrice) params.set('min_price', minPrice);
   if (maxPrice) params.set('max_price', maxPrice);
   if (sort) params.set('sort', sort);
@@ -277,6 +330,7 @@ async function loadShopProducts() {
             </a>
             <div class="card-body d-flex flex-column">
               ${p.category_name ? `<small class="card-category">${p.category_name}</small>` : ''}
+              ${p.is_live ? (p.breed_name ? `<small class="text-muted"><i class="fas fa-paw me-1"></i>${p.breed_name}</small>` : '') : (p.brand_name ? `<small class="text-muted">${p.brand_name}</small>` : '')}
               <a href="/product/${p.slug}" class="text-decoration-none">
                 <h6 class="card-title">${p.name}</h6>
               </a>
@@ -328,6 +382,7 @@ function goToPage(page) {
   const searchVal = params.get('search');
   const catVal = params.get('category') || '<%= selectedCategory %>';
   const brandVal = params.get('brand');
+  const breedVal = params.get('breed');
   if (searchVal) {
     document.getElementById('searchInput').value = searchVal;
     document.getElementById('mobileSearchInput').value = searchVal;
@@ -340,6 +395,13 @@ function goToPage(page) {
     document.getElementById('brandFilter').value = brandVal;
     document.getElementById('mobileBrandFilter').value = brandVal;
   }
+  if (breedVal) {
+    document.getElementById('breedFilter').value = breedVal;
+    document.getElementById('mobileBreedFilter').value = breedVal;
+  }
+  document.getElementById('categoryFilter').addEventListener('change', toggleBreedBrand);
+  document.getElementById('mobileCategoryFilter').addEventListener('change', toggleBreedBrand);
+  toggleBreedBrand();
   loadShopProducts();
 })();
 </script>
