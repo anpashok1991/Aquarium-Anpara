@@ -1207,7 +1207,11 @@ img { max-width: 100%; height: auto; }
   .admin-sidebar-overlay.open { display: block; }
   .admin-sidebar-close { display: block; }
   .admin-sidebar-toggle { display: inline-block; }
-  .admin-content { margin-left: 0; }
+  .admin-content { margin-left: 0; padding: 1rem; width: 100%; overflow-x: auto; }
+  .admin-content .card { min-width: 0; }
+  .admin-content .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .admin-content .d-flex { flex-wrap: wrap; gap: 0.5rem; }
+  .admin-content input, .admin-content select { max-width: 100% !important; }
   .whatsapp-float, .call-float { width: 50px; height: 50px; font-size: 1.4rem; }
   .whatsapp-float { bottom: 70px; }
   .call-float { bottom: 130px; }
