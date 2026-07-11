@@ -216,6 +216,7 @@ model orders {
   order_items       order_items[]
   users             users?        @relation(fields: [user_id], references: [id], onUpdate: NoAction)
   payments          payments[]
+  order_tracking    order_tracking[]
 
   @@index([order_status], map: "idx_orders_status")
   @@index([user_id], map: "idx_orders_user")
@@ -230,6 +231,17 @@ model payments {
   transaction_id String?
   created_at     DateTime? @default(now())
   orders         orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model order_tracking {
+  id          Int      @id @default(autoincrement())
+  order_id    Int
+  status      String
+  description String?
+  created_at  DateTime @default(now())
+  orders      orders   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([order_id])
 }
 
 model product_images {

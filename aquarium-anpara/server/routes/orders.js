@@ -3,6 +3,21 @@ const router = express.Router();
 const prisma = require('../database');
 const { auth, adminOnly, optionalAuth } = require('../middleware/auth');
 
+const statusLabels = {
+  pending: 'Order Placed',
+  confirmed: 'Order Confirmed',
+  processing: 'Processing',
+  dispatched: 'Dispatched',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled'
+};
+
+async function addTracking(orderId, status, description) {
+  await prisma.order_tracking.create({
+    data: { order_id: orderId, status, description: description || statusLabels[status] || status }
+  });
+}
+
 function generateOrderNumber() {
   const date = new Date();
   const prefix = 'AQ';
@@ -119,6 +134,7 @@ router.post('/', optionalAuth, async (req, res) => {
     });
 
     const orderId = newOrder.id;
+    await addTracking(orderId, 'pending');
 
     const insertItems = async (tx) => {
       for (const item of cartItems) {
@@ -209,23 +225,33 @@ router.get('/', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.get('/track/:orderNumber', async (req, res) => {
+  try {
+    const order = await prisma.orders.findFirst({
+      where: { order_number: req.params.orderNumber },
+      select: { id: true, order_number: true, order_status: true, payment_status: true, total: true, created_at: true, updated_at: true }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json({ order });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/:id/tracking', async (req, res) => {
+  try {
+    const tracking = await prisma.order_tracking.findMany({
+      where: { order_id: Number(req.params.id) },
+      orderBy: { created_at: 'asc' }
+    });
+    res.json({ tracking });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/:id', auth, async (req, res) => {
   try {
     const order = await prisma.orders.findFirst({ where: { id: Number(req.params.id) } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (req.user.role === 'customer' && order.user_id !== req.user.id) return res.status(403).json({ error: 'Access denied' });
     order.items = await prisma.order_items.findMany({ where: { order_id: order.id } });
-    res.json({ order });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-router.get('/track/:orderNumber', async (req, res) => {
-  try {
-    const order = await prisma.orders.findFirst({
-      where: { order_number: req.params.orderNumber },
-      select: { order_number: true, order_status: true, payment_status: true, total: true, created_at: true, updated_at: true }
-    });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -248,6 +274,9 @@ router.put('/:id/status', auth, adminOnly, async (req, res) => {
         data
       });
     }
+    if (order_status) {
+      await addTracking(Number(req.params.id), order_status);
+    }
     const order = await prisma.orders.findFirst({ where: { id: Number(req.params.id) } });
     res.json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -263,6 +292,7 @@ router.put('/cancel/:orderNumber', auth, async (req, res) => {
       where: { id: order.id },
       data: { order_status: 'cancelled', updated_at: new Date() }
     });
+    await addTracking(order.id, 'cancelled');
     const updated = await prisma.orders.findFirst({ where: { id: order.id } });
     res.json({ order: updated });
   } catch (e) { res.status(500).json({ error: e.message }); }

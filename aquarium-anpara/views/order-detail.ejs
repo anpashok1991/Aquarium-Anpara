@@ -84,10 +84,15 @@ async function loadOrder() {
           <h6 class="fw-bold mb-3"><i class="fas fa-box me-2"></i>Items</h6>
           <div id="orderItems"></div>
       </div>
+      <div class="glass-card p-3 mb-3">
+        <h6 class="fw-bold mb-3"><i class="fas fa-history me-2"></i>Tracking Timeline</h6>
+        <div id="trackingTimeline"><p class="text-muted small">Loading tracking...</p></div>
+      </div>
       ${canModify ? '<button class="btn btn-danger btn-lg w-100" onclick="cancelOrder()"><i class="fas fa-ban me-2"></i>Cancel Order</button>' : ''}
       ${order.order_status === 'delivered' || order.order_status === 'completed' ? '<div class="mt-4"><h5 class="fw-bold mb-3"><i class="fas fa-star me-2"></i>Write a Review</h5><div id="reviewSection"></div></div>' : '<p class="text-muted text-center mt-3">This order can no longer be modified.</p>'}
     `;
     loadItems();
+    loadTracking();
     if (order.order_status === 'delivered' || order.order_status === 'completed') {
       loadReviewForm();
     }
@@ -107,6 +112,31 @@ async function loadItems() {
         <strong>₹${i.total.toLocaleString()}</strong>
       </div>`).join('');
   } catch(e) {}
+}
+
+async function loadTracking() {
+  try {
+    const data = await api(`/orders/${order.id}/tracking`);
+    const tracking = data.tracking || [];
+    const statusIcon = { pending:'fa-clock', confirmed:'fa-check-circle', processing:'fa-spinner', dispatched:'fa-truck', delivered:'fa-home', cancelled:'fa-times-circle' };
+    const container = document.getElementById('trackingTimeline');
+    if (!tracking.length) { container.innerHTML = '<p class="text-muted small">No tracking updates yet.</p>'; return; }
+    container.innerHTML = tracking.map((t, i) => {
+      const isLast = i === tracking.length - 1;
+      return `<div class="d-flex mb-2">
+        <div class="me-3 text-center" style="width:32px;flex-shrink:0">
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:${isLast ? 'var(--primary,#0d6efd)' : '#e9ecef'};color:${isLast ? '#fff' : '#6c757d'}">
+            <i class="fas ${statusIcon[t.status] || 'fa-circle'} fa-xs"></i>
+          </div>
+          ${!isLast ? '<div style="width:2px;height:35px;background:#e9ecef;margin:3px auto"></div>' : ''}
+        </div>
+        <div style="padding-top:4px">
+          <div class="${isLast ? 'fw-bold' : ''}">${t.description || t.status}</div>
+          <small class="text-muted">${new Date(t.created_at).toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</small>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { document.getElementById('trackingTimeline').innerHTML = '<p class="text-muted small">Unable to load tracking.</p>'; }
 }
 
 function getReviewForm(productId, productName, existing) {
