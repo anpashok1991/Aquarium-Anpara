@@ -152,7 +152,7 @@ router.get('/:slug', async (req, res) => {
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id,
-      stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, meta_title, meta_description, images } = req.body;
+      stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, video_url, images } = req.body;
 
     let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     let finalSlug = slug;
@@ -168,7 +168,8 @@ router.post('/', auth, adminOnly, async (req, res) => {
         category_id, brand_id, stock_quantity: stock_quantity || 0,
         low_stock_threshold: low_stock_threshold || 5, weight: weight || 0,
         is_featured: is_featured ? 1 : 0, is_best_seller: is_best_seller ? 1 : 0,
-        is_new_arrival: is_new_arrival ? 1 : 0, meta_title, meta_description
+        is_new_arrival: is_new_arrival ? 1 : 0, is_active: is_active !== undefined ? (is_active ? 1 : 0) : 1,
+        meta_title, meta_description, video_url: video_url || null
       }
     });
 

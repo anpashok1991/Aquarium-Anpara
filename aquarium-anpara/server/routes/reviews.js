@@ -10,21 +10,22 @@ router.get('/product/:productId', async (req, res) => {
       include: { users: { select: { name: true } } },
       orderBy: { created_at: 'desc' }
     });
-    const mapped = reviews.map(r => ({ ...r, user_name: r.users?.name || null, users: undefined }));
+    const mapped = reviews.map(r => ({ ...r, user_name: r.users?.name || null, users: undefined, images: r.images ? JSON.parse(r.images) : null }));
     res.json({ reviews: mapped });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/', optionalAuth, async (req, res) => {
   try {
-    const { product_id, rating, title, comment, customer_name } = req.body;
+    const { product_id, rating, title, comment, customer_name, images } = req.body;
     if (!product_id || !rating) return res.status(400).json({ error: 'Product and rating required' });
     const review = await prisma.reviews.create({
       data: {
         product_id: Number(product_id), rating: Number(rating),
         user_id: req.user?.id || null,
         customer_name: customer_name || req.user?.name || 'Anonymous',
-        title, comment
+        title, comment,
+        images: images && images.length ? JSON.stringify(images) : null
       }
     });
 

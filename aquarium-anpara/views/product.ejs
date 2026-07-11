@@ -99,20 +99,27 @@
       <% if (product.reviews && product.reviews.length) { %>
       <div class="tab-pane fade" id="reviews">
         <% product.reviews.forEach(r => { %>
-        <div class="border-bottom pb-3 mb-3">
-          <div class="d-flex justify-content-between">
-            <div>
-              <strong><%= r.customer_name %></strong>
-              <div style="color:#ffc107;font-size:0.85rem"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5-r.rating) %></div>
+          <div class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong><%= r.customer_name %></strong>
+                <div style="color:#ffc107;font-size:0.85rem"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5-r.rating) %></div>
+              </div>
+              <small class="text-muted"><%= new Date(r.created_at).toLocaleDateString() %></small>
             </div>
-            <small class="text-muted"><%= new Date(r.created_at).toLocaleDateString() %></small>
+            <% if (r.title) { %><h6 class="mt-2"><%= r.title %></h6><% } %>
+            <p class="mb-1"><%= r.comment %></p>
+            <% if (r.images) { var reviewImgs = typeof r.images === 'string' ? JSON.parse(r.images) : r.images; %>
+            <div class="d-flex gap-2 mt-2 flex-wrap">
+              <% (reviewImgs || []).forEach(function(img) { %>
+              <img src="<%= img %>" class="rounded" style="height:60px;width:60px;object-fit:cover;border:1px solid #dee2e6;cursor:pointer" onclick="window.open(this.src)" onerror="this.style.display='none'" alt="review image">
+              <% }) %>
+            </div>
+            <% } %>
+            <% if (r.admin_reply) { %>
+            <div class="ms-3 mt-2 p-2 bg-light rounded"><strong>Owner Reply:</strong> <%= r.admin_reply %></div>
+            <% } %>
           </div>
-          <% if (r.title) { %><h6 class="mt-2"><%= r.title %></h6><% } %>
-          <p class="mb-1"><%= r.comment %></p>
-          <% if (r.admin_reply) { %>
-          <div class="ms-3 mt-2 p-2 bg-light rounded"><strong>Owner Reply:</strong> <%= r.admin_reply %></div>
-          <% } %>
-        </div>
         <% }) %>
       </div>
       <% } %>

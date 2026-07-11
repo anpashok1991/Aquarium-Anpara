@@ -72,6 +72,7 @@ async function loadOrder() {
             </div>
             <div class="col-md-6">
               <h6 class="fw-bold"><i class="fas fa-tag me-2"></i>Total</h6>
+              ${order.order_status === 'delivered' || order.order_status === 'completed' ? `<div class="mb-2"><a href="/invoice/${order.order_number}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fas fa-receipt me-1"></i>View Invoice</a></div>` : ''}
               <p class="mb-1 fw-bold fs-5">₹${order.total.toLocaleString()}</p>
               <small class="text-muted">Subtotal: ₹${order.subtotal.toLocaleString()}${order.discount > 0 ? ' | Discount: -₹' + order.discount.toLocaleString() : ''} | Delivery: ${order.shipping_charge === 0 ? 'Free' : '₹' + order.shipping_charge}</small>
             </div>
@@ -83,9 +84,13 @@ async function loadOrder() {
           <h6 class="fw-bold mb-3"><i class="fas fa-box me-2"></i>Items</h6>
           <div id="orderItems"></div>
       </div>
-      ${canModify ? '<button class="btn btn-danger btn-lg w-100" onclick="cancelOrder()"><i class="fas fa-ban me-2"></i>Cancel Order</button>' : '<p class="text-muted text-center">This order can no longer be modified.</p>'}
+      ${canModify ? '<button class="btn btn-danger btn-lg w-100" onclick="cancelOrder()"><i class="fas fa-ban me-2"></i>Cancel Order</button>' : ''}
+      ${order.order_status === 'delivered' || order.order_status === 'completed' ? '<div class="mt-4"><h5 class="fw-bold mb-3"><i class="fas fa-star me-2"></i>Write a Review</h5><div id="reviewSection"></div></div>' : '<p class="text-muted text-center mt-3">This order can no longer be modified.</p>'}
     `;
     loadItems();
+    if (order.order_status === 'delivered' || order.order_status === 'completed') {
+      loadReviewForm();
+    }
   } catch(e) { container.innerHTML = '<p class="text-muted">Error loading order.</p>'; }
 }
 
@@ -94,13 +99,140 @@ async function loadItems() {
     const data = await api('/orders/' + order.id);
     const items = data.order.items || [];
     document.getElementById('orderItems').innerHTML = items.map(i => `
-      <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+      <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom" id="item-${i.product_id}">
         <div class="d-flex align-items-center gap-2">
           <img src="${i.product_image || '/images/no-image.png'}" style="width:50px;height:50px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
           <div><small class="fw-semibold">${i.product_name}</small><br><small class="text-muted">x${i.quantity} @ ₹${i.price.toLocaleString()}</small></div>
         </div>
         <strong>₹${i.total.toLocaleString()}</strong>
       </div>`).join('');
+  } catch(e) {}
+}
+
+let reviewImages = [];
+
+function addReviewImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    reviewImages.push(e.target.result);
+    renderReviewPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeReviewImage(index) {
+  reviewImages.splice(index, 1);
+  renderReviewPreview();
+}
+
+function renderReviewPreview() {
+  const container = document.getElementById('reviewImagePreview');
+  if (!container) return;
+  container.innerHTML = reviewImages.map((img, i) =>
+    `<div style="position:relative;display:inline-block;margin:4px">
+      <img src="${img}" style="height:60px;width:60px;object-fit:cover;border-radius:8px;border:1px solid #dee2e6">
+      <button type="button" style="position:absolute;top:-6px;right:-6px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:20px;text-align:center;cursor:pointer;padding:0" onclick="removeReviewImage(${i})">&times;</button>
+    </div>`
+  ).join('');
+}
+
+function getReviewForm(productId, productName) {
+  return `
+    <div class="border-top pt-3 mb-3" id="reviewForm-${productId}">
+      <div class="mb-2 d-flex align-items-center gap-2">
+        <img src="/images/no-image.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+        <strong>${productName}</strong>
+      </div>
+      <div class="mb-2">
+        <label class="form-label small">Rating</label>
+        <div class="star-rating" id="stars-${productId}">
+          ${[1,2,3,4,5].map(s => `<i class="fas fa-star text-muted" data-star="${s}" style="cursor:pointer;font-size:1.3rem;margin-right:2px" onclick="setRating(${productId},${s})"></i>`).join('')}
+        </div>
+      </div>
+      <div class="mb-2">
+        <input type="text" class="form-control form-control-sm" id="reviewTitle-${productId}" placeholder="Review title (optional)">
+      </div>
+      <div class="mb-2">
+        <textarea class="form-control form-control-sm" id="reviewComment-${productId}" rows="2" placeholder="Share your experience with this product"></textarea>
+      </div>
+      <div class="mb-2">
+        <input type="file" class="form-control form-control-sm" accept="image/*" multiple onchange="handleReviewFiles(this, ${productId})">
+        <div id="reviewImagePreview-${productId}" class="mt-1"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="submitReview(${productId})"><i class="fas fa-paper-plane me-1"></i>Submit Review</button>
+    </div>`;
+}
+
+function handleReviewFiles(input, productId) {
+  // Store files per product
+  if (!window._reviewFiles) window._reviewFiles = {};
+  if (!window._reviewFiles[productId]) window._reviewFiles[productId] = [];
+  Array.from(input.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      window._reviewFiles[productId].push(e.target.result);
+      renderProductReviewPreview(productId);
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+
+function renderProductReviewPreview(productId) {
+  const container = document.getElementById(`reviewImagePreview-${productId}`);
+  if (!container) return;
+  const imgs = window._reviewFiles[productId] || [];
+  container.innerHTML = imgs.map((img, i) =>
+    `<div style="position:relative;display:inline-block;margin:4px">
+      <img src="${img}" style="height:50px;width:50px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6">
+      <button type="button" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;cursor:pointer;padding:0" onclick="removeProductReviewImage(${productId},${i})">&times;</button>
+    </div>`
+  ).join('');
+}
+
+function removeProductReviewImage(productId, index) {
+  if (window._reviewFiles[productId]) {
+    window._reviewFiles[productId].splice(index, 1);
+    renderProductReviewPreview(productId);
+  }
+}
+
+let currentRatings = {};
+
+function setRating(productId, star) {
+  currentRatings[productId] = star;
+  const container = document.getElementById(`stars-${productId}`);
+  if (!container) return;
+  container.querySelectorAll('.fa-star').forEach(el => {
+    const s = parseInt(el.dataset.star);
+    el.classList.toggle('text-muted', s > star);
+    el.classList.toggle('text-warning', s <= star);
+  });
+}
+
+async function submitReview(productId) {
+  const rating = currentRatings[productId];
+  if (!rating) { showToast('Please select a rating', 'error'); return; }
+  const title = document.getElementById(`reviewTitle-${productId}`).value;
+  const comment = document.getElementById(`reviewComment-${productId}`).value;
+  const images = window._reviewFiles?.[productId] || [];
+  try {
+    const body = { product_id: productId, rating, title, comment, images: images.length ? images : undefined };
+    await api('/reviews', { method: 'POST', body: JSON.stringify(body) });
+    showToast('Review submitted! Awaiting approval.');
+    document.getElementById(`reviewForm-${productId}`).innerHTML = '<p class="text-success small"><i class="fas fa-check-circle me-1"></i>Review submitted. Thank you!</p>';
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function loadReviewForm() {
+  try {
+    const data = await api('/orders/' + order.id);
+    const items = data.order.items || [];
+    const container = document.getElementById('reviewSection');
+    if (!container) return;
+    if (!items.length) { container.innerHTML = ''; return; }
+    container.innerHTML = '<p class="text-muted small mb-3">Rate the products you received:</p>' +
+      items.map(i => getReviewForm(i.product_id, i.product_name)).join('');
   } catch(e) {}
 }
 

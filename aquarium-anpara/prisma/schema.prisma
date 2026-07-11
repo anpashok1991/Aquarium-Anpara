@@ -280,6 +280,7 @@ model reviews {
   comment       String?
   is_approved   Int?      @default(0)
   admin_reply   String?
+  images        String?
   created_at    DateTime? @default(now())
   users         users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
   products      products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -301,9 +302,11 @@ model users {
   phone          String?          @unique(map: "sqlite_autoindex_users_2")
   password       String?
   role           String?          @default("customer")
+  permissions    String?
   avatar         String?
   auth_provider  String?          @default("local")
   is_active      Int?             @default(1)
+  token_version  Int              @default(0)
   created_at     DateTime?        @default(now())
   updated_at     DateTime?        @default(now())
   addresses      addresses[]

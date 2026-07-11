@@ -37,6 +37,7 @@ async function loadOrders() {
         </select></td>
         <td>${new Date(o.created_at).toLocaleDateString()}</td>
         <td><button class="btn btn-sm btn-outline-primary" onclick="viewOrder(${o.id})"><i class="fas fa-eye"></i></button>
+        ${o.order_status === 'delivered' || o.order_status === 'completed' ? `<a href="/invoice/${o.order_number}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-receipt"></i></a>` : ''}
         <button class="btn btn-sm btn-outline-success" onclick="sendOrderWhatsApp({order_number:'${o.order_number}',customer_name:'${o.customer_name}',customer_phone:'${o.customer_phone}',total:${o.total}})"><i class="fab fa-whatsapp"></i></button></td>
       </tr>`).join('');
   } catch(e) { console.error(e); }
@@ -57,7 +58,8 @@ async function viewOrder(id) {
         <div class="row mb-3"><div class="col-6"><strong>Customer:</strong> ${o.customer_name}<br><strong>Phone:</strong> ${o.customer_phone}<br><strong>Email:</strong> ${o.customer_email||'-'}</div>
         <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}<br><strong>Payment:</strong> ${o.payment_method.toUpperCase()}<br><strong>Status:</strong> ${o.order_status}</div></div>
         <table class="table table-sm"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
-        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br><strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5></div>
+        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br><strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5>
+        ${o.order_status === 'delivered' || o.order_status === 'completed' ? `<a href="/invoice/${o.order_number}" target="_blank" class="btn btn-outline-primary btn-sm mt-2"><i class="fas fa-receipt me-1"></i>View Invoice</a>` : ''}</div>
       </div></div></div>`;
     document.body.appendChild(modal);
     const bsModal = new bootstrap.Modal(modal);

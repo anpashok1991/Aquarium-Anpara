@@ -70,9 +70,19 @@
   <script>
     const user = getUser();
     if (user && (user.role === 'admin' || user.role === 'staff')) {
-      document.querySelectorAll('#admin-link').forEach(el => el.style.display = '');
+      document.querySelectorAll('#admin-link, #admin-link-mobile').forEach(el => el.style.display = '');
       document.querySelectorAll('.customer-only').forEach(el => el.style.display = 'none');
     }
   </script>
+  <div class="mobile-nav d-lg-none">
+    <div class="container d-flex justify-content-around">
+      <a href="/" class="mobile-nav-item<%= currentPath === '/' ? ' active' : '' %>"><i class="fas fa-home"></i><span>Home</span></a>
+      <a href="/shop" class="mobile-nav-item<%= currentPath === '/shop' ? ' active' : '' %>"><i class="fas fa-store"></i><span>Shop</span></a>
+      <a href="/about" class="mobile-nav-item<%= currentPath === '/about' ? ' active' : '' %>"><i class="fas fa-info-circle"></i><span>About</span></a>
+      <a href="/gallery" class="mobile-nav-item<%= currentPath === '/gallery' ? ' active' : '' %>"><i class="fas fa-images"></i><span>Gallery</span></a>
+      <a href="/contact" class="mobile-nav-item<%= currentPath === '/contact' ? ' active' : '' %>"><i class="fas fa-envelope"></i><span>Contact</span></a>
+    </div>
+  </div>
+  <script>if(window.innerWidth<992)document.querySelector('.mobile-nav')&&(document.querySelector('.mobile-nav').style.display='flex');</script>
 </body>
 </html>

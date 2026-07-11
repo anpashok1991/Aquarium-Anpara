@@ -44,7 +44,8 @@ body {
   background: var(--light);
   color: var(--dark);
   line-height: 1.6;
-  overflow-x: hidden;
+  overflow-x: clip;
+  min-height: 100dvh;
   background-image: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.06) 0%, transparent 50%),
                     radial-gradient(ellipse at 80% 20%, rgba(13,202,240,0.06) 0%, transparent 50%);
   background-attachment: fixed;
@@ -1237,4 +1238,149 @@ img { max-width: 100%; height: auto; }
   .footer .social-btn { width: 32px; height: 32px; font-size: 0.8rem; }
   .footer p { font-size: 0.85rem; }
   .footer-bottom { margin-top: 1.5rem; padding: 1rem 0; }
+}
+
+/* Mobile Bottom Nav */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--gray-light);
+  z-index: 1050;
+  padding: 6px 0;
+  box-shadow: 0 -2px 15px rgba(0,0,0,0.08);
+  display: flex;
+  contain: layout paint;
+}
+.mobile-nav > .container { display: flex; justify-content: space-around; }
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  color: var(--gray);
+  text-decoration: none;
+  transition: var(--transition);
+  border-radius: var(--radius-sm);
+}
+.mobile-nav-item i {
+  font-size: 1.2rem;
+  color: var(--gray);
+}
+.mobile-nav-item.active i,
+.mobile-nav-item.active span {
+  color: var(--primary);
+}
+.mobile-nav-item.active {
+  background: rgba(13,110,253,0.06);
+}
+.mobile-nav-item span {
+  font-weight: 600;
+  font-size: 0.6rem;
+  line-height: 1;
+}
+@media (max-width: 991px) {
+  body { padding-bottom: 60px; }
+}
+@media (min-width: 992px) {
+  .mobile-nav { display: none !important; }
+}
+
+/* Flipkart-style Mobile Theme */
+@media (max-width: 576px) {
+  .product-card {
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .product-card .card-img-wrapper {
+    height: 160px;
+    padding: 0.3rem;
+  }
+  .product-card .card-body {
+    padding: 0.6rem 0.6rem 1rem;
+  }
+  .product-card .card-title {
+    font-size: 0.8rem;
+    -webkit-line-clamp: 2;
+    margin-bottom: 0.2rem;
+  }
+  .product-price {
+    font-size: 1rem;
+  }
+  .product-price .old-price {
+    font-size: 0.7rem;
+  }
+  .product-price .discount-tag {
+    font-size: 0.6rem;
+    padding: 1px 6px;
+  }
+  .product-card .btn-group .btn {
+    font-size: 0.7rem;
+    padding: 0.3rem;
+  }
+  .card-category {
+    font-size: 0.65rem !important;
+  }
+  .product-rating .stars {
+    font-size: 0.7rem;
+  }
+  .product-rating .count {
+    font-size: 0.65rem;
+  }
+  .category-card {
+    border-radius: 8px;
+  }
+  .category-card .cat-img-wrapper {
+    height: 85px;
+  }
+  .category-card .cat-body {
+    padding: 0.3rem 0.3rem 0.5rem;
+  }
+  .category-card .cat-body i {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+  }
+  .category-card h5 {
+    font-size: 0.7rem;
+  }
+  .category-card .cat-count {
+    font-size: 0.6rem;
+  }
+  .cat-scroll-wrapper::before,
+  .cat-scroll-wrapper::after {
+    display: none;
+  }
+  .section {
+    padding: 1.5rem 0;
+  }
+  .section-title {
+    font-size: 1.2rem;
+  }
+  .section-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .section-title-wrapper {
+    margin-bottom: 1rem;
+  }
+  .section-title-wrapper::after {
+    width: 50px;
+    height: 3px;
+  }
+  .glass-card {
+    border-radius: 8px;
+    padding: 0.8rem !important;
+  }
+  .btn-sm {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .btn-lg {
+    font-size: 0.9rem;
+    padding: 0.5rem 1.2rem;
+  }
 }

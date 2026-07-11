@@ -1,9 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const prisma = require('../database');
 const { auth, generateToken } = require('../middleware/auth');
+
+const CAPTCHA_SECRET = process.env.CAPTCHA_SECRET || 'aquarium-captcha-salt-2026';
+function generateCaptcha() {
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  const answer = a + b;
+  const token = crypto.createHmac('sha256', CAPTCHA_SECRET).update(String(answer)).digest('hex').substring(0, 8);
+  return { question: `${a} + ${b} = ?`, token };
+}
+function verifyCaptcha(answer, token) {
+  const expected = crypto.createHmac('sha256', CAPTCHA_SECRET).update(String(answer)).digest('hex').substring(0, 8);
+  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+}
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -14,10 +28,17 @@ const COOKIE_OPTIONS = {
   maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
+router.get('/captcha', (req, res) => {
+  res.json(generateCaptcha());
+});
+
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email, phone, password, captcha_answer, captcha_token } = req.body;
     if (!name || !password || (!email && !phone)) return res.status(400).json({ error: 'Name, password and email or phone required' });
+    if (!captcha_answer || !captcha_token || !verifyCaptcha(Number(captcha_answer), captcha_token)) {
+      return res.status(400).json({ error: 'Invalid captcha answer' });
+    }
 
     const existing = email
       ? await prisma.users.findUnique({ where: { email }, select: { id: true } })
@@ -29,9 +50,14 @@ router.post('/register', async (req, res) => {
       data: { name, email: email || null, phone: phone || null, password: hash }
     });
 
+    await prisma.users.update({
+      where: { id: result.id },
+      data: { token_version: { increment: 1 } }
+    });
+
     const user = await prisma.users.findUnique({
       where: { id: result.id },
-      select: { id: true, name: true, email: true, phone: true, role: true }
+      select: { id: true, name: true, email: true, phone: true, role: true, token_version: true }
     });
     const token = generateToken(user);
 
@@ -59,8 +85,14 @@ router.post('/login', async (req, res) => {
 
     if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = generateToken(user);
-    const { password: _, ...safeUser } = user;
+    await prisma.users.update({
+      where: { id: user.id },
+      data: { token_version: { increment: 1 } }
+    });
+
+    const updatedUser = await prisma.users.findUnique({ where: { id: user.id } });
+    const token = generateToken(updatedUser);
+    const { password: _, ...safeUser } = updatedUser;
     res.cookie('token', token, COOKIE_OPTIONS);
     res.json({ token, user: safeUser });
   } catch (e) {
@@ -162,8 +194,14 @@ router.post('/google', async (req, res) => {
 
     if (!user.is_active) return res.status(401).json({ error: 'Account disabled' });
 
-    const token = generateToken(user);
-    const { password: _, ...safeUser } = user;
+    await prisma.users.update({
+      where: { id: user.id },
+      data: { token_version: { increment: 1 } }
+    });
+
+    const updatedUser = await prisma.users.findUnique({ where: { id: user.id } });
+    const token = generateToken(updatedUser);
+    const { password: _, ...safeUser } = updatedUser;
     res.cookie('token', token, COOKIE_OPTIONS);
     res.json({ token, user: safeUser });
   } catch (e) {

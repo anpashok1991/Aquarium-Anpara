@@ -15,6 +15,14 @@
           <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="email"></div>
           <div class="mb-3"><label class="form-label">Phone</label><input type="tel" class="form-control" id="phone"></div>
           <div class="mb-3"><label class="form-label">Password</label><input type="password" class="form-control" id="password" required minlength="6"></div>
+          <div class="mb-3">
+            <label class="form-label" id="captchaLabel">Loading captcha...</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="captchaAnswer" required placeholder="Enter answer">
+              <input type="hidden" id="captchaToken">
+              <button class="btn btn-outline-secondary" type="button" onclick="loadCaptcha()"><i class="fas fa-sync-alt"></i></button>
+            </div>
+          </div>
           <button type="submit" class="btn btn-primary w-100 btn-lg">Register</button>
         </form>
         <div class="text-center my-3">
@@ -60,14 +68,31 @@ function handleGoogleCredential(response) {
   .catch(e => showToast(e.message, 'error'));
 }
 
+async function loadCaptcha() {
+  try {
+    const data = await api('/auth/captcha');
+    document.getElementById('captchaLabel').textContent = data.question;
+    document.getElementById('captchaToken').value = data.token;
+  } catch(e) { document.getElementById('captchaLabel').textContent = 'Verify you are human'; }
+}
+
+loadCaptcha();
+
 document.getElementById('registerForm').addEventListener('submit', async(e) => {
   e.preventDefault();
   try {
-    const data = await api('/auth/register', { method:'POST', body: JSON.stringify({ name: document.getElementById('name').value, email: document.getElementById('email').value, phone: document.getElementById('phone').value, password: document.getElementById('password').value }) });
+    const data = await api('/auth/register', { method:'POST', body: JSON.stringify({
+      name: document.getElementById('name').value,
+      email: document.getElementById('email').value,
+      phone: document.getElementById('phone').value,
+      password: document.getElementById('password').value,
+      captcha_answer: document.getElementById('captchaAnswer').value,
+      captcha_token: document.getElementById('captchaToken').value
+    }) });
     setAuth(data);
     showToast('Registration successful!');
     setTimeout(() => window.location.href = '/', 500);
-  } catch(e) { showToast(e.message, 'error'); }
+  } catch(e) { loadCaptcha(); showToast(e.message, 'error'); }
 });
 </script>
 <%- include('partials/footer') %>

@@ -10,7 +10,19 @@
 
   <div class="row">
     <div class="col-lg-3 mb-4">
-      <div class="card border-0 shadow-sm">
+      <!-- Mobile: search bar + filter button -->
+      <div class="d-lg-none mb-3">
+        <div class="input-group mb-2">
+          <input type="text" class="form-control" id="mobileSearchInput" placeholder="Search products...">
+          <button class="btn btn-primary" onclick="mobileSearch()"><i class="fas fa-search"></i></button>
+        </div>
+        <button class="btn btn-outline-primary w-100" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
+          <i class="fas fa-filter me-1"></i>Filters
+        </button>
+      </div>
+
+      <!-- Desktop: full filter sidebar -->
+      <div class="card border-0 shadow-sm d-none d-lg-block">
         <div class="card-body">
           <h5 class="fw-bold mb-3">Filters</h5>
           
@@ -78,6 +90,57 @@
       </div>
     </div>
 
+    <!-- Mobile Filter Offcanvas -->
+    <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="filterOffcanvas">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title fw-bold">Filters</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Category</label>
+          <select class="form-select" id="mobileCategoryFilter">
+            <option value="">All Categories</option>
+            <% categories.forEach(cat => { %>
+            <option value="<%= cat.slug %>"><%- cat.parent_id ? '&nbsp;&nbsp;&nbsp;' : '' %><%= cat.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Brand</label>
+          <select class="form-select" id="mobileBrandFilter">
+            <option value="">All Brands</option>
+            <% brands.forEach(b => { %>
+            <option value="<%= b.slug %>"><%= b.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Price Range</label>
+          <div class="d-flex gap-2">
+            <input type="number" class="form-control" id="mobileMinPrice" placeholder="Min">
+            <input type="number" class="form-control" id="mobileMaxPrice" placeholder="Max">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Sort By</label>
+          <select class="form-select" id="mobileSortFilter">
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="popular">Most Popular</option>
+            <option value="rating">Top Rated</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="mobileInStock"><label class="form-check-label">In Stock Only</label></div>
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="mobileOnSale"><label class="form-check-label">On Sale</label></div>
+        </div>
+        <button class="btn btn-primary w-100 mb-2" onclick="applyMobileFilters()"><i class="fas fa-filter me-1"></i>Apply Filters</button>
+        <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetMobileFilters()">Clear Filters</button>
+      </div>
+    </div>
+
     <div class="col-lg-9">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0">Products <span id="productCount" class="text-muted fs-6"></span></h4>
@@ -105,16 +168,57 @@ function setView(view) {
 }
 
 function resetFilters() {
+  const defaultCat = '<%= selectedCategory || "" %>';
   document.getElementById('searchInput').value = '';
-  document.getElementById('categoryFilter').value = '<%= selectedCategory || "" %>';
+  document.getElementById('mobileSearchInput').value = '';
+  document.getElementById('categoryFilter').value = defaultCat;
   document.getElementById('brandFilter').value = '';
   document.getElementById('minPrice').value = '';
   document.getElementById('maxPrice').value = '';
   document.getElementById('sortFilter').value = 'newest';
   document.getElementById('inStock').checked = false;
   document.getElementById('onSale').checked = false;
+  document.getElementById('mobileCategoryFilter').value = defaultCat;
+  document.getElementById('mobileBrandFilter').value = '';
+  document.getElementById('mobileMinPrice').value = '';
+  document.getElementById('mobileMaxPrice').value = '';
+  document.getElementById('mobileSortFilter').value = 'newest';
+  document.getElementById('mobileInStock').checked = false;
+  document.getElementById('mobileOnSale').checked = false;
   currentPage = 1;
   loadShopProducts();
+}
+
+function mobileSearch() {
+  const q = document.getElementById('mobileSearchInput').value;
+  document.getElementById('searchInput').value = q;
+  currentPage = 1;
+  loadShopProducts();
+}
+
+function applyMobileFilters() {
+  document.getElementById('searchInput').value = document.getElementById('mobileSearchInput').value;
+  document.getElementById('categoryFilter').value = document.getElementById('mobileCategoryFilter').value;
+  document.getElementById('brandFilter').value = document.getElementById('mobileBrandFilter').value;
+  document.getElementById('minPrice').value = document.getElementById('mobileMinPrice').value;
+  document.getElementById('maxPrice').value = document.getElementById('mobileMaxPrice').value;
+  document.getElementById('sortFilter').value = document.getElementById('mobileSortFilter').value;
+  document.getElementById('inStock').checked = document.getElementById('mobileInStock').checked;
+  document.getElementById('onSale').checked = document.getElementById('mobileOnSale').checked;
+  currentPage = 1;
+  const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('filterOffcanvas'));
+  if (offcanvas) offcanvas.hide();
+  loadShopProducts();
+}
+
+function resetMobileFilters() {
+  document.getElementById('mobileCategoryFilter').value = '';
+  document.getElementById('mobileBrandFilter').value = '';
+  document.getElementById('mobileMinPrice').value = '';
+  document.getElementById('mobileMaxPrice').value = '';
+  document.getElementById('mobileSortFilter').value = 'newest';
+  document.getElementById('mobileInStock').checked = false;
+  document.getElementById('mobileOnSale').checked = false;
 }
 
 async function loadShopProducts() {
@@ -221,9 +325,20 @@ function goToPage(page) {
 (function init() {
   if (typeof api !== 'function') return setTimeout(init, 50);
   const params = new URLSearchParams(window.location.search);
-  if (params.get('search')) document.getElementById('searchInput').value = params.get('search');
-  if (params.get('category') || '<%= selectedCategory %>') {
-    document.getElementById('categoryFilter').value = params.get('category') || '<%= selectedCategory %>';
+  const searchVal = params.get('search');
+  const catVal = params.get('category') || '<%= selectedCategory %>';
+  const brandVal = params.get('brand');
+  if (searchVal) {
+    document.getElementById('searchInput').value = searchVal;
+    document.getElementById('mobileSearchInput').value = searchVal;
+  }
+  if (catVal) {
+    document.getElementById('categoryFilter').value = catVal;
+    document.getElementById('mobileCategoryFilter').value = catVal;
+  }
+  if (brandVal) {
+    document.getElementById('brandFilter').value = brandVal;
+    document.getElementById('mobileBrandFilter').value = brandVal;
   }
   loadShopProducts();
 })();

@@ -28,6 +28,12 @@ router.get('/', async (req, res) => {
       const product_count = await prisma.products.count({ where: { category_id: { in: ids }, is_active: 1 } });
       return { ...c, product_count };
     }));
+    const brandsWithCount = await prisma.brands.findMany({
+      where: { is_active: 1 },
+      include: { _count: { select: { products: { where: { is_active: 1 } } } } },
+      orderBy: { name: 'asc' }
+    });
+    const brandsData = brandsWithCount.map(b => ({ ...b, product_count: b._count.products }));
     const featuredMapped = featured.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
     const bestMapped = bestSellers.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
     const newMapped = newArrivals.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
@@ -38,8 +44,8 @@ router.get('/', async (req, res) => {
       keywords: 'aquarium shop Anpara, pet store, aquarium fish, tropical fish, pet supplies, aquarium tanks, fish food, pet food, aquarium plants, aquarium accessories, pet store near me',
       breadcrumb: buildBreadcrumb([{ name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' }])
     };
-    res.render('index', { title: 'Home', seo, featured: featuredMapped, bestSellers: bestMapped, newArrivals: newMapped, categories: catWithCount, banners, reviews: reviewsMapped });
-  } catch (e) { res.render('index', { title: 'Home', seo: { title: 'Home' }, featured: [], bestSellers: [], newArrivals: [], categories: [], banners: [], reviews: [] }); }
+    res.render('index', { title: 'Home', seo, featured: featuredMapped, bestSellers: bestMapped, newArrivals: newMapped, categories: catWithCount, brands: brandsData, banners, reviews: reviewsMapped });
+  } catch (e) { res.render('index', { title: 'Home', seo: { title: 'Home' }, featured: [], bestSellers: [], newArrivals: [], categories: [], brands: [], banners: [], reviews: [] }); }
 });
 
 router.get('/about', (req, res) => {
@@ -169,6 +175,21 @@ router.get('/orders/:orderNumber', (req, res) => {
   const seo = { title: 'Order Details', robots: 'noindex' };
   res.render('order-detail', { title: 'Order Details', seo, orderNumber: req.params.orderNumber });
 });
+router.get('/invoice/:orderNumber', async (req, res) => {
+  try {
+    const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
+    if (!order) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found' }, error: 'Order not found' });
+    if (order.order_status !== 'delivered' && order.order_status !== 'completed') {
+      return res.status(403).render('error', { title: 'Not Available', seo: { title: 'Not Available' }, error: 'Invoice will be available once the order is delivered.' });
+    }
+    order.items = await prisma.order_items.findMany({ where: { order_id: order.id } });
+    const seo = { title: 'Invoice ' + order.order_number, robots: 'noindex' };
+    res.render('invoice', { title: 'Invoice', seo, order });
+  } catch (e) { res.status(500).render('error', { title: 'Error', seo: { title: 'Error' }, error: e.message }); }
+});
+
+router.get('/admin/staff', requireAdminPage, (req, res) => { res.render('admin/staff', { title: 'Manage Staff', seo: { robots: 'noindex' } }); });
+
 router.get('/profile', (req, res) => {
   const seo = { title: 'My Profile', robots: 'noindex' };
   res.render('profile', { title: 'My Profile', seo });

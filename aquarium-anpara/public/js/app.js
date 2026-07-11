@@ -290,4 +290,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initScrollAnimations();
   initNavbarScroll();
   addRippleEffect();
+  // Force mobile nav to be visible immediately on mobile
+  const mobileNav = document.querySelector('.mobile-nav');
+  if (mobileNav && window.innerWidth < 992) {
+    mobileNav.style.display = 'flex';
+    // Force repaint
+    void mobileNav.offsetHeight;
+  }
 });

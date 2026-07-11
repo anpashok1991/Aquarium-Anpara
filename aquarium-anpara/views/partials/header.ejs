@@ -103,11 +103,11 @@
     <div class="container d-flex justify-content-between align-items-center">
       <div>
         <a href="tel:<%= shopPhone %>" class="me-3"><i class="fas fa-phone me-1"></i> <%= shopPhone %></a>
-        <a href="mailto:<%= shopEmail %>"><i class="fas fa-envelope me-1"></i> <%= shopEmail %></a>
+        <a href="mailto:<%= shopEmail %>" class="d-none d-lg-inline"><i class="fas fa-envelope me-1"></i> <%= shopEmail %></a>
       </div>
       <div>
         <a href="/track-order" class="me-3"><i class="fas fa-truck me-1"></i> Track Order</a>
-        <a href="/contact"><i class="fas fa-map-marker-alt me-1"></i> <%= shopAddress.substring(0,30) %>...</a>
+        <a href="/contact" class="d-none d-lg-inline"><i class="fas fa-map-marker-alt me-1"></i> <%= shopAddress.substring(0,30) %>...</a>
       </div>
     </div>
   </div>
@@ -122,27 +122,18 @@
         <% } %>
         <span class="brand-text"><%= shopName %></span>
       </a>
-      <div class="d-flex align-items-center d-lg-none ms-auto">
-        <a href="/cart" class="nav-icon position-relative me-2" title="Cart">
+
+      <div class="d-flex align-items-center gap-1 d-lg-none">
+        <a href="/shop" class="nav-icon position-relative" title="Search">
+          <i class="fas fa-search"></i>
+        </a>
+        <a href="/wishlist" class="nav-icon position-relative" title="Wishlist">
+          <i class="far fa-heart"></i>
+        </a>
+        <a href="/cart" class="nav-icon position-relative me-1" title="Cart">
           <i class="fas fa-shopping-cart"></i>
           <span class="nav-badge cart-count">0</span>
         </a>
-        <div class="dropdown auth-only" style="display:none">
-          <a class="nav-link dropdown-toggle p-1" href="#" data-bs-toggle="dropdown">
-            <i class="fas fa-user-circle fs-5"></i>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>My Profile</a></li>
-            <li class="customer-only"><a class="dropdown-item" href="/orders"><i class="fas fa-box me-2"></i>My Orders</a></li>
-            <li class="customer-only"><a class="dropdown-item" href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
-            <li id="admin-link" style="display:none"><a class="dropdown-item" href="/admin"><i class="fas fa-cog me-2"></i>Admin Panel</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-          </ul>
-        </div>
-        <div class="guest-only">
-          <a href="/login" class="btn btn-outline-primary btn-sm px-1 py-0 me-1">Login</a>
-        </div>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -155,6 +146,13 @@
           <li class="nav-item"><a class="nav-link <%= currentPath === '/about' ? 'active' : '' %>" href="/about">About</a></li>
           <li class="nav-item"><a class="nav-link <%= currentPath === '/gallery' ? 'active' : '' %>" href="/gallery">Gallery</a></li>
           <li class="nav-item"><a class="nav-link <%= currentPath === '/contact' ? 'active' : '' %>" href="/contact">Contact</a></li>
+          <li class="nav-item d-lg-none"><hr class="dropdown-divider"></li>
+          <li class="nav-item d-lg-none auth-only" style="display:none"><a class="nav-link" href="/profile"><i class="fas fa-user me-2"></i>My Profile</a></li>
+          <li class="nav-item d-lg-none customer-only"><a class="nav-link" href="/orders"><i class="fas fa-box me-2"></i>My Orders</a></li>
+          <li class="nav-item d-lg-none customer-only"><a class="nav-link" href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+          <li class="nav-item d-lg-none" id="admin-link-mobile" style="display:none"><a class="nav-link" href="/admin"><i class="fas fa-cog me-2"></i>Admin Panel</a></li>
+          <li class="nav-item d-lg-none guest-only"><a class="nav-link" href="/login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+          <li class="nav-item d-lg-none auth-only" style="display:none"><a class="nav-link" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
         </ul>
         <div class="d-flex align-items-center gap-2 d-none d-lg-flex">
           <a href="/shop" class="nav-icon" title="Search"><i class="fas fa-search"></i></a>
@@ -186,4 +184,16 @@
         </div>
       </div>
     </div>
+
   </nav>
+
+  <div class="container d-lg-none pb-3" id="mobileUserMenu" style="display:none">
+    <ul class="navbar-nav">
+      <li class="nav-item auth-only" style="display:none"><a class="nav-link" href="/profile"><i class="fas fa-user me-2"></i>My Profile</a></li>
+      <li class="nav-item customer-only"><a class="nav-link" href="/orders"><i class="fas fa-box me-2"></i>My Orders</a></li>
+      <li class="nav-item customer-only"><a class="nav-link" href="/wishlist"><i class="fas fa-heart me-2"></i>Wishlist</a></li>
+      <li class="nav-item" id="admin-link-mobile" style="display:none"><a class="nav-link" href="/admin"><i class="fas fa-cog me-2"></i>Admin Panel</a></li>
+      <li class="nav-item guest-only"><a class="nav-link" href="/login"><i class="fas fa-sign-in-alt me-2"></i>Login</a></li>
+      <li class="nav-item auth-only" style="display:none"><a class="nav-link" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+    </ul>
+  </div>

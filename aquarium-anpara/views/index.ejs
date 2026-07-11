@@ -138,6 +138,44 @@ const catIcons = {
   </div>
 </section>
 
+<!-- Shop by Brand -->
+<% if (brands && brands.length) { %>
+<section class="section">
+  <div class="container">
+    <div class="section-title-wrapper text-center">
+      <h2 class="section-title">Shop by Brand</h2>
+      <p class="section-subtitle">Browse products from top brands</p>
+    </div>
+    <div class="cat-scroll-wrapper">
+      <div class="cat-scroll-track" id="brandTrack">
+        <% brands.forEach(b => { %>
+        <div class="cat-scroll-item fade-in">
+          <a href="/shop?brand=<%= b.slug %>" class="text-decoration-none">
+            <div class="category-card">
+              <div class="cat-img-wrapper" style="display:flex;align-items:center;justify-content:center;background:var(--light)">
+                <% if (b.logo) { %>
+                <img src="<%= b.logo %>" alt="<%= b.name %>" style="max-height:70%;max-width:80%;object-fit:contain" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\'fas fa-tag\' style=\'font-size:3rem;color:var(--gray-light)\'></i>'">
+                <% } else { %>
+                <i class="fas fa-tag" style="font-size:3rem;color:var(--gray-light)"></i>
+                <% } %>
+              </div>
+              <div class="cat-body">
+                <i class="fas fa-certificate"></i>
+                <h5><%= b.name %></h5>
+                <span class="cat-count"><%= b.product_count %> Products</span>
+              </div>
+            </div>
+          </a>
+        </div>
+        <% }) %>
+      </div>
+      <button class="cat-scroll-btn cat-scroll-left d-none d-md-flex" onclick="document.getElementById('brandTrack').scrollBy({left:-250,behavior:'smooth'})" aria-label="Previous brands"><i class="fas fa-chevron-left"></i></button>
+      <button class="cat-scroll-btn cat-scroll-right d-none d-md-flex" onclick="document.getElementById('brandTrack').scrollBy({left:250,behavior:'smooth'})" aria-label="Next brands"><i class="fas fa-chevron-right"></i></button>
+    </div>
+  </div>
+</section>
+<% } %>
+
 <!-- Featured Products -->
 <% if (featured.length) { %>
 <section class="section bg-white">

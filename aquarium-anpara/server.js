@@ -104,6 +104,30 @@ app.disable('view cache');
   } catch (e) { console.log('ℹ️ Settings check deferred:', e.message); }
 })();
 
+// Auto-migrate: add token_version column for existing databases
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`);
+    console.log('✅ token_version column added to users table');
+  } catch (e) { /* column already exists */ }
+})();
+
+// Auto-migrate: add permissions column for staff role-based access
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE users ADD COLUMN permissions TEXT`);
+    console.log('✅ permissions column added to users table');
+  } catch (e) { /* column already exists */ }
+})();
+
+// Auto-migrate: add images column to reviews table
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE reviews ADD COLUMN images TEXT`);
+    console.log('✅ images column added to reviews table');
+  } catch (e) { /* column already exists */ }
+})();
+
 app.use(async (req, res, next) => {
   try {
     const rows = await prisma.settings.findMany({ select: { key: true, value: true } });
@@ -161,6 +185,7 @@ app.use('/api/notifications', require('./server/routes/notifications'));
 app.use('/api/contact', require('./server/routes/contact'));
 app.use('/api/wishlist', require('./server/routes/wishlist'));
 app.use('/api/addresses', require('./server/routes/addresses'));
+app.use('/api/staff', require('./server/routes/staff'));
 
 app.use('/', require('./server/routes/pages'));
 
