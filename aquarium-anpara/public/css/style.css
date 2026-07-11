@@ -38,14 +38,13 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+#page-content { overflow-x: hidden; }
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--light);
   color: var(--dark);
   line-height: 1.6;
-  overflow-x: clip;
-  min-height: 100dvh;
   background-image: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.06) 0%, transparent 50%),
                     radial-gradient(ellipse at 80% 20%, rgba(13,202,240,0.06) 0%, transparent 50%);
   background-attachment: fixed;
@@ -1243,16 +1242,15 @@ img { max-width: 100%; height: auto; }
 /* Mobile Bottom Nav */
 .mobile-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: auto 0 0 0;
   background: var(--white);
   border-top: 1px solid var(--gray-light);
   z-index: 1050;
   padding: 6px 0;
   box-shadow: 0 -2px 15px rgba(0,0,0,0.08);
   display: flex;
-  contain: layout paint;
+  height: 56px;
+  will-change: transform;
 }
 .mobile-nav > .container { display: flex; justify-content: space-around; }
 .mobile-nav-item {

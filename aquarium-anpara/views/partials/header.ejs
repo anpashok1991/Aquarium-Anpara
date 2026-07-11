@@ -99,6 +99,16 @@
 <% } %>
 </head>
 <body data-whatsapp="<%= whatsappNumber %>">
+  <nav class="mobile-nav">
+    <div class="container d-flex justify-content-around">
+      <a href="/" class="mobile-nav-item<%= currentPath === '/' ? ' active' : '' %>"><i class="fas fa-home"></i><span>Home</span></a>
+      <a href="/shop" class="mobile-nav-item<%= currentPath === '/shop' ? ' active' : '' %>"><i class="fas fa-store"></i><span>Shop</span></a>
+      <a href="/about" class="mobile-nav-item<%= currentPath === '/about' ? ' active' : '' %>"><i class="fas fa-info-circle"></i><span>About</span></a>
+      <a href="/gallery" class="mobile-nav-item<%= currentPath === '/gallery' ? ' active' : '' %>"><i class="fas fa-images"></i><span>Gallery</span></a>
+      <a href="/contact" class="mobile-nav-item<%= currentPath === '/contact' ? ' active' : '' %>"><i class="fas fa-envelope"></i><span>Contact</span></a>
+    </div>
+  </nav>
+  <div id="page-content">
   <div class="top-bar">
     <div class="container d-flex justify-content-between align-items-center">
       <div>
