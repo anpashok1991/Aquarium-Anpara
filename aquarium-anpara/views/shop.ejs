@@ -38,9 +38,17 @@
             <label class="form-label fw-semibold">Category</label>
             <select class="form-select" id="categoryFilter">
               <option value="">All Categories</option>
-              <% categories.forEach(cat => { %>
-              <option value="<%= cat.slug %>"><%- cat.parent_id ? '&nbsp;&nbsp;&nbsp;' : '' %><%= cat.name %></option>
-              <% }) %>
+              <% function renderCatOptions(parentId, depth) {
+                   let html = '';
+                   const filtered = categories.filter(c => (c.parent_id || null) === (parentId || null));
+                   filtered.sort((a,b) => (a.sort_order||0) - (b.sort_order||0) || a.name.localeCompare(b.name));
+                   filtered.forEach(c => {
+                     const indent = '&nbsp;'.repeat(depth * 3);
+                     html += `<option value="${c.slug}">${indent}${c.name}</option>`;
+                     html += renderCatOptions(c.id, depth + 1);
+                   });
+                   return html;
+                 } %><%- renderCatOptions(null, 0) %>
             </select>
           </div>
 
@@ -110,9 +118,7 @@
           <label class="form-label fw-semibold">Category</label>
           <select class="form-select" id="mobileCategoryFilter">
             <option value="">All Categories</option>
-            <% categories.forEach(cat => { %>
-            <option value="<%= cat.slug %>"><%- cat.parent_id ? '&nbsp;&nbsp;&nbsp;' : '' %><%= cat.name %></option>
-            <% }) %>
+            <%- renderCatOptions(null, 0) %>
           </select>
         </div>
         <div class="mb-3" id="mobileBrandFilterWrap">

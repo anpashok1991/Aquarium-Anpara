@@ -60,7 +60,11 @@ async function loadForm() {
     window._catLiveMap[c.id] = c.is_live ? true : false;
   });
   bData.brands.forEach(b => brandSel.add(new Option(b.name, b.id)));
-  breedData.breeds.forEach(b => breedSel.add(new Option(b.name, b.id)));
+  breedData.breeds.forEach(b => {
+    const opt = new Option(b.name, b.id);
+    opt.dataset.cat = b.category_id || '';
+    breedSel.add(opt);
+  });
   window._breedMap = {};
   breedData.breeds.forEach(b => {
     if (!window._breedMap[b.category_id]) window._breedMap[b.category_id] = {};
@@ -111,6 +115,10 @@ function toggleBreedBrand() {
   const isLive = window._catLiveMap[catId];
   document.getElementById('brandField').style.display = isLive ? 'none' : '';
   document.getElementById('breedField').style.display = isLive ? '' : 'none';
+  document.querySelectorAll('#breed option').forEach(o => {
+    if (!o.value) return;
+    o.style.display = Number(o.dataset.cat) === Number(catId) ? '' : 'none';
+  });
   autoSelectBreed();
 }
 
