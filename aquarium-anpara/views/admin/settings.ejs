@@ -22,6 +22,21 @@
           <input type="hidden" id="shopLogo"></div>
         <div class="col-md-6"><label class="form-label">Free Delivery Min Order (₹)</label><input type="number" class="form-control" id="minOrder"></div>
         <div class="col-md-6"><label class="form-label">Delivery Charge (₹)</label><input type="number" class="form-control" id="deliveryCharge"></div>
+        <div class="col-12"><hr><h5 class="fw-bold">Email / SMTP Settings</h5></div>
+        <div class="col-md-6"><label class="form-label">SMTP Host</label><input type="text" class="form-control" id="smtpHost" placeholder="smtp.gmail.com"></div>
+        <div class="col-md-3"><label class="form-label">SMTP Port</label><input type="number" class="form-control" id="smtpPort" placeholder="587"></div>
+        <div class="col-md-3"><label class="form-label">SMTP Secure</label><select class="form-select" id="smtpSecure"><option value="false">No (Port 587)</option><option value="true">Yes (Port 465)</option></select></div>
+        <div class="col-md-6"><label class="form-label">SMTP Username</label><input type="text" class="form-control" id="smtpUser" placeholder="your@email.com"></div>
+        <div class="col-md-6"><label class="form-label">SMTP Password</label><input type="password" class="form-control" id="smtpPass" placeholder="App password"></div>
+        <div class="col-12"><button class="btn btn-outline-primary btn-sm" onclick="testEmail()"><i class="fas fa-paper-plane me-1"></i>Test Email</button></div>
+        <div class="col-12"><hr><h5 class="fw-bold">Payment Settings</h5></div>
+        <div class="col-12"><label class="form-label">Enabled Payment Methods</label>
+          <div class="d-flex flex-wrap gap-3 mt-1">
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="payCod" value="cod" checked><label class="form-check-label">Cash on Delivery</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="payUpi" value="upi"><label class="form-check-label">UPI Payment</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="payBank" value="bank_transfer"><label class="form-check-label">Bank Transfer</label></div>
+          </div>
+        </div>
         <div class="col-12"><hr><h5 class="fw-bold">SEO Settings</h5></div>
         <div class="col-md-6"><label class="form-label">Google Search Console Verification Code</label><input type="text" class="form-control" id="googleVerification" placeholder="e.g. ABCDEF1234567890"></div>
         <div class="col-md-6"><label class="form-label">Google Analytics Measurement ID</label><input type="text" class="form-control" id="gaId" placeholder="e.g. G-XXXXXXXXXX"></div>
@@ -56,8 +71,24 @@ function removeLogo() {
   document.getElementById('shopLogoFile').value = '';
   showLogoPreview('');
 }
-async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';if(s.shop_logo){showLogoPreview(s.shop_logo);}}catch(e){}}
-async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}await api('/settings',{method:'PUT',body:JSON.stringify({shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value})});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
+function getPaymentMethods() {
+  const methods = [];
+  document.querySelectorAll('[id^="pay"]:checked').forEach(cb => methods.push(cb.value));
+  return methods;
+}
+function setPaymentMethods(arr) {
+  document.querySelectorAll('[id^="pay"]').forEach(cb => cb.checked = arr.includes(cb.value));
+}
+async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('smtpHost').value=s.smtp_host||'';document.getElementById('smtpPort').value=s.smtp_port||'587';document.getElementById('smtpSecure').value=s.smtp_secure||'false';document.getElementById('smtpUser').value=s.smtp_user||'';document.getElementById('smtpPass').value=s.smtp_pass||'';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';try{setPaymentMethods(JSON.parse(s.payment_methods||'["cod"]'));}catch(e){setPaymentMethods(['cod']);}if(s.shop_logo){showLogoPreview(s.shop_logo);}}catch(e){}}
+async function testEmail() {
+  const email = document.getElementById('shopEmail').value;
+  if (!email) { showToast('Please enter a Shop Email first', 'error'); return; }
+  try {
+    await api('/settings/test-email', { method: 'POST', body: JSON.stringify({ email, smtp_host: document.getElementById('smtpHost').value, smtp_port: document.getElementById('smtpPort').value, smtp_secure: document.getElementById('smtpSecure').value, smtp_user: document.getElementById('smtpUser').value, smtp_pass: document.getElementById('smtpPass').value }) });
+    showToast('Test email sent! Check your inbox.');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}await api('/settings',{method:'PUT',body:JSON.stringify({shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,smtp_host:document.getElementById('smtpHost').value,smtp_port:document.getElementById('smtpPort').value,smtp_secure:document.getElementById('smtpSecure').value,smtp_user:document.getElementById('smtpUser').value,smtp_pass:document.getElementById('smtpPass').value,payment_methods:JSON.stringify(getPaymentMethods()),google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value})});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
 document.addEventListener('DOMContentLoaded',loadSettings);
 </script>
 <%- include('../partials/footer') %>

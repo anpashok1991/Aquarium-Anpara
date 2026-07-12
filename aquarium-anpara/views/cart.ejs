@@ -74,7 +74,7 @@ function renderCart() {
     <div class="cart-item">
       <img src="${item.image || '/images/no-image.png'}" alt="${item.name}" onerror="this.style.display='none'">
       <div class="flex-grow-1">
-        <h6 class="mb-1"><a href="/product/${item.slug}" class="text-decoration-none">${item.name}</a></h6>
+        <h6 class="mb-1"><a href="/product/${btoa(String(item.id)).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''})[c])}" class="text-decoration-none">${item.name}</a></h6>
         <span class="text-primary fw-bold">₹${(item.unit_price || item.price).toLocaleString()}</span>
         ${item.discount_price > 0 ? `<span class="text-muted text-decoration-line-through ms-2">₹${item.price.toLocaleString()}</span>` : ''}
         ${item.stock_quantity <= 5 ? `<span class="badge bg-warning text-dark ms-2">Only ${item.stock_quantity} left</span>` : ''}
@@ -145,7 +145,7 @@ async function loadSavedItems() {
       <div class="cart-item saved-item">
         <img src="${item.image || '/images/no-image.png'}" alt="${item.name}" onerror="this.style.display='none'">
         <div class="flex-grow-1">
-          <h6 class="mb-1"><a href="/product/${item.slug}" class="text-decoration-none">${item.name}</a></h6>
+          <h6 class="mb-1"><a href="/product/${btoa(String(item.id)).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''})[c])}" class="text-decoration-none">${item.name}</a></h6>
           <span class="text-primary fw-bold">₹${(item.unit_price || item.price).toLocaleString()}</span>
         </div>
         <div class="text-end" style="min-width:90px">

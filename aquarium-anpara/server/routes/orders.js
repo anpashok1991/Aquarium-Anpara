@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
 const { auth, adminOnly, optionalAuth } = require('../middleware/auth');
+const { sendOrderStatusEmail } = require('../email');
 
 const statusLabels = {
   pending: 'Order Placed',
@@ -29,10 +30,23 @@ function generateOrderNumber() {
 router.post('/', optionalAuth, async (req, res) => {
   try {
     const { customer_name, customer_email, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode,
-      payment_method, coupon_code, notes } = req.body;
+      payment_method, coupon_code, notes, buy_now } = req.body;
 
     if (!customer_name || !customer_phone || !shipping_address || !shipping_city || !shipping_state || !shipping_pincode) {
       return res.status(400).json({ error: 'All shipping details are required' });
+    }
+
+    if (!payment_method) {
+      return res.status(400).json({ error: 'Please select a payment method' });
+    }
+
+    if (payment_method) {
+      const pmSetting = await prisma.settings.findUnique({ where: { key: 'payment_methods' } });
+      let enabled = ['cod'];
+      try { enabled = JSON.parse(pmSetting?.value || '["cod"]'); } catch {}
+      if (!enabled.includes(payment_method)) {
+        return res.status(400).json({ error: 'Selected payment method is not available' });
+      }
     }
 
     const sessionId = req.headers['x-session-id'] || 'guest';
@@ -82,6 +96,11 @@ router.post('/', optionalAuth, async (req, res) => {
     }
 
     if (!cartItems.length) return res.status(400).json({ error: 'Cart is empty' });
+
+    if (buy_now === '1') {
+      const buyId = Number(req.body.buy_now_product_id);
+      if (buyId) cartItems = cartItems.filter(item => item.product_id === buyId);
+    }
 
     let subtotal = 0;
     let discount = 0;
@@ -135,6 +154,7 @@ router.post('/', optionalAuth, async (req, res) => {
 
     const orderId = newOrder.id;
     await addTracking(orderId, 'pending');
+    sendOrderStatusEmail(newOrder, null, 'pending');
 
     const insertItems = async (tx) => {
       for (const item of cartItems) {
@@ -278,6 +298,9 @@ router.put('/:id/status', auth, adminOnly, async (req, res) => {
       await addTracking(Number(req.params.id), order_status);
     }
     const order = await prisma.orders.findFirst({ where: { id: Number(req.params.id) } });
+    if (order_status && order?.customer_email) {
+      sendOrderStatusEmail(order, order.order_status, order_status);
+    }
     res.json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -294,6 +317,7 @@ router.put('/cancel/:orderNumber', auth, async (req, res) => {
     });
     await addTracking(order.id, 'cancelled');
     const updated = await prisma.orders.findFirst({ where: { id: order.id } });
+    if (updated?.customer_email) sendOrderStatusEmail(updated, order.order_status, 'cancelled');
     res.json({ order: updated });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -329,15 +329,18 @@ async function loadShopProducts() {
         <div class="${colClass} fade-in">
           <div class="product-card position-relative ${currentView === 'list' ? 'd-flex flex-row' : ''}">
             ${badges.length ? `<div class="product-badge">${badges.join('')}</div>` : ''}
-            <a href="/product/${p.slug}" class="${currentView === 'list' ? 'flex-shrink-0' : ''}" style="${currentView === 'list' ? 'width:200px;min-width:200px' : ''}">
-              <div class="card-img-wrapper" style="${currentView === 'list' ? 'height:200px' : ''}">
-                <img src="${p.primary_image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">
-              </div>
-            </a>
+            <div class="${currentView === 'list' ? 'flex-shrink-0' : ''}" style="position:relative;${currentView === 'list' ? 'width:200px;min-width:200px' : ''}">
+              <a href="/product/${btoa(String(p.id)).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''})[c])}">
+                <div class="card-img-wrapper" style="${currentView === 'list' ? 'height:200px' : ''}">
+                  <img src="${p.primary_image || '/images/no-image.png'}" class="card-img-top" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">
+                </div>
+              </a>
+              <button class="btn btn-sm wishlist-overlay" onclick="toggleWishlist(${p.id})" data-wishlist="${p.id}" title="Wishlist"><i class="far fa-heart"></i></button>
+            </div>
             <div class="card-body d-flex flex-column">
               ${p.category_name ? `<small class="card-category">${p.category_name}</small>` : ''}
               ${p.is_live ? (p.breed_name ? `<small class="text-muted"><i class="fas fa-paw me-1"></i>${p.breed_name}</small>` : '') : (p.brand_name ? `<small class="text-muted">${p.brand_name}</small>` : '')}
-              <a href="/product/${p.slug}" class="text-decoration-none">
+              <a href="/product/${btoa(String(p.id)).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''})[c])}" class="text-decoration-none">
                 <h6 class="card-title">${p.name}</h6>
               </a>
               <div class="product-rating">
@@ -350,7 +353,8 @@ async function loadShopProducts() {
               </div>
               <div class="btn-group mt-2">
                 <button class="btn btn-primary btn-sm" onclick="addToCart(${p.id}, 1, this)"><i class="fas fa-cart-plus me-1"></i>Add</button>
-                <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/${p.slug}'">View</button>
+                <button class="btn btn-success btn-sm" onclick="buyNow(${p.id}, 1)"><i class="fas fa-bolt me-1"></i>Buy Now</button>
+                <button class="btn btn-outline-primary btn-sm" onclick="window.location.href='/product/${btoa(String(p.id)).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''})[c])}'"><i class="fas fa-eye me-1"></i>View</button>
               </div>
             </div>
           </div>
@@ -409,6 +413,17 @@ function goToPage(page) {
   document.getElementById('mobileCategoryFilter').addEventListener('change', toggleBreedBrand);
   toggleBreedBrand();
   loadShopProducts();
+  if (isLoggedIn()) {
+    api('/wishlist').then(d => {
+      window._wishlistIds = new Set((d.items || []).map(i => i.product_id));
+      window._wishlistIds.forEach(id => {
+        document.querySelectorAll(`[data-wishlist="${id}"]`).forEach(btn => {
+          btn.innerHTML = '<i class="fas fa-heart text-danger"></i>';
+          btn.classList.add('wishlist-active');
+        });
+      });
+    }).catch(() => {});
+  }
 })();
 </script>
 

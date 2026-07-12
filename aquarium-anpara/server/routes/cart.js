@@ -79,7 +79,7 @@ router.post('/add', optionalAuth, async (req, res) => {
     const userId = req.user?.id;
     const product = await prisma.products.findFirst({ where: { id: product_id, is_active: 1 } });
     if (!product) return res.status(404).json({ error: 'Product not found' });
-    if (product.stock_quantity < quantity) return res.status(400).json({ error: 'Insufficient stock' });
+    if (product.stock_quantity < quantity) return res.status(400).json({ error: 'Only ' + product.stock_quantity + ' in stock' });
 
     let existing;
     if (userId) {
@@ -94,7 +94,7 @@ router.post('/add', optionalAuth, async (req, res) => {
 
     if (existing) {
       const newQty = existing.quantity + quantity;
-      if (newQty > product.stock_quantity) return res.status(400).json({ error: 'Insufficient stock' });
+      if (newQty > product.stock_quantity) return res.status(400).json({ error: 'Only ' + product.stock_quantity + ' available, you already have ' + existing.quantity + ' in cart' });
       await prisma.cart.update({ where: { id: existing.id }, data: { quantity: newQty } });
     } else {
       await prisma.cart.create({

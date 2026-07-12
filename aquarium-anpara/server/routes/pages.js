@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
 const { requireAdminPage } = require('../middleware/auth');
+const { enc, dec } = require('../url-helper');
 
 function buildBreadcrumb(items) {
   return items.map((item, i) => ({
@@ -34,8 +35,8 @@ router.get('/', async (req, res) => {
       orderBy: { name: 'asc' }
     });
     const brandsData = brandsWithCount.map(b => ({ ...b, product_count: b._count.products }));
-    const featuredMapped = featured.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
-    const bestMapped = bestSellers.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
+    const featuredMapped = featured.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null, _encUrl: enc(p.id) }));
+    const bestMapped = bestSellers.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null, _encUrl: enc(p.id) }));
     const newMapped = newArrivals.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }));
     const reviewsMapped = reviews.map(r => { const o = { ...r, product_name: r.products?.name }; delete o.products; return o; });
     const seo = {
@@ -80,10 +81,12 @@ router.get('/shop', async (req, res) => {
   } catch (e) { res.render('shop', { title: 'Shop', seo: { title: 'Shop' }, categories: [], brands: [], breeds: [], selectedCategory: '' }); }
 });
 
-router.get('/product/:slug', async (req, res) => {
+router.get('/product/:param', async (req, res) => {
   try {
+    let productId = dec(req.params.param);
+    const where = productId ? { id: productId, is_active: 1 } : { slug: req.params.param, is_active: 1 };
     const product = await prisma.products.findFirst({
-      where: { slug: req.params.slug, is_active: 1 },
+      where,
       include: {
         categories: { select: { name: true, slug: true, is_live: true } },
         brands: { select: { name: true } },
@@ -104,6 +107,7 @@ router.get('/product/:slug', async (req, res) => {
       brand: product.brands?.name || '',
       images: images.length ? images.map(i => 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + i.image_url) : ['/images/no-image.png'],
       slug: product.slug,
+      _encUrl: enc(product.id),
       price: product.discount_price > 0 ? product.discount_price : product.price,
       stock: product.stock_quantity
     };
@@ -117,11 +121,12 @@ router.get('/product/:slug', async (req, res) => {
       breadcrumb: buildBreadcrumb([
         { name: 'Home', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/' },
         { name: product.categories?.name || 'Shop', url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + (product.categories?.slug ? '/category/' + product.categories.slug : '/shop') },
-        { name: product.name, url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/product/' + product.slug }
+        { name: product.name, url: 'https://' + (res.locals.shopDomain || 'aquarium-anpara.com') + '/product/' + enc(product.id) }
       ])
     };
     const productData = {
       ...product,
+      _encUrl: enc(product.id),
       category_name: product.categories?.name,
       category_slug: product.categories?.slug,
       is_live: product.categories?.is_live ? true : false,
@@ -129,7 +134,7 @@ router.get('/product/:slug', async (req, res) => {
       breed_name: product.breeds?.name,
       images,
       reviews: reviews.map(r => ({ ...r, user_name: r.users?.name })),
-      related: related.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null }))
+      related: related.map(p => ({ ...p, primary_image: p.product_images[0]?.image_url || null, _encUrl: enc(p.id) }))
     };
     delete productData.categories;
     delete productData.brands;
@@ -253,7 +258,7 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const domain = res.locals.shopDomain || 'aquarium-anpara.com';
     const [products, categories] = await Promise.all([
-      prisma.products.findMany({ where: { is_active: 1 }, select: { slug: true, updated_at: true } }),
+      prisma.products.findMany({ where: { is_active: 1 }, select: { id: true, updated_at: true } }),
       prisma.categories.findMany({ where: { is_active: 1 }, select: { slug: true } })
     ]);
     const staticPages = ['/', '/shop', '/about', '/gallery', '/contact', '/track-order'];
@@ -265,7 +270,7 @@ router.get('/sitemap.xml', async (req, res) => {
       xml += `  <url><loc>https://${domain}/category/${c.slug}</loc><priority>0.7</priority></url>\n`;
     });
     products.forEach(p => {
-      xml += `  <url><loc>https://${domain}/product/${p.slug}</loc><priority>0.6</priority><lastmod>${(p.updated_at || new Date()).toISOString()}</lastmod></url>\n`;
+      xml += `  <url><loc>https://${domain}/product/${enc(p.id)}</loc><priority>0.6</priority><lastmod>${(p.updated_at || new Date()).toISOString()}</lastmod></url>\n`;
     });
     xml += '</urlset>';
     res.header('Content-Type', 'application/xml');

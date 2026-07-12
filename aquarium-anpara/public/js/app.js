@@ -71,6 +71,14 @@ function showToast(message, type = 'success') {
 }
 
 // Cart
+async function buyNow(productId, qty = 1) {
+  try {
+    await api('/cart/add', { method: 'POST', body: JSON.stringify({ product_id: productId, quantity: qty }) });
+    sessionStorage.setItem('buyNowProductId', String(productId));
+    window.location.href = '/checkout?buy_now=1';
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
 async function addToCart(productId, qty = 1, btn) {
   try {
     await api('/cart/add', { method: 'POST', body: JSON.stringify({ product_id: productId, quantity: qty }) });
@@ -114,8 +122,10 @@ async function toggleWishlist(productId) {
   try {
     const data = await api('/wishlist', { method: 'POST', body: JSON.stringify({ product_id: productId }) });
     showToast(data.message);
-    const btn = document.querySelector(`[data-wishlist="${productId}"]`);
-    if (btn) btn.innerHTML = data.active ? '<i class="fas fa-heart text-danger"></i>' : '<i class="far fa-heart"></i>';
+    document.querySelectorAll(`[data-wishlist="${productId}"]`).forEach(btn => {
+      btn.innerHTML = data.active ? '<i class="fas fa-heart text-danger"></i>' : '<i class="far fa-heart"></i>';
+      if (data.active) btn.classList.add('wishlist-active'); else btn.classList.remove('wishlist-active');
+    });
   } catch (e) { showToast(e.message, 'error'); }
 }
 

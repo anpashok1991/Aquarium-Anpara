@@ -12,9 +12,10 @@
 
   <div class="row g-5">
     <div class="col-lg-6">
-      <div class="product-detail-img mb-3">
+      <div class="product-detail-img mb-3 position-relative">
         <img id="mainImage" src="<%= product.images && product.images[0] ? product.images[0].image_url : '/images/no-image.png' %>" 
              alt="<%= product.name %>" class="img-fluid rounded" onerror="this.style.display='none'">
+        <button class="btn btn-sm wishlist-overlay-lg" onclick="toggleWishlist(<%= product.id %>)" data-wishlist="<%= product.id %>" title="Wishlist"><i class="far fa-heart"></i></button>
       </div>
       <% if (product.video_url) { %>
       <div class="mb-3">
@@ -56,9 +57,9 @@
 
       <div class="mb-4">
         <% if (product.stock_quantity > 0) { %>
-          <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i>In Stock (<%= product.stock_quantity %> available)</span>
+          <span class="badge bg-success fs-6" id="stockBadge"><i class="fas fa-check-circle me-1"></i>In Stock (<%= product.stock_quantity %> available)</span>
         <% } else { %>
-          <span class="badge bg-danger fs-6"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
+          <span class="badge bg-danger fs-6" id="stockBadge"><i class="fas fa-times-circle me-1"></i>Out of Stock</span>
         <% } %>
       </div>
 
@@ -73,8 +74,8 @@
         <button class="btn btn-primary btn-lg flex-grow-1" onclick="addToCart(<%= product.id %>, document.getElementById('qty').value, this)" <%= product.stock_quantity <= 0 ? 'disabled' : '' %>>
           <i class="fas fa-cart-plus me-2"></i>Add to Cart
         </button>
-        <button class="btn btn-outline-danger btn-lg" onclick="toggleWishlist(<%= product.id %>)">
-          <i class="far fa-heart"></i>
+        <button class="btn btn-success btn-lg" onclick="buyNow(<%= product.id %>, document.getElementById('qty').value)" <%= product.stock_quantity <= 0 ? 'disabled' : '' %>>
+          <i class="fas fa-bolt me-2"></i>Buy Now
         </button>
       </div>
 
@@ -134,13 +135,16 @@
       <% product.related.forEach(p => { %>
       <div class="col-6 col-md-3">
         <div class="product-card h-100">
-          <a href="/product/<%= p.slug %>">
-            <div class="card-img-wrapper">
-              <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.style.display='none'">
-            </div>
-          </a>
+          <div style="position:relative">
+            <a href="/product/<%= p._encUrl %>">
+              <div class="card-img-wrapper">
+                <img src="<%= p.primary_image || '/images/no-image.png' %>" class="card-img-top" alt="<%= p.name %>" onerror="this.style.display='none'">
+              </div>
+            </a>
+            <button class="btn btn-sm wishlist-overlay" onclick="toggleWishlist(<%= p.id %>)" data-wishlist="<%= p.id %>" title="Wishlist"><i class="far fa-heart"></i></button>
+          </div>
           <div class="card-body">
-            <a href="/product/<%= p.slug %>" class="text-decoration-none"><h6 class="card-title"><%= p.name %></h6></a>
+            <a href="/product/<%= p._encUrl %>" class="text-decoration-none"><h6 class="card-title"><%= p.name %></h6></a>
             <div class="product-price">₹<%= (p.discount_price > 0 ? p.discount_price : p.price).toLocaleString() %>
               <% if (p.discount_price > 0) { %><span class="old-price">₹<%= p.price.toLocaleString() %></span><% } %>
             </div>
@@ -187,6 +191,42 @@ function changeQty(delta) {
       lens.style.backgroundImage = lensBg;
     });
   });
+})();
+
+(async function() {
+  try {
+    if (isLoggedIn()) {
+      const wd = await api('/wishlist');
+      const pid = <%= product.id %>;
+      if ((wd.items || []).some(i => i.product_id === pid)) {
+        const btn = document.querySelector(`[data-wishlist="${pid}"]`);
+        if (btn) { btn.innerHTML = '<i class="fas fa-heart text-danger"></i>'; btn.classList.add('wishlist-active'); }
+      }
+    }
+  } catch(e) {}
+})();
+
+(async function() {
+  try {
+    const cart = await api('/cart');
+    const productId = <%= product.id %>;
+    const inCart = cart.items.find(i => i.product_id === productId);
+    if (inCart) {
+      const badge = document.getElementById('stockBadge');
+      const qtyInput = document.getElementById('qty');
+      const addBtn = document.querySelector('.btn-primary.btn-lg[onclick*="addToCart"]');
+      const buyBtn = document.querySelector('.btn-success.btn-lg[onclick*="buyNow"]');
+      const effectiveStock = Math.max(0, <%= product.stock_quantity %> - inCart.quantity);
+      if (effectiveStock > 0) {
+        if (badge) badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>In Stock (' + effectiveStock + ' available, ' + inCart.quantity + ' in cart)';
+        if (qtyInput) qtyInput.max = effectiveStock;
+      } else {
+        if (badge) { badge.className = 'badge bg-warning text-dark fs-6'; badge.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>In Cart (' + inCart.quantity + ')'; }
+        if (qtyInput) qtyInput.max = 0;
+        [addBtn, buyBtn].forEach(b => { if (b) b.disabled = true; });
+      }
+    }
+  } catch(e) {}
 })();
 </script>
 

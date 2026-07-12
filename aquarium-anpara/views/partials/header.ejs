@@ -67,7 +67,7 @@
     "image": <%= JSON.stringify(seo.product.images) %>,
     "offers": {
       "@type": "Offer",
-      "url": "https://<%= shopDomain || 'aquarium-anpara.com' %>/product/<%= seo.product.slug %>",
+      "url": "https://<%= shopDomain || 'aquarium-anpara.com' %>/product/<%= seo.product._encUrl %>",
       "priceCurrency": "INR",
       "price": <%= seo.product.price %>,
       "availability": "<%= seo.product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' %>",
