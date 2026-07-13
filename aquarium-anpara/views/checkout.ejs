@@ -143,7 +143,10 @@ async function loadCheckout() {
       let enabled = [];
       try { enabled = JSON.parse(payMethods); } catch { enabled = ['cod']; }
       document.querySelectorAll('.pay-option').forEach(el => {
-        el.style.display = enabled.includes(el.dataset.method) ? '' : 'none';
+        const isEnabled = enabled.includes(el.dataset.method);
+        el.style.display = '';
+        el.classList.toggle('disabled', !isEnabled);
+        el.querySelector('input').disabled = !isEnabled;
       });
       const firstVisible = document.querySelector('.pay-option:not([style*="display: none"]) input');
       if (firstVisible) firstVisible.checked = true;

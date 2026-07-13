@@ -73,6 +73,24 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.json({ products: [] });
+    const products = await prisma.products.findMany({
+      where: { is_active: 1, name: { contains: q } },
+      orderBy: { name: 'asc' },
+      take: 20,
+      include: { product_images: { where: { is_primary: 1 }, take: 1 } }
+    });
+    const mapped = products.map(p => ({
+      id: p.id, name: p.name, price: p.price, discount_price: p.discount_price,
+      stock_quantity: p.stock_quantity, primary_image: p.product_images[0]?.image_url || null
+    }));
+    res.json({ products: mapped });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/featured', async (req, res) => {
   try {
     const products = await prisma.products.findMany({

@@ -68,11 +68,11 @@ async function loadOrder() {
             </div>
             <div class="col-md-6">
               <h6 class="fw-bold"><i class="fas fa-credit-card me-2"></i>Payment</h6>
-              <p class="mb-1">${order.payment_method.toUpperCase()} ${order.payment_status === 'paid' ? '<span class="badge bg-success">Paid</span>' : '<span class="badge bg-warning text-dark">' + order.payment_status + '</span>'}</p>
+              <p class="mb-1">${order.payment_method === 'cod' ? 'Cash' : order.payment_method.toUpperCase()} ${order.payment_status === 'paid' ? '<span class="badge bg-success">Paid</span>' : '<span class="badge bg-warning text-dark">' + order.payment_status + '</span>'}</p>
             </div>
             <div class="col-md-6">
               <h6 class="fw-bold"><i class="fas fa-tag me-2"></i>Total</h6>
-              ${order.order_status === 'delivered' || order.order_status === 'completed' ? `<div class="mb-2"><a href="/invoice/${order.order_number}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fas fa-receipt me-1"></i>View Invoice</a></div>` : ''}
+              ${order.order_status === 'delivered' || order.order_status === 'completed' || order.sale_type === 'offline' ? `<div class="mb-2"><a href="/invoice/${order.order_number}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fas fa-receipt me-1"></i>View Invoice</a></div>` : ''}
               <p class="mb-1 fw-bold fs-5">₹${order.total.toLocaleString()}</p>
               <small class="text-muted">Subtotal: ₹${order.subtotal.toLocaleString()}${order.discount > 0 ? ' | Discount: -₹' + order.discount.toLocaleString() : ''} | Delivery: ${order.shipping_charge === 0 ? 'Free' : '₹' + order.shipping_charge}</small>
             </div>

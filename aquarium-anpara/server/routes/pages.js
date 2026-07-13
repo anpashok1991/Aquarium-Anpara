@@ -193,13 +193,17 @@ router.get('/invoice/:orderNumber', async (req, res) => {
     const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
     if (!order) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found' }, error: 'Order not found' });
     if (order.order_status !== 'delivered' && order.order_status !== 'completed') {
-      return res.status(403).render('error', { title: 'Not Available', seo: { title: 'Not Available' }, error: 'Invoice will be available once the order is delivered.' });
+      if (order.sale_type !== 'offline') {
+        return res.status(403).render('error', { title: 'Not Available', seo: { title: 'Not Available' }, error: 'Invoice will be available once the order is delivered.' });
+      }
     }
     order.items = await prisma.order_items.findMany({ where: { order_id: order.id } });
     const seo = { title: 'Invoice ' + order.order_number, robots: 'noindex' };
     res.render('invoice', { title: 'Invoice', seo, order });
   } catch (e) { res.status(500).render('error', { title: 'Error', seo: { title: 'Error' }, error: e.message }); }
 });
+
+router.get('/admin/offline-sale', requireAdminPage, (req, res) => { res.render('admin/offline-sale', { title: 'Offline Sale', seo: { robots: 'noindex' } }); });
 
 router.get('/admin/staff', requireAdminPage, (req, res) => { res.render('admin/staff', { title: 'Manage Staff', seo: { robots: 'noindex' } }); });
 

@@ -66,7 +66,7 @@ const requireAdminPage = async (req, res, next) => {
     if (user.role === 'staff' && user.permissions) {
       const perms = (() => { try { return JSON.parse(user.permissions); } catch { return []; } })();
       const pathSection = req.path.replace('/admin/', '').split('/')[0] || 'dashboard';
-      const sectionMap = { '': 'dashboard', 'products': 'products', 'categories': 'categories', 'brands': 'brands', 'orders': 'orders', 'customers': 'customers', 'inventory': 'inventory', 'coupons': 'coupons', 'reviews': 'reviews', 'reports': 'reports', 'banners': 'banners', 'gallery': 'gallery', 'settings': 'settings', 'messages': 'messages', 'users': 'users', 'staff': 'staff' };
+      const sectionMap = { '': 'dashboard', 'products': 'products', 'categories': 'categories', 'brands': 'brands', 'orders': 'orders', 'customers': 'customers', 'inventory': 'inventory', 'coupons': 'coupons', 'reviews': 'reviews', 'reports': 'reports', 'banners': 'banners', 'gallery': 'gallery', 'settings': 'settings', 'messages': 'messages', 'users': 'users', 'staff': 'staff', 'offline-sale': 'offline-sale' };
       const section = sectionMap[pathSection] || pathSection;
       if (section !== 'staff' && !perms.includes(section) && !perms.includes('all')) {
         return res.status(403).send('Access denied: You do not have permission to view this section.');

@@ -2,7 +2,15 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin } = require('../middleware/auth');
+
+function generateOrderNumber() {
+  const date = new Date();
+  const prefix = 'AQ';
+  const datePart = date.getFullYear().toString().slice(-2) + String(date.getMonth()+1).padStart(2,'0') + String(date.getDate()).padStart(2,'0');
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `${prefix}${datePart}${random}`;
+}
 
 router.get('/users', auth, adminOnly, async (req, res) => {
   try {
@@ -59,6 +67,104 @@ router.get('/audit-logs', auth, adminOnly, async (req, res) => {
     });
     const mapped = logs.map(l => ({ ...l, user_name: l.users?.name || null, users: undefined }));
     res.json({ logs: mapped, total, page: pageNum, pages: Math.ceil(total / limitNum) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
+  try {
+    const { items, customer_name, customer_phone, payment_method, payment_status, discount_amount, notes } = req.body;
+
+    if (!items || !items.length) return res.status(400).json({ error: 'At least one item is required' });
+    if (!customer_name || !customer_phone) return res.status(400).json({ error: 'Customer name and phone are required' });
+
+    const productIds = items.map(i => Number(i.product_id));
+    const products = await prisma.products.findMany({
+      where: { id: { in: productIds }, is_active: 1 },
+      include: { product_images: { where: { is_primary: 1 }, take: 1 } }
+    });
+    const productMap = {};
+    products.forEach(p => { productMap[p.id] = p; });
+
+    let subtotal = 0;
+    for (const item of items) {
+      const product = productMap[Number(item.product_id)];
+      if (!product) return res.status(400).json({ error: `Product ID ${item.product_id} not found or inactive` });
+      if (product.stock_quantity < Number(item.quantity)) {
+        return res.status(400).json({ error: `Insufficient stock for ${product.name}. Available: ${product.stock_quantity}` });
+      }
+      const unitPrice = product.discount_price > 0 ? product.discount_price : product.price;
+      subtotal += unitPrice * Number(item.quantity);
+    }
+
+    const discount = Math.min(Number(discount_amount) || 0, subtotal);
+    const total = subtotal - discount;
+    const orderNumber = generateOrderNumber();
+
+    const newOrder = await prisma.orders.create({
+      data: {
+        order_number: orderNumber,
+        user_id: req.user.id,
+        customer_name,
+        customer_phone,
+        customer_whatsapp: customer_phone,
+        shipping_address: 'Store Pickup',
+        shipping_city: 'Store',
+        shipping_state: 'Store',
+        shipping_pincode: '000000',
+        subtotal,
+        discount,
+        shipping_charge: 0,
+        total,
+        payment_method: payment_method || 'cod',
+        payment_status: payment_status || 'paid',
+        order_status: 'delivered',
+        sale_type: 'offline',
+        notes: notes ? `Offline Sale - ${notes}` : 'Offline Sale at Store'
+      }
+    });
+
+    await prisma.order_tracking.create({
+      data: { order_id: newOrder.id, status: 'delivered', description: 'Offline sale at store' }
+    });
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const product = productMap[Number(item.product_id)];
+        const qty = Number(item.quantity);
+        const unitPrice = product.discount_price > 0 ? product.discount_price : product.price;
+        const itemTotal = unitPrice * qty;
+        await tx.order_items.create({
+          data: {
+            order_id: newOrder.id,
+            product_id: product.id,
+            product_name: product.name,
+            product_image: product.product_images?.[0]?.image_url || null,
+            quantity: qty,
+            price: product.price,
+            discount: product.price - unitPrice,
+            total: itemTotal
+          }
+        });
+        await tx.products.update({
+          where: { id: product.id },
+          data: { stock_quantity: { decrement: qty }, sold_count: { increment: qty } }
+        });
+        await tx.inventory_logs.create({
+          data: {
+            product_id: product.id,
+            type: 'sale',
+            quantity: qty,
+            reference: orderNumber,
+            notes: `Offline sale at store by ${req.user.name}`
+          }
+        });
+      }
+    });
+
+    const order = await prisma.orders.findFirst({ where: { id: newOrder.id } });
+    order.items = await prisma.order_items.findMany({ where: { order_id: order.id } });
+
+    res.status(201).json({ order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

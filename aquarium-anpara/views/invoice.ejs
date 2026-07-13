@@ -23,8 +23,12 @@
           <strong>Bill To:</strong><br>
           <%= order.customer_name %><br>
           <%= order.customer_phone %><br>
-          <%= order.shipping_address %><br>
-          <%= order.shipping_city %>, <%= order.shipping_state %> - <%= order.shipping_pincode %>
+          <% if (order.sale_type === 'offline') { %>
+            <span class="badge bg-info">Store Pickup (Offline Sale)</span>
+          <% } else { %>
+            <%= order.shipping_address %><br>
+            <%= order.shipping_city %>, <%= order.shipping_state %> - <%= order.shipping_pincode %>
+          <% } %>
         </div>
       </div>
       <table class="table table-bordered">
@@ -53,7 +57,7 @@
       </table>
       <div class="row">
         <div class="col-md-6">
-          <p class="mb-1"><strong>Payment Method:</strong> <%= order.payment_method?.toUpperCase() || 'COD' %></p>
+          <p class="mb-1"><strong>Payment Method:</strong> <%= order.payment_method === 'cod' ? 'Cash' : order.payment_method?.toUpperCase() %></p>
           <p class="mb-1"><strong>Payment Status:</strong> <span class="badge bg-<%= order.payment_status === 'paid' ? 'success' : 'warning' %>"><%= order.payment_status %></span></p>
           <p><strong>Order Status:</strong> <span class="badge bg-<%= order.order_status === 'delivered' || order.order_status === 'completed' ? 'success' : order.order_status === 'cancelled' ? 'danger' : 'warning' %>"><%= order.order_status %></span></p>
         </div>

@@ -209,6 +209,7 @@ model orders {
   payment_method    String?       @default("cod")
   payment_status    String?       @default("pending")
   order_status      String?       @default("pending")
+  sale_type         String?       @default("online")
   notes             String?
   coupon_code       String?
   created_at        DateTime?     @default(now())
