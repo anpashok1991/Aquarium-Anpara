@@ -29,7 +29,8 @@ async function loadOrder() {
       document.getElementById('orderDetails').innerHTML = `
         <div class="row mb-3"><div class="col-sm-6"><strong>Name:</strong> ${orderData.customer_name}</div><div class="col-sm-6"><strong>Phone:</strong> ${orderData.customer_phone}</div></div>
         <div class="row mb-3"><div class="col-12"><strong>Address:</strong> ${orderData.shipping_address}, ${orderData.shipping_city}, ${orderData.shipping_state} - ${orderData.shipping_pincode}</div></div>
-        <div class="row mb-3"><div class="col-sm-6"><strong>Payment:</strong> ${orderData.payment_method.toUpperCase()}</div><div class="col-sm-6"><strong>Total:</strong> ₹${orderData.total.toLocaleString()}</div></div>
+        <div class="row mb-3"><div class="col-sm-6"><strong>Payment:</strong> ${orderData.payment_method === 'cod' ? 'Cash' : orderData.payment_method.toUpperCase()}</div><div class="col-sm-6"><strong>Total:</strong> ₹${orderData.total.toLocaleString()}</div></div>
+        ${orderData.tax > 0 ? `<div class="row mb-3"><div class="col-12"><strong>GST:</strong> ₹${orderData.tax.toLocaleString()}</div></div>` : ''}
         <p class="text-muted"><i class="fas fa-truck me-2"></i>Estimated delivery: 3-5 business days</p>`;
       document.getElementById('whatsappBtn').onclick = () => sendOrderWhatsApp(orderData);
     }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly, optionalAuth } = require('../middleware/auth');
+const { auth, adminOnly, optionalAuth, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 async function recalcProductRating(productId) {
   const agg = await prisma.reviews.aggregate({
@@ -78,7 +78,7 @@ router.put('/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/pending', auth, adminOnly, async (req, res) => {
+router.get('/pending', auth, staffOrAdmin, requireWritePermission('reviews'), async (req, res) => {
   try {
     const reviews = await prisma.reviews.findMany({
       where: { is_approved: 0 },
@@ -90,7 +90,7 @@ router.get('/pending', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/approve', auth, adminOnly, async (req, res) => {
+router.put('/:id/approve', auth, staffOrAdmin, requireWritePermission('reviews'), async (req, res) => {
   try {
     const review = await prisma.reviews.findUnique({ where: { id: Number(req.params.id) } });
     if (!review) return res.status(404).json({ error: 'Review not found' });
@@ -100,14 +100,14 @@ router.put('/:id/approve', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/reply', auth, adminOnly, async (req, res) => {
+router.put('/:id/reply', auth, staffOrAdmin, requireWritePermission('reviews'), async (req, res) => {
   try {
     await prisma.reviews.update({ where: { id: Number(req.params.id) }, data: { admin_reply: req.body.reply } });
     res.json({ message: 'Reply added' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('reviews'), async (req, res) => {
   try {
     const review = await prisma.reviews.findUnique({ where: { id: Number(req.params.id) } });
     if (!review) return res.status(404).json({ error: 'Review not found' });

@@ -203,8 +203,8 @@ const catIcons = {
               <h6 class="card-title"><%= p.name %></h6>
             </a>
             <div class="product-rating">
-              <span class="stars"><%= '★'.repeat(Math.round(p.rating)) %></span>
-              <span class="count">(<%= p.review_count %>)</span>
+              <span class="stars"><%= '★'.repeat(Math.round(p.rating || 0)) %><%= '☆'.repeat(5 - Math.round(p.rating || 0)) %></span>
+              <span class="count">(<%= p.review_count || 0 %>)</span>
             </div>
             <div class="product-price">
               ₹<%= p.discount_price > 0 ? p.discount_price.toLocaleString() : p.price.toLocaleString() %>

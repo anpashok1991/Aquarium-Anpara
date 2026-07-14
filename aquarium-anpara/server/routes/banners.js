@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
   try {
@@ -20,7 +20,7 @@ router.get('/all', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, staffOrAdmin, requireWritePermission('banners'), async (req, res) => {
   try {
     const { title, subtitle, image, link, sort_order } = req.body;
     const result = await prisma.banners.create({
@@ -30,7 +30,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, async (req, res) => {
+router.put('/:id', auth, staffOrAdmin, requireWritePermission('banners'), async (req, res) => {
   try {
     const paramId = Number(req.params.id);
     const { title, subtitle, image, link, sort_order, is_active } = req.body;
@@ -46,7 +46,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('banners'), async (req, res) => {
   try {
     await prisma.banners.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Banner deleted' });

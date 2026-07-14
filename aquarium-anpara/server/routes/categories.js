@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
   try {
@@ -32,7 +32,7 @@ router.get('/:slug', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, staffOrAdmin, requireWritePermission('categories'), async (req, res) => {
   try {
     const { name, description, image, parent_id, sort_order, is_live } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -48,7 +48,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, async (req, res) => {
+router.put('/:id', auth, staffOrAdmin, requireWritePermission('categories'), async (req, res) => {
   try {
     const { name, description, image, parent_id, sort_order, is_active, is_live } = req.body;
     const data = {};
@@ -64,7 +64,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('categories'), async (req, res) => {
   try {
     await prisma.categories.updateMany({ where: { parent_id: Number(req.params.id) }, data: { parent_id: null } });
     await prisma.products.updateMany({ where: { category_id: Number(req.params.id) }, data: { category_id: null } });

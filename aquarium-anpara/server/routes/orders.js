@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly, optionalAuth } = require('../middleware/auth');
+const { auth, adminOnly, optionalAuth, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 const { sendOrderStatusEmail } = require('../email');
 
 const statusLabels = {
@@ -67,6 +67,7 @@ router.post('/', optionalAuth, async (req, res) => {
         name: c.products.name,
         price: c.products.price,
         discount_price: c.products.discount_price,
+        gst_percent: c.products.gst_percent || 0,
         stock_quantity: c.products.stock_quantity,
         is_active: c.products.is_active,
         image: c.products.product_images[0]?.image_url || null,
@@ -88,6 +89,7 @@ router.post('/', optionalAuth, async (req, res) => {
         name: c.products.name,
         price: c.products.price,
         discount_price: c.products.discount_price,
+        gst_percent: c.products.gst_percent || 0,
         stock_quantity: c.products.stock_quantity,
         is_active: c.products.is_active,
         image: c.products.product_images[0]?.image_url || null,
@@ -104,10 +106,22 @@ router.post('/', optionalAuth, async (req, res) => {
 
     let subtotal = 0;
     let discount = 0;
+    let tax = 0;
+    const itemGstDetails = [];
 
     cartItems.forEach(item => {
       const unitPrice = item.discount_price > 0 ? item.discount_price : item.price;
-      subtotal += unitPrice * item.quantity;
+      const lineTotal = unitPrice * item.quantity;
+      const gstPct = item.gst_percent || 0;
+      // GST is inclusive in price: extract from total
+      const gstAmt = gstPct > 0 ? lineTotal * gstPct / (100 + gstPct) : 0;
+      subtotal += lineTotal;
+      tax += gstAmt;
+      itemGstDetails.push({
+        productId: item.product_id,
+        gstPercent: gstPct,
+        gstAmount: gstAmt
+      });
     });
 
     if (coupon_code) {
@@ -145,6 +159,7 @@ router.post('/', optionalAuth, async (req, res) => {
         subtotal,
         discount,
         shipping_charge,
+        tax,
         total,
         payment_method: payment_method || 'cod',
         coupon_code: coupon_code || null,
@@ -157,10 +172,12 @@ router.post('/', optionalAuth, async (req, res) => {
     sendOrderStatusEmail(newOrder, null, 'pending');
 
     const insertItems = async (tx) => {
+      let i = 0;
       for (const item of cartItems) {
         const unitPrice = item.discount_price > 0 ? item.discount_price : item.price;
         const itemDiscount = item.price - unitPrice;
         const itemTotal = unitPrice * item.quantity;
+        const gstInfo = itemGstDetails[i++];
         await tx.order_items.create({
           data: {
             order_id: orderId,
@@ -170,6 +187,8 @@ router.post('/', optionalAuth, async (req, res) => {
             quantity: item.quantity,
             price: item.price,
             discount: itemDiscount,
+            gst_percent: gstInfo.gstPercent,
+            gst_amount: gstInfo.gstAmount,
             total: itemTotal
           }
         });
@@ -221,7 +240,7 @@ router.post('/', optionalAuth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status, search, searchBy, page = 1, limit = 20 } = req.query;
     let where = {};
 
     if (req.user.role === 'customer') {
@@ -229,6 +248,17 @@ router.get('/', auth, async (req, res) => {
     }
     if (status) {
       where.order_status = status;
+    }
+    if (search && searchBy) {
+      if (searchBy === 'order_number') {
+        where.order_number = { contains: search.toUpperCase() };
+      } else if (searchBy === 'customer_name') {
+        where.customer_name = { contains: search };
+      } else if (searchBy === 'customer_phone') {
+        where.customer_phone = { contains: search };
+      } else if (searchBy === 'payment_method') {
+        where.payment_method = { contains: search };
+      }
     }
 
     const offset = (Number(page) - 1) * Number(limit);
@@ -247,8 +277,9 @@ router.get('/', auth, async (req, res) => {
 
 router.get('/track/:orderNumber', async (req, res) => {
   try {
+    const orderNumber = req.params.orderNumber.toUpperCase();
     const order = await prisma.orders.findFirst({
-      where: { order_number: req.params.orderNumber },
+      where: { order_number: orderNumber },
       select: { id: true, order_number: true, order_status: true, payment_status: true, total: true, created_at: true, updated_at: true }
     });
     if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -276,7 +307,7 @@ router.get('/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/status', auth, adminOnly, async (req, res) => {
+router.put('/:id/status', auth, staffOrAdmin, requireWritePermission('orders'), async (req, res) => {
   try {
     const { order_status, payment_status } = req.body;
     const data = { updated_at: new Date() };
@@ -286,6 +317,19 @@ router.put('/:id/status', auth, adminOnly, async (req, res) => {
       const current = await prisma.orders.findFirst({ where: { id: Number(req.params.id) }, select: { payment_method: true, payment_status: true } });
       if (current && current.payment_method === 'cod' && current.payment_status !== 'paid') {
         data.payment_status = 'paid';
+      }
+    }
+    // Restore stock when cancelling
+    if (order_status === 'cancelled') {
+      const current = await prisma.orders.findFirst({ where: { id: Number(req.params.id) }, select: { order_status: true } });
+      if (current && current.order_status !== 'cancelled') {
+        const items = await prisma.order_items.findMany({ where: { order_id: Number(req.params.id) } });
+        for (const item of items) {
+          await prisma.products.update({
+            where: { id: item.product_id },
+            data: { stock_quantity: { increment: item.quantity }, sold_count: { decrement: item.quantity } }
+          });
+        }
       }
     }
     if (Object.keys(data).length > 1) {
@@ -307,7 +351,8 @@ router.put('/:id/status', auth, adminOnly, async (req, res) => {
 
 router.put('/cancel/:orderNumber', auth, async (req, res) => {
   try {
-    const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
+    const orderNumber = req.params.orderNumber.toUpperCase();
+    const order = await prisma.orders.findFirst({ where: { order_number: orderNumber } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
     if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be cancelled' });
@@ -315,6 +360,14 @@ router.put('/cancel/:orderNumber', auth, async (req, res) => {
       where: { id: order.id },
       data: { order_status: 'cancelled', updated_at: new Date() }
     });
+    // Restore stock
+    const items = await prisma.order_items.findMany({ where: { order_id: order.id } });
+    for (const item of items) {
+      await prisma.products.update({
+        where: { id: item.product_id },
+        data: { stock_quantity: { increment: item.quantity }, sold_count: { decrement: item.quantity } }
+      });
+    }
     await addTracking(order.id, 'cancelled');
     const updated = await prisma.orders.findFirst({ where: { id: order.id } });
     if (updated?.customer_email) sendOrderStatusEmail(updated, order.order_status, 'cancelled');
@@ -324,7 +377,8 @@ router.put('/cancel/:orderNumber', auth, async (req, res) => {
 
 router.put('/shipping/:orderNumber', auth, async (req, res) => {
   try {
-    const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
+    const orderNumber = req.params.orderNumber.toUpperCase();
+    const order = await prisma.orders.findFirst({ where: { order_number: orderNumber } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
     if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be updated' });

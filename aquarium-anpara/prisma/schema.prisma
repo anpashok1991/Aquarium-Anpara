@@ -184,6 +184,8 @@ model order_items {
   quantity      Int      @default(1)
   price         Float
   discount      Float?   @default(0)
+  gst_percent   Float?   @default(0)
+  gst_amount    Float?   @default(0)
   total         Float
   products      products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   orders        orders   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -278,6 +280,7 @@ model products {
   rating              Float?           @default(0)
   review_count        Int?             @default(0)
   sold_count          Int?             @default(0)
+  gst_percent         Float?           @default(0)
   meta_title          String?
   meta_description    String?
   video_url           String?

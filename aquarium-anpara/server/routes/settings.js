@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 const { sendOrderEmail } = require('../email');
 
 router.get('/', async (req, res) => {
@@ -40,7 +40,7 @@ router.post('/test-email', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/', auth, adminOnly, async (req, res) => {
+router.put('/', auth, staffOrAdmin, requireWritePermission('settings'), async (req, res) => {
   try {
     const entries = Object.entries(req.body);
     for (const [key, value] of entries) {

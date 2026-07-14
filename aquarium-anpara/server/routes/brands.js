@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
   try {
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, staffOrAdmin, requireWritePermission('brands'), async (req, res) => {
   try {
     const { name, logo, description } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -39,7 +39,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, async (req, res) => {
+router.put('/:id', auth, staffOrAdmin, requireWritePermission('brands'), async (req, res) => {
   try {
     const paramId = Number(req.params.id);
     const { name, logo, description, is_active } = req.body;
@@ -53,7 +53,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('brands'), async (req, res) => {
   try {
     const paramId = Number(req.params.id);
     await prisma.products.updateMany({ where: { brand_id: paramId }, data: { brand_id: null } });

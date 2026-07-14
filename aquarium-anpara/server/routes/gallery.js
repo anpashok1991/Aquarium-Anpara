@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
   try {
@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, staffOrAdmin, requireWritePermission('gallery'), async (req, res) => {
   try {
     const { title, image, category, sort_order } = req.body;
     const result = await prisma.gallery.create({ data: { title, image, category, sort_order: sort_order || 0 } });
@@ -21,7 +21,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('gallery'), async (req, res) => {
   try {
     await prisma.gallery.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Image deleted' });

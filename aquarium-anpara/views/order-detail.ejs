@@ -16,9 +16,9 @@
         <form id="addressForm">
           <div class="row g-2 mb-2">
             <div class="col-6"><label class="form-label">Name</label><input type="text" class="form-control" id="aName"></div>
-            <div class="col-6"><label class="form-label">Phone</label><input type="tel" class="form-control" id="aPhone"></div>
+            <div class="col-6"><label class="form-label">Phone</label><input type="tel" class="form-control" id="aPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
           </div>
-          <div class="mb-2"><label class="form-label">WhatsApp</label><input type="tel" class="form-control" id="aWhatsapp"></div>
+          <div class="mb-2"><label class="form-label">WhatsApp</label><input type="tel" class="form-control" id="aWhatsapp" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
           <div class="mb-2"><label class="form-label">Address</label><textarea class="form-control" id="aAddress" rows="2"></textarea></div>
           <div class="row g-2 mb-2">
             <div class="col-5"><label class="form-label">City</label><input type="text" class="form-control" id="aCity"></div>
@@ -74,7 +74,7 @@ async function loadOrder() {
               <h6 class="fw-bold"><i class="fas fa-tag me-2"></i>Total</h6>
               ${order.order_status === 'delivered' || order.order_status === 'completed' || order.sale_type === 'offline' ? `<div class="mb-2"><a href="/invoice/${order.order_number}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fas fa-receipt me-1"></i>View Invoice</a></div>` : ''}
               <p class="mb-1 fw-bold fs-5">₹${order.total.toLocaleString()}</p>
-              <small class="text-muted">Subtotal: ₹${order.subtotal.toLocaleString()}${order.discount > 0 ? ' | Discount: -₹' + order.discount.toLocaleString() : ''} | Delivery: ${order.shipping_charge === 0 ? 'Free' : '₹' + order.shipping_charge}</small>
+              <small class="text-muted">Subtotal: ₹${order.subtotal.toLocaleString()}${order.discount > 0 ? ' | Discount: -₹' + order.discount.toLocaleString() : ''}${order.tax > 0 ? ' | GST: ₹' + order.tax.toLocaleString() : ''} | Delivery: ${order.shipping_charge === 0 ? 'Free' : '₹' + order.shipping_charge}</small>
             </div>
           </div>
           ${order.notes ? '<div class="mt-2"><small class="text-muted"><strong>Notes:</strong> ' + order.notes + '</small></div>' : ''}

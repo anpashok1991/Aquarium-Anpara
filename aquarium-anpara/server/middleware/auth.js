@@ -79,8 +79,26 @@ const requireAdminPage = async (req, res, next) => {
   }
 };
 
+const requireWritePermission = (section) => {
+  return async (req, res, next) => {
+    try {
+      if (!req.user || !['admin', 'staff'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Staff access required' });
+      }
+      if (req.user.role === 'admin') return next();
+      if (req.user.permissions) {
+        const perms = (() => { try { return JSON.parse(req.user.permissions); } catch { return []; } })();
+        if (perms.includes(section + ':write') || perms.includes('all:write')) return next();
+      }
+      return res.status(403).json({ error: 'Access denied: Write permission required' });
+    } catch (e) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+  };
+};
+
 const generateToken = (user) => {
   return jwt.sign({ id: user.id, role: user.role, version: user.token_version || 0 }, TOKEN_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 };
 
-module.exports = { auth, optionalAuth, adminOnly, staffOrAdmin, requireAdminPage, generateToken };
+module.exports = { auth, optionalAuth, adminOnly, staffOrAdmin, requireAdminPage, requireWritePermission, generateToken };

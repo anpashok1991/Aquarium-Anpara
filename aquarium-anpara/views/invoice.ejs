@@ -37,7 +37,8 @@
             <th>#</th>
             <th>Product</th>
             <th class="text-center">Qty</th>
-            <th class="text-end">Price</th>
+            <th class="text-end">Base Price</th>
+            <% if (order.tax > 0) { %><th class="text-end">GST%</th><th class="text-end">GST Amt</th><% } %>
             <th class="text-end">Total</th>
           </tr>
         </thead>
@@ -48,7 +49,8 @@
               <td><%= i + 1 %></td>
               <td><%= item.product_name %></td>
               <td class="text-center"><%= item.quantity %></td>
-              <td class="text-end">₹<%= Number(item.price).toLocaleString() %></td>
+              <td class="text-end">₹<%= (Number(item.total) - Number(item.gst_amount || 0)).toLocaleString() %></td>
+              <% if (order.tax > 0) { %><td class="text-end"><%= Number(item.gst_percent || 0) %>%</td><td class="text-end">₹<%= Number(item.gst_amount || 0).toLocaleString() %></td><% } %>
               <td class="text-end">₹<%= Number(item.total).toLocaleString() %></td>
             </tr>
             <% }) %>
@@ -63,7 +65,10 @@
         </div>
         <div class="col-md-6">
           <div class="text-end">
-            <p class="mb-1">Subtotal: ₹<%= Number(order.subtotal).toLocaleString() %></p>
+            <% const baseSubtotal = Number(order.subtotal) - Number(order.tax || 0); %>
+            <p class="mb-1">Subtotal (excl. GST): ₹<%= baseSubtotal.toLocaleString() %></p>
+            <% if (order.tax > 0) { %><p class="mb-1">GST: ₹<%= Number(order.tax).toLocaleString() %></p><% } %>
+            <p class="mb-1">Subtotal (incl. GST): ₹<%= Number(order.subtotal).toLocaleString() %></p>
             <% if (order.discount > 0) { %><p class="mb-1">Discount: -₹<%= Number(order.discount).toLocaleString() %></p><% } %>
             <% if (order.coupon_code) { %><p class="mb-1">Coupon: <%= order.coupon_code %></p><% } %>
             <p class="mb-1">Shipping: <%= order.shipping_charge > 0 ? '₹' + Number(order.shipping_charge).toLocaleString() : 'FREE' %></p>
@@ -80,7 +85,8 @@
 </div>
 <style>
 @media print {
-  .no-print { display: none !important; }
+  .no-print, .mobile-nav, .top-bar, .navbar, .footer, .whatsapp-float, .call-float { display: none !important; }
+  #page-content { padding: 0 !important; margin: 0 !important; }
   body { background: #fff !important; }
   #invoiceBody { box-shadow: none !important; border: none !important; }
 }

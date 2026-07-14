@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const prisma = require('../database');
-const { auth, adminOnly, staffOrAdmin } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 function generateOrderNumber() {
   const date = new Date();
@@ -70,7 +70,7 @@ router.get('/audit-logs', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
+router.post('/offline-sale', auth, staffOrAdmin, requireWritePermission('offline-sale'), async (req, res) => {
   try {
     const { items, customer_name, customer_phone, payment_method, payment_status, discount_amount, notes } = req.body;
 
@@ -86,6 +86,8 @@ router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
     products.forEach(p => { productMap[p.id] = p; });
 
     let subtotal = 0;
+    let tax = 0;
+    const itemGstDetails = [];
     for (const item of items) {
       const product = productMap[Number(item.product_id)];
       if (!product) return res.status(400).json({ error: `Product ID ${item.product_id} not found or inactive` });
@@ -93,7 +95,16 @@ router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
         return res.status(400).json({ error: `Insufficient stock for ${product.name}. Available: ${product.stock_quantity}` });
       }
       const unitPrice = product.discount_price > 0 ? product.discount_price : product.price;
-      subtotal += unitPrice * Number(item.quantity);
+      const lineTotal = unitPrice * Number(item.quantity);
+      const gstPct = product.gst_percent || 0;
+      const gstAmt = gstPct > 0 ? lineTotal * gstPct / (100 + gstPct) : 0;
+      subtotal += lineTotal;
+      tax += gstAmt;
+      itemGstDetails.push({
+        productId: product.id,
+        gstPercent: gstPct,
+        gstAmount: gstAmt
+      });
     }
 
     const discount = Math.min(Number(discount_amount) || 0, subtotal);
@@ -114,6 +125,7 @@ router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
         subtotal,
         discount,
         shipping_charge: 0,
+        tax,
         total,
         payment_method: payment_method || 'cod',
         payment_status: payment_status || 'paid',
@@ -128,11 +140,13 @@ router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
     });
 
     await prisma.$transaction(async (tx) => {
+      let i = 0;
       for (const item of items) {
         const product = productMap[Number(item.product_id)];
         const qty = Number(item.quantity);
         const unitPrice = product.discount_price > 0 ? product.discount_price : product.price;
         const itemTotal = unitPrice * qty;
+        const gstInfo = itemGstDetails[i++];
         await tx.order_items.create({
           data: {
             order_id: newOrder.id,
@@ -142,6 +156,8 @@ router.post('/offline-sale', auth, staffOrAdmin, async (req, res) => {
             quantity: qty,
             price: product.price,
             discount: product.price - unitPrice,
+            gst_percent: gstInfo.gstPercent,
+            gst_amount: gstInfo.gstAmount,
             total: itemTotal
           }
         });

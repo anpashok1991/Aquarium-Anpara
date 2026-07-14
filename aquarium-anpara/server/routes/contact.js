@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.post('/', async (req, res) => {
   try {
@@ -19,14 +19,14 @@ router.get('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/read', auth, adminOnly, async (req, res) => {
+router.put('/:id/read', auth, staffOrAdmin, requireWritePermission('messages'), async (req, res) => {
   try {
     await prisma.contact_messages.update({ where: { id: Number(req.params.id) }, data: { is_read: 1 } });
     res.json({ message: 'Marked as read' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('messages'), async (req, res) => {
   try {
     await prisma.contact_messages.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Deleted' });

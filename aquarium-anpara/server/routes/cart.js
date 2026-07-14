@@ -30,6 +30,7 @@ router.get('/', optionalAuth, async (req, res) => {
           slug: products.slug,
           price: products.price,
           discount_price: products.discount_price,
+          gst_percent: products.gst_percent || 0,
           stock_quantity: products.stock_quantity,
           is_active: products.is_active,
           image: products.product_images[0]?.image_url || null
@@ -55,6 +56,7 @@ router.get('/', optionalAuth, async (req, res) => {
           slug: products.slug,
           price: products.price,
           discount_price: products.discount_price,
+          gst_percent: products.gst_percent || 0,
           stock_quantity: products.stock_quantity,
           is_active: products.is_active,
           image: products.product_images[0]?.image_url || null

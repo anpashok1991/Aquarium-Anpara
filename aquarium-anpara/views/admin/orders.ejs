@@ -12,6 +12,17 @@
       <button class="btn btn-outline-success btn-sm status-filter" onclick="filterOrders('delivered',this)">Delivered</button>
       <button class="btn btn-outline-danger btn-sm status-filter" onclick="filterOrders('cancelled',this)">Cancelled</button>
     </div>
+    <div class="input-group mb-3">
+      <select class="form-select" id="searchBy" style="max-width:160px">
+        <option value="order_number">Order #</option>
+        <option value="customer_name">Customer Name</option>
+        <option value="customer_phone">Phone</option>
+        <option value="payment_method">Payment</option>
+      </select>
+      <input type="text" class="form-control" id="searchInput" placeholder="Search..." onkeyup="if(event.key==='Enter')searchOrders()">
+      <button class="btn btn-outline-primary" onclick="searchOrders()"><i class="fas fa-search"></i></button>
+      <button class="btn btn-outline-secondary" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+    </div>
     <div class="card border-0 shadow-sm"><div class="card-body">
       <div class="table-responsive"><table class="table table-hover mb-0">
         <thead><tr><th>Order #</th><th>Customer</th><th>Phone</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
@@ -23,10 +34,26 @@
 <script>
 let currentStatus = '';
 function filterOrders(s,btn) { currentStatus = s; document.querySelectorAll('.status-filter').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); loadOrders(); }
-async function loadOrders() {
-  const params = currentStatus ? `?status=${currentStatus}` : '';
+function searchOrders() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { loadOrders(); return; }
+  const by = document.getElementById('searchBy').value;
+  loadOrders({ search: q, searchBy: by });
+}
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  loadOrders();
+}
+async function loadOrders(extra) {
+  const params = new URLSearchParams();
+  if (currentStatus) params.set('status', currentStatus);
+  if (extra) {
+    if (extra.search) params.set('search', extra.search);
+    if (extra.searchBy) params.set('searchBy', extra.searchBy);
+  }
+  const qs = params.toString();
   try {
-    const data = await api(`/orders${params}`);
+    const data = await api(`/orders${qs ? '?' + qs : ''}`);
     document.getElementById('ordersTable').innerHTML = data.orders.map(o => `
       <tr>
         <td><strong>${o.order_number}</strong>${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline</span>' : ''}</td><td>${o.customer_name}</td><td>${o.customer_phone}</td>
@@ -59,7 +86,7 @@ async function viewOrder(id) {
         <div class="row mb-3"><div class="col-6"><strong>Customer:</strong> ${o.customer_name}<br><strong>Phone:</strong> ${o.customer_phone}<br><strong>Email:</strong> ${o.customer_email||'-'}</div>
         <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline Sale</span>' : ''}<br><strong>Payment:</strong> ${o.payment_method === 'cod' ? 'Cash' : o.payment_method.toUpperCase()}<br><strong>Status:</strong> ${o.order_status}</div></div>
         <table class="table table-sm"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
-        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br><strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5>
+        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br>${o.tax > 0 ? '<strong>GST: ₹' + o.tax.toLocaleString() + '</strong><br>' : ''}<strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5>
         ${o.order_status === 'delivered' || o.order_status === 'completed' || o.sale_type === 'offline' ? `<a href="/invoice/${o.order_number}" target="_blank" class="btn btn-outline-primary btn-sm mt-2"><i class="fas fa-receipt me-1"></i>View Invoice</a>` : ''}</div>
       </div></div></div>`;
     document.body.appendChild(modal);

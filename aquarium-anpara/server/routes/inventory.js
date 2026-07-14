@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', auth, adminOnly, async (req, res) => {
   try {
@@ -36,7 +36,7 @@ router.get('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/adjust', auth, adminOnly, async (req, res) => {
+router.post('/adjust', auth, staffOrAdmin, requireWritePermission('inventory'), async (req, res) => {
   try {
     const { product_id, type, quantity, reference, notes } = req.body;
     if (!product_id || !type || quantity === undefined) return res.status(400).json({ error: 'Product, type and quantity required' });

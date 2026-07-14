@@ -128,6 +128,26 @@ app.disable('view cache');
   } catch (e) { /* column already exists */ }
 })();
 
+// Auto-migrate: add gst_percent column to products table
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE products ADD COLUMN gst_percent REAL DEFAULT 0`);
+    console.log('✅ gst_percent column added to products table');
+  } catch (e) { /* column already exists */ }
+})();
+
+// Auto-migrate: add gst_percent and gst_amount columns to order_items table
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE order_items ADD COLUMN gst_percent REAL DEFAULT 0`);
+    console.log('✅ gst_percent column added to order_items table');
+  } catch (e) { /* column already exists */ }
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE order_items ADD COLUMN gst_amount REAL DEFAULT 0`);
+    console.log('✅ gst_amount column added to order_items table');
+  } catch (e) { /* column already exists */ }
+})();
+
 app.use(async (req, res, next) => {
   try {
     const rows = await prisma.settings.findMany({ select: { key: true, value: true } });

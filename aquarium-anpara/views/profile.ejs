@@ -15,7 +15,7 @@
         </div>
         <div class="mb-3">
           <label class="form-label">Phone</label>
-          <input type="tel" class="form-control" id="pPhone">
+          <input type="tel" class="form-control" id="pPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
         </div>
         <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
       </form>
@@ -48,7 +48,7 @@
           </div>
           <div class="row g-2 mb-2">
             <div class="col-6"><label class="form-label">Name</label><input type="text" class="form-control" id="addrName"></div>
-            <div class="col-6"><label class="form-label">Phone</label><input type="tel" class="form-control" id="addrPhone"></div>
+            <div class="col-6"><label class="form-label">Phone</label><input type="tel" class="form-control" id="addrPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
           </div>
           <div class="mb-2"><label class="form-label">Address</label><textarea class="form-control" id="addrAddress" rows="2"></textarea></div>
           <div class="row g-2 mb-2">

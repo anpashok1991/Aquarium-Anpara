@@ -59,7 +59,7 @@ router.get('/dashboard', auth, adminOnly, async (req, res) => {
 
 router.get('/sales', auth, adminOnly, async (req, res) => {
   try {
-    const { period = 'daily', start_date, end_date } = req.query;
+    const { period = 'daily', start_date, end_date, search } = req.query;
     let groupBy, dateFormat;
     switch (period) {
       case 'weekly': groupBy = "strftime('%Y-W%W', created_at)"; dateFormat = 'weekly'; break;
@@ -71,6 +71,7 @@ router.get('/sales', auth, adminOnly, async (req, res) => {
     let params = [];
     if (start_date) { whereClause += " AND created_at >= ?"; params.push(start_date); }
     if (end_date) { whereClause += " AND created_at <= ?"; params.push(end_date); }
+    if (search && search.trim()) { whereClause += " AND (customer_name LIKE ? OR order_number LIKE ?)"; const s = '%' + search.trim() + '%'; params.push(s, s); }
 
     const sales = await prisma.$queryRawUnsafe(
       `SELECT ${groupBy} as period, COUNT(*) as orders, SUM(subtotal) as subtotal,
@@ -84,8 +85,10 @@ router.get('/sales', auth, adminOnly, async (req, res) => {
 
 router.get('/products', auth, adminOnly, async (req, res) => {
   try {
+    const { search } = req.query;
+    const where = search && search.trim() ? { name: { contains: search.trim() }, is_active: 1 } : { is_active: 1 };
     const products = await prisma.products.findMany({
-      where: { is_active: 1 },
+      where,
       include: { categories: { select: { name: true } }, brands: { select: { name: true } } },
       orderBy: { sold_count: 'desc' }
     });
@@ -119,8 +122,10 @@ router.get('/orders', auth, adminOnly, async (req, res) => {
 
 router.get('/stock', auth, adminOnly, async (req, res) => {
   try {
+    const { search } = req.query;
+    const where = search && search.trim() ? { name: { contains: search.trim() }, is_active: 1 } : { is_active: 1 };
     const products = await prisma.products.findMany({
-      where: { is_active: 1 },
+      where,
       include: { categories: { select: { name: true } } },
       orderBy: { stock_quantity: 'asc' }
     });

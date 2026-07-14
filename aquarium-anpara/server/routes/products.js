@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
   try {
@@ -179,9 +179,9 @@ router.get('/:slug', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, staffOrAdmin, requireWritePermission('products'), async (req, res) => {
   try {
-    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id, breed_id,
+    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, gst_percent, category_id, brand_id, breed_id,
       stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, video_url, images } = req.body;
 
     let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -194,7 +194,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
     const result = await prisma.products.create({
       data: {
         name, slug: finalSlug, description, short_description, sku, barcode,
-        price: price || 0, discount_price: discount_price || 0, cost_price: cost_price || 0,
+        price: price || 0, discount_price: discount_price || 0, cost_price: cost_price || 0, gst_percent: gst_percent || 0,
         category_id, brand_id, breed_id, stock_quantity: stock_quantity || 0,
         low_stock_threshold: low_stock_threshold || 5, weight: weight || 0,
         is_featured: is_featured ? 1 : 0, is_best_seller: is_best_seller ? 1 : 0,
@@ -221,9 +221,9 @@ router.post('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, async (req, res) => {
+router.put('/:id', auth, staffOrAdmin, requireWritePermission('products'), async (req, res) => {
   try {
-    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, category_id, brand_id, breed_id,
+    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, gst_percent, category_id, brand_id, breed_id,
       stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, images, video_url } = req.body;
 
     const data = {};
@@ -235,6 +235,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     if (price !== undefined) data.price = price;
     if (discount_price !== undefined) data.discount_price = discount_price;
     if (cost_price !== undefined) data.cost_price = cost_price;
+    if (gst_percent !== undefined) data.gst_percent = gst_percent;
     if (category_id !== undefined) data.category_id = category_id;
     if (brand_id !== undefined) data.brand_id = brand_id;
     if (breed_id !== undefined) data.breed_id = breed_id || null;
@@ -267,7 +268,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('products'), async (req, res) => {
   try {
     await prisma.products.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Product deleted' });

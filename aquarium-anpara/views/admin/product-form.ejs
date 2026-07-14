@@ -10,8 +10,9 @@
         <div class="col-12"><label class="form-label">Short Description</label><input type="text" class="form-control" id="shortDesc"></div>
         <div class="col-12"><label class="form-label">Full Description</label><textarea class="form-control" id="description" rows="4"></textarea></div>
         <div class="col-md-3"><label class="form-label">Price *</label><input type="number" class="form-control" id="price" step="0.01" required></div>
-        <div class="col-md-3"><label class="form-label">Discount Price</label><input type="number" class="form-control" id="discountPrice" step="0.01"></div>
+        <div class="col-md-3"><label class="form-label">Discount Price</label><input type="number" class="form-control" id="discountPrice" step="0.01" oninput="if(this.value&&parseFloat(this.value)>parseFloat(document.getElementById('price').value)){this.value=document.getElementById('price').value}"></div>
         <div class="col-md-3"><label class="form-label">Cost Price</label><input type="number" class="form-control" id="costPrice" step="0.01"></div>
+        <div class="col-md-2"><label class="form-label">GST (%)</label><input type="number" class="form-control" id="gstPercent" step="0.01" min="0" max="100" placeholder="0"></div>
         <div class="col-md-3"><label class="form-label">Stock *</label><input type="number" class="form-control" id="stock" value="0" required></div>
         <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="category" onchange="toggleBreedBrand()"></select></div>
         <div class="col-md-4" id="brandField"><label class="form-label">Brand</label><select class="form-select" id="brand"></select></div>
@@ -79,6 +80,7 @@ async function loadForm() {
     document.getElementById('price').value = product.price || '';
     document.getElementById('discountPrice').value = product.discount_price || '';
     document.getElementById('costPrice').value = product.cost_price || '';
+    document.getElementById('gstPercent').value = product.gst_percent || '';
     document.getElementById('stock').value = product.stock_quantity || 0;
     document.getElementById('barcode').value = product.barcode || '';
     document.getElementById('lowStock').value = product.low_stock_threshold || 5;
@@ -156,6 +158,9 @@ document.getElementById('name').addEventListener('input', autoSelectBreed);
 document.getElementById('category').addEventListener('change', autoSelectBreed);
 document.getElementById('productForm').addEventListener('submit', async(e) => {
   e.preventDefault();
+  const price = parseFloat(document.getElementById('price').value);
+  const discPrice = parseFloat(document.getElementById('discountPrice').value) || 0;
+  if (discPrice > price) { showToast('Discount price cannot be greater than price', 'error'); return; }
   const imageItems = document.querySelectorAll('#imageList img');
   const images = [];
   imageItems.forEach(img => images.push({ url: img.src }));
@@ -165,9 +170,10 @@ document.getElementById('productForm').addEventListener('submit', async(e) => {
     short_description: document.getElementById('shortDesc').value,
     sku: document.getElementById('sku').value,
     barcode: document.getElementById('barcode').value,
-    price: parseFloat(document.getElementById('price').value),
-    discount_price: parseFloat(document.getElementById('discountPrice').value) || 0,
+    price,
+    discount_price: discPrice,
     cost_price: parseFloat(document.getElementById('costPrice').value) || 0,
+    gst_percent: parseFloat(document.getElementById('gstPercent').value) || 0,
     category_id: parseInt(document.getElementById('category').value) || null,
     brand_id: parseInt(document.getElementById('brand').value) || null,
     breed_id: parseInt(document.getElementById('breed').value) || null,

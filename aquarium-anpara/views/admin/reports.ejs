@@ -10,22 +10,39 @@
     </ul>
     <div class="tab-content">
       <div class="tab-pane fade show active" id="salesReport">
-        <div class="d-flex gap-2 mb-3"><select class="form-select" id="salesPeriod" style="width:150px" onchange="loadSalesReport()"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div>
+        <div class="d-flex gap-2 mb-3 flex-wrap">
+          <select class="form-select" id="salesPeriod" style="width:150px" onchange="loadSalesReport()"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select>
+          <input type="date" class="form-control" id="salesStartDate" style="width:160px">
+          <input type="date" class="form-control" id="salesEndDate" style="width:160px">
+          <input type="text" class="form-control" id="salesSearch" placeholder="Search customer or order #..." style="width:220px" onkeyup="if(event.key==='Enter')loadSalesReport()">
+          <button class="btn btn-outline-primary" onclick="loadSalesReport()"><i class="fas fa-search"></i></button>
+          <button class="btn btn-outline-secondary" onclick="document.getElementById('salesSearch').value='';document.getElementById('salesStartDate').value='';document.getElementById('salesEndDate').value='';loadSalesReport()"><i class="fas fa-times"></i></button>
+        </div>
         <div class="card border-0 shadow-sm"><div class="card-body"><table class="table table-hover mb-0"><thead><tr><th>Period</th><th>Orders</th><th>Subtotal</th><th>Discount</th><th>Shipping</th><th>Revenue</th></tr></thead><tbody id="salesTable"></tbody></table></div></div>
       </div>
       <div class="tab-pane fade" id="productReport">
+        <div class="d-flex gap-2 mb-3">
+          <input type="text" class="form-control" id="prodSearch" placeholder="Search product name..." style="max-width:300px" onkeyup="if(event.key==='Enter')loadProductReport()">
+          <button class="btn btn-outline-primary" onclick="loadProductReport()"><i class="fas fa-search"></i></button>
+          <button class="btn btn-outline-secondary" onclick="document.getElementById('prodSearch').value='';loadProductReport()"><i class="fas fa-times"></i></button>
+        </div>
         <div class="card border-0 shadow-sm"><div class="card-body"><table class="table table-hover mb-0"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Sold</th><th>Profit/Unit</th><th>Total Profit</th></tr></thead><tbody id="prodReportTable"></tbody></table></div></div>
       </div>
       <div class="tab-pane fade" id="stockReport">
+        <div class="d-flex gap-2 mb-3">
+          <input type="text" class="form-control" id="stockSearch" placeholder="Search product name..." style="max-width:300px" onkeyup="if(event.key==='Enter')loadStockReport()">
+          <button class="btn btn-outline-primary" onclick="loadStockReport()"><i class="fas fa-search"></i></button>
+          <button class="btn btn-outline-secondary" onclick="document.getElementById('stockSearch').value='';loadStockReport()"><i class="fas fa-times"></i></button>
+        </div>
         <div class="card border-0 shadow-sm"><div class="card-body"><h5>Total Stock Value: <span id="stockValue" class="text-primary"></span></h5><table class="table table-hover mb-0"><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Cost Price</th><th>Value</th></tr></thead><tbody id="stockTable"></tbody></table></div></div>
       </div>
     </div>
   </div>
 </div>
 <script>
-async function loadSalesReport(){try{const d=await api(`/reports/sales?period=${document.getElementById('salesPeriod').value}`);document.getElementById('salesTable').innerHTML=d.sales.map(s=>`<tr><td>${s.period}</td><td>${s.orders}</td><td>₹${(s.subtotal||0).toLocaleString()}</td><td>₹${(s.discount||0).toLocaleString()}</td><td>₹${(s.shipping||0).toLocaleString()}</td><td><strong>₹${(s.revenue||0).toLocaleString()}</strong></td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No data</td></tr>';}catch(e){}}
-async function loadProductReport(){try{const d=await api('/reports/products');document.getElementById('prodReportTable').innerHTML=d.products.map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>₹${p.price}</td><td>${p.sold_count}</td><td>₹${(p.profit_per_unit||0).toFixed(0)}</td><td>₹${(p.total_profit||0).toLocaleString()}</td></tr>`).join('');}catch(e){}}
-async function loadStockReport(){try{const d=await api('/reports/stock');document.getElementById('stockValue').textContent='₹'+d.totalValue.toLocaleString();document.getElementById('stockTable').innerHTML=d.products.map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>${p.stock_quantity}</td><td>₹${p.cost_price}</td><td>₹${p.stock_value.toLocaleString()}</td></tr>`).join('');}catch(e){}}
+async function loadSalesReport(){try{const p=new URLSearchParams();p.set('period',document.getElementById('salesPeriod').value);const sd=document.getElementById('salesStartDate').value;if(sd)p.set('start_date',sd);const ed=document.getElementById('salesEndDate').value;if(ed)p.set('end_date',ed);const ss=document.getElementById('salesSearch').value.trim();if(ss)p.set('search',ss);const d=await api('/reports/sales?'+p.toString());document.getElementById('salesTable').innerHTML=d.sales.map(s=>`<tr><td>${s.period}</td><td>${s.orders}</td><td>₹${(s.subtotal||0).toLocaleString()}</td><td>₹${(s.discount||0).toLocaleString()}</td><td>₹${(s.shipping||0).toLocaleString()}</td><td><strong>₹${(s.revenue||0).toLocaleString()}</strong></td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No data</td></tr>';}catch(e){}}
+async function loadProductReport(){try{const ss=document.getElementById('prodSearch').value.trim();const d=await api('/reports/products'+(ss?'?search='+encodeURIComponent(ss):''));document.getElementById('prodReportTable').innerHTML=d.products.map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>₹${p.price}</td><td>${p.sold_count}</td><td>₹${(p.profit_per_unit||0).toFixed(0)}</td><td>₹${(p.total_profit||0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No products found</td></tr>';}catch(e){}}
+async function loadStockReport(){try{const ss=document.getElementById('stockSearch').value.trim();const d=await api('/reports/stock'+(ss?'?search='+encodeURIComponent(ss):''));document.getElementById('stockValue').textContent='₹'+d.totalValue.toLocaleString();document.getElementById('stockTable').innerHTML=d.products.map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>${p.stock_quantity}</td><td>₹${p.cost_price}</td><td>₹${p.stock_value.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-muted">No products found</td></tr>';}catch(e){}}
 document.addEventListener('DOMContentLoaded',loadSalesReport);
 </script>
 <%- include('../partials/footer') %>

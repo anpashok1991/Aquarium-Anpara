@@ -36,7 +36,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Phone</label>
-            <input type="tel" class="form-control" id="newUserPhone">
+            <input type="tel" class="form-control" id="newUserPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
           </div>
           <div class="mb-3">
             <label class="form-label">Password *</label>

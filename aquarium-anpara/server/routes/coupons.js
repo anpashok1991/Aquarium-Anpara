@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
 router.get('/', auth, adminOnly, async (req, res) => {
   try {
@@ -26,7 +26,7 @@ router.post('/validate', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, staffOrAdmin, requireWritePermission('coupons'), async (req, res) => {
   try {
     const { code, description, discount_type, discount_value, min_order, max_discount, usage_limit, start_date, end_date } = req.body;
     const coupon = await prisma.coupons.create({
@@ -36,7 +36,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', auth, adminOnly, async (req, res) => {
+router.put('/:id', auth, staffOrAdmin, requireWritePermission('coupons'), async (req, res) => {
   try {
     const { code, description, discount_type, discount_value, min_order, max_discount, usage_limit, start_date, end_date, is_active } = req.body;
     const data = {};
@@ -55,7 +55,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', auth, adminOnly, async (req, res) => {
+router.delete('/:id', auth, staffOrAdmin, requireWritePermission('coupons'), async (req, res) => {
   try {
     await prisma.coupons.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: 'Coupon deleted' });

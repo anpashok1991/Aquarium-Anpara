@@ -6,9 +6,9 @@
     <div class="card border-0 shadow-sm p-4">
       <div class="row g-3">
         <div class="col-md-6"><label class="form-label">Shop Name</label><input type="text" class="form-control" id="shopName"></div>
-        <div class="col-md-6"><label class="form-label">Shop Phone</label><input type="text" class="form-control" id="shopPhone"></div>
+        <div class="col-md-6"><label class="form-label">Shop Phone</label><input type="tel" class="form-control" id="shopPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
         <div class="col-md-6"><label class="form-label">Shop Email</label><input type="email" class="form-control" id="shopEmail"></div>
-        <div class="col-md-6"><label class="form-label">WhatsApp Number</label><input type="text" class="form-control" id="whatsappNumber"></div>
+        <div class="col-md-6"><label class="form-label">WhatsApp Number</label><input type="tel" class="form-control" id="whatsappNumber" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
         <div class="col-12"><label class="form-label">Shop Address</label><textarea class="form-control" id="shopAddress" rows="2"></textarea></div>
         <div class="col-md-6"><label class="form-label">Shop Logo</label>
           <div class="d-flex align-items-center gap-2">

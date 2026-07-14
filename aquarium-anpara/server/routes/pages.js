@@ -190,7 +190,8 @@ router.get('/orders/:orderNumber', (req, res) => {
 });
 router.get('/invoice/:orderNumber', async (req, res) => {
   try {
-    const order = await prisma.orders.findFirst({ where: { order_number: req.params.orderNumber } });
+    const orderNumber = req.params.orderNumber.toUpperCase();
+    const order = await prisma.orders.findFirst({ where: { order_number: orderNumber } });
     if (!order) return res.status(404).render('error', { title: 'Not Found', seo: { title: 'Not Found' }, error: 'Order not found' });
     if (order.order_status !== 'delivered' && order.order_status !== 'completed') {
       if (order.sale_type !== 'offline') {
