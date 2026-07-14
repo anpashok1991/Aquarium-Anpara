@@ -198,7 +198,10 @@ router.get('/invoice/:orderNumber', async (req, res) => {
         return res.status(403).render('error', { title: 'Not Available', seo: { title: 'Not Available' }, error: 'Invoice will be available once the order is delivered.' });
       }
     }
-    order.items = await prisma.order_items.findMany({ where: { order_id: order.id } });
+    order.items = await prisma.order_items.findMany({
+      where: { order_id: order.id },
+      include: { products: { select: { hsn_code: true, barcode: true } } }
+    });
     const seo = { title: 'Invoice ' + order.order_number, robots: 'noindex' };
     res.render('invoice', { title: 'Invoice', seo, order });
   } catch (e) { res.status(500).render('error', { title: 'Error', seo: { title: 'Error' }, error: e.message }); }
@@ -312,6 +315,7 @@ router.get('/admin/breeds', requireAdminPage, async (req, res) => {
 router.get('/admin/orders', requireAdminPage, (req, res) => { res.render('admin/orders', { title: 'Manage Orders', seo: { robots: 'noindex' } }); });
 router.get('/admin/customers', requireAdminPage, (req, res) => { res.render('admin/customers', { title: 'Manage Customers', seo: { robots: 'noindex' } }); });
 router.get('/admin/inventory', requireAdminPage, (req, res) => { res.render('admin/inventory', { title: 'Inventory Management', seo: { robots: 'noindex' } }); });
+router.get('/admin/barcode-labels', requireAdminPage, (req, res) => { res.render('admin/barcode-labels', { title: 'Barcode Labels', seo: { robots: 'noindex' } }); });
 router.get('/admin/coupons', requireAdminPage, (req, res) => { res.render('admin/coupons', { title: 'Manage Coupons', seo: { robots: 'noindex' } }); });
 router.get('/admin/reviews', requireAdminPage, (req, res) => { res.render('admin/reviews', { title: 'Manage Reviews', seo: { robots: 'noindex' } }); });
 router.get('/admin/reports', requireAdminPage, (req, res) => { res.render('admin/reports', { title: 'Reports', seo: { robots: 'noindex' } }); });

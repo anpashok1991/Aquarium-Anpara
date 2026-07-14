@@ -1,0 +1,62 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="admin-content flex-grow-1 p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold mb-0"><i class="fas fa-barcode me-2"></i>Barcode Labels</h4>
+      <div>
+        <button class="btn btn-primary no-print" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
+      </div>
+    </div>
+
+    <div class="alert alert-info no-print">
+      <i class="fas fa-info-circle me-1"></i>Printable barcode labels for all products with barcodes. Click Print to generate sticky labels.
+    </div>
+
+    <div id="labelGrid" class="row g-2"></div>
+    <div id="noBarcodes" class="text-center py-5" style="display:none">
+      <i class="fas fa-barcode fa-4x text-muted mb-3"></i>
+      <h5>No barcodes found</h5>
+      <p class="text-muted">Add barcodes to products in the product form first.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+async function loadLabels() {
+  const grid = document.getElementById('labelGrid');
+  const empty = document.getElementById('noBarcodes');
+  try {
+    const data = await api('/products?limit=500&sort=newest');
+    const products = (data.products || []).filter(p => p.barcode);
+    if (!products.length) { grid.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    grid.innerHTML = products.map(p => `
+      <div class="col-6 col-md-3 col-lg-2">
+        <div class="border rounded p-2 text-center" style="page-break-inside:avoid">
+          <svg class="barcode-svg" data-barcode="${p.barcode}"></svg>
+          <div class="small fw-semibold mt-1 text-truncate" title="${p.name}">${p.name}</div>
+          <div class="small text-muted">₹${(p.discount_price > 0 ? p.discount_price : p.price).toLocaleString()}</div>
+        </div>
+      </div>`).join('');
+    // Render barcodes
+    document.querySelectorAll('.barcode-svg').forEach(el => {
+      try {
+        JsBarcode(el, el.dataset.barcode, { width: 1.2, height: 30, displayValue: true, fontSize: 10, margin: 0 });
+      } catch(e) {}
+    });
+  } catch(e) { grid.innerHTML = '<p class="text-muted">Failed to load products.</p>'; }
+}
+document.addEventListener('DOMContentLoaded', loadLabels);
+</script>
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .admin-content { padding: 10px !important; }
+  .col-6 { width: 50% !important; }
+  .col-md-3 { width: 25% !important; }
+  .col-lg-2 { width: 16.666% !important; }
+}
+</style>
+<%- include('../partials/footer') %>

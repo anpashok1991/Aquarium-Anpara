@@ -162,6 +162,10 @@ app.disable('view cache');
     await prisma.$executeRawUnsafe(`ALTER TABLE orders ADD COLUMN refund_amount REAL DEFAULT 0`);
     console.log('✅ refund_amount column added to orders table');
   } catch (e) { /* column already exists */ }
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE products ADD COLUMN hsn_code TEXT DEFAULT NULL`);
+    console.log('✅ hsn_code column added to products table');
+  } catch (e) { /* column already exists */ }
 })();
 
 // Auto-migrate: update payment_method CHECK constraint to include 'scan_pay'
@@ -288,6 +292,7 @@ app.use(async (req, res, next) => {
     res.locals.upiId = s.upi_id || '';
     res.locals.cancelChargePercent = s.cancel_charge_percent || '0';
     res.locals.platformFee = s.platform_fee || '0';
+    res.locals.barcodeEnabled = s.barcode_enabled === 'true';
     try { res.locals.promotion1 = JSON.parse(s.promotion_1 || '{}'); } catch(e) { res.locals.promotion1 = {}; }
     try { res.locals.promotion2 = JSON.parse(s.promotion_2 || '{}'); } catch(e) { res.locals.promotion2 = {}; }
     try { res.locals.scanner1 = JSON.parse(s.scanner_1 || '{}'); } catch(e) { res.locals.scanner1 = {}; }

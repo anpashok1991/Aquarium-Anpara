@@ -13,11 +13,18 @@
         <div class="col-md-3"><label class="form-label">Discount Price</label><input type="number" class="form-control" id="discountPrice" step="0.01" oninput="if(this.value&&parseFloat(this.value)>parseFloat(document.getElementById('price').value)){this.value=document.getElementById('price').value}"></div>
         <div class="col-md-3"><label class="form-label">Cost Price</label><input type="number" class="form-control" id="costPrice" step="0.01"></div>
         <div class="col-md-2"><label class="form-label">GST (%)</label><input type="number" class="form-control" id="gstPercent" step="0.01" min="0" max="100" placeholder="0"></div>
+        <div class="col-md-2"><label class="form-label">HSN Code *</label><input type="text" class="form-control" id="hsnCode" placeholder="e.g. 9503.00" required></div>
         <div class="col-md-3"><label class="form-label">Stock *</label><input type="number" class="form-control" id="stock" value="0" required></div>
         <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="category" onchange="toggleBreedBrand()"></select></div>
         <div class="col-md-4" id="brandField"><label class="form-label">Brand</label><select class="form-select" id="brand"></select></div>
         <div class="col-md-4" id="breedField" style="display:none"><label class="form-label">Breed</label><select class="form-select" id="breed"></select></div>
-        <div class="col-md-4"><label class="form-label">Barcode</label><input type="text" class="form-control" id="barcode"></div>
+        <div class="col-md-4">
+          <label class="form-label">Barcode</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="barcode" placeholder="Scan or generate">
+            <button class="btn btn-outline-primary" type="button" onclick="generateBarcode()" title="Generate unique barcode"><i class="fas fa-qrcode me-1"></i>Generate</button>
+          </div>
+        </div>
         <div class="col-md-4"><label class="form-label">Low Stock Threshold</label><input type="number" class="form-control" id="lowStock" value="5"></div>
         <div class="col-md-4"><label class="form-label">Weight (kg)</label><input type="number" class="form-control" id="weight" step="0.01" value="0"></div>
         <div class="col-md-4"><label class="form-label">Product Video URL</label><input type="url" class="form-control" id="videoUrl" placeholder="https://www.youtube.com/embed/..."><small class="text-muted">YouTube embed URL or any direct video URL</small></div>
@@ -81,6 +88,7 @@ async function loadForm() {
     document.getElementById('discountPrice').value = product.discount_price || '';
     document.getElementById('costPrice').value = product.cost_price || '';
     document.getElementById('gstPercent').value = product.gst_percent || '';
+    document.getElementById('hsnCode').value = product.hsn_code || '';
     document.getElementById('stock').value = product.stock_quantity || 0;
     document.getElementById('barcode').value = product.barcode || '';
     document.getElementById('lowStock').value = product.low_stock_threshold || 5;
@@ -156,11 +164,21 @@ function addImageUrl() {
 
 document.getElementById('name').addEventListener('input', autoSelectBreed);
 document.getElementById('category').addEventListener('change', autoSelectBreed);
+
+function generateBarcode() {
+  const ts = Date.now().toString().slice(-8);
+  const rand = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+  const barcode = ts + rand;
+  document.getElementById('barcode').value = barcode;
+  showToast('Barcode generated: ' + barcode);
+}
+
 document.getElementById('productForm').addEventListener('submit', async(e) => {
   e.preventDefault();
   const price = parseFloat(document.getElementById('price').value);
   const discPrice = parseFloat(document.getElementById('discountPrice').value) || 0;
   if (discPrice > price) { showToast('Discount price cannot be greater than price', 'error'); return; }
+  if (!document.getElementById('hsnCode').value.trim()) { showToast('HSN Code is required', 'error'); document.getElementById('hsnCode').focus(); return; }
   const imageItems = document.querySelectorAll('#imageList img');
   const images = [];
   imageItems.forEach(img => images.push({ url: img.src }));
@@ -174,6 +192,7 @@ document.getElementById('productForm').addEventListener('submit', async(e) => {
     discount_price: discPrice,
     cost_price: parseFloat(document.getElementById('costPrice').value) || 0,
     gst_percent: parseFloat(document.getElementById('gstPercent').value) || 0,
+    hsn_code: document.getElementById('hsnCode').value,
     category_id: parseInt(document.getElementById('category').value) || null,
     brand_id: parseInt(document.getElementById('brand').value) || null,
     breed_id: parseInt(document.getElementById('breed').value) || null,

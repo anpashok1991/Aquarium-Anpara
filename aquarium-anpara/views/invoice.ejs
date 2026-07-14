@@ -36,6 +36,7 @@
           <tr>
             <th>#</th>
             <th>Product</th>
+            <th class="text-center">HSN</th>
             <th class="text-center">Qty</th>
             <th class="text-end">Base Price</th>
             <% if (order.tax > 0) { %><th class="text-end">GST%</th><th class="text-end">GST Amt</th><% } %>
@@ -47,7 +48,14 @@
             <% order.items.forEach((item, i) => { %>
             <tr>
               <td><%= i + 1 %></td>
-              <td><%= item.product_name %></td>
+              <td>
+                <%= item.product_name %>
+                <% if (item.products?.barcode) { %>
+                  <svg class="barcode-svg" data-barcode="<%= item.products.barcode %>" style="width:140px;height:30px"></svg>
+                  <div class="small text-muted"><%= item.products.barcode %></div>
+                <% } %>
+              </td>
+              <td class="text-center"><%= item.products?.hsn_code || '-' %></td>
               <td class="text-center"><%= item.quantity %></td>
               <td class="text-end">₹<%= (Number(item.total) - Number(item.gst_amount || 0)).toLocaleString() %></td>
               <% if (order.tax > 0) { %><td class="text-end"><%= Number(item.gst_percent || 0) %>%</td><td class="text-end">₹<%= Number(item.gst_amount || 0).toLocaleString() %></td><% } %>
@@ -86,6 +94,13 @@
   </div>
 </div>
 <style>
+#invoiceBody table { font-size: 0.8rem; }
+#invoiceBody table th, #invoiceBody table td { padding: 0.35rem 0.4rem; white-space: nowrap; }
+#invoiceBody table td:first-child,
+#invoiceBody table th:first-child { width: 30px; text-align: center; }
+#invoiceBody table td:nth-child(2),
+#invoiceBody table th:nth-child(2) { white-space: normal; word-break: break-word; max-width: 220px; }
+#invoiceBody .barcode-svg { max-width: 140px; display: block; margin-top: 4px; }
 @media print {
   .no-print, .mobile-nav, .top-bar, .navbar, .footer, .whatsapp-float, .call-float { display: none !important; }
   #page-content { padding: 0 !important; margin: 0 !important; }
@@ -94,8 +109,16 @@
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
+function initBarcodes() {
+  document.querySelectorAll('.barcode-svg').forEach(el => {
+    try { JsBarcode(el, el.dataset.barcode, { width: 1.5, height: 30, displayValue: false, fontSize: 10, margin: 0 }); } catch(e) {}
+  });
+}
+document.addEventListener('DOMContentLoaded', initBarcodes);
 function downloadPDF() {
+  initBarcodes();
   const element = document.getElementById('invoiceBody');
   const opt = { margin: 0.5, filename: 'invoice-<%= order.order_number %>.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
   html2pdf().set(opt).from(element).save();

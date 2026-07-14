@@ -18,6 +18,16 @@
                 <div class="list-group position-absolute w-100 z-3 shadow" id="searchResults" style="display:none;max-height:300px;overflow-y:auto"></div>
               </div>
             </div>
+            <div class="mb-3" id="barcodeScanWrap" style="display:none">
+              <label class="form-label">Scan Barcode</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="barcodeInput" placeholder="Scan or type barcode..." autocomplete="off">
+                <button class="btn btn-outline-primary" onclick="lookupBarcode()"><i class="fas fa-search"></i></button>
+                <!-- Camera scan placeholder - enable when needed -->
+                <button class="btn btn-outline-info" id="cameraScanBtn" onclick="startCameraScan()" title="Scan with camera"><i class="fas fa-camera"></i></button>
+              </div>
+              <div class="form-text small">Scanner will auto-lookup on Enter.</div>
+            </div>
             <div id="defaultProducts" class="mb-2">
               <label class="form-label small text-muted fw-semibold">Quick Add Products</label>
               <div id="defaultProductList" class="d-flex flex-column gap-1" style="max-height:240px;overflow-y:auto"></div>
@@ -157,6 +167,31 @@
         <div class="d-flex gap-2 justify-content-center">
           <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
           <button class="btn btn-primary" id="offlineConfirmScanPayBtn" disabled><i class="fas fa-check me-1"></i>Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Camera Scanner Modal -->
+<div class="modal fade" id="cameraScanModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-camera me-2 text-primary"></i>Scan Barcode</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCameraScan()"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="cameraView" class="mb-3">
+          <video id="cameraPreview" autoplay playsinline style="width:100%;max-height:300px;border-radius:8px;background:#000"></video>
+          <canvas id="cameraCanvas" style="display:none"></canvas>
+        </div>
+        <div id="cameraStatus" class="small text-muted mb-2">Point camera at a barcode...</div>
+        <div id="cameraUnsupported" class="alert alert-warning small" style="display:none">
+          <i class="fas fa-exclamation-triangle me-1"></i>Camera barcode scanning is not supported in this browser. Use Chrome on Android or desktop.
+        </div>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal" onclick="stopCameraScan()">Cancel</button>
         </div>
       </div>
     </div>
@@ -417,6 +452,10 @@ loadDefaultProducts();
 loadSettings().then(d => {
   if (d.settings) {
     loadScannerConfig(d.settings);
+    // Show/hide barcode scan based on settings
+    if (d.settings.barcode_enabled === 'true') {
+      document.getElementById('barcodeScanWrap').style.display = '';
+    }
     // Respect enabled payment methods from settings
     const payMethods = d.settings.payment_methods || '["cod"]';
     let enabled;
@@ -427,4 +466,91 @@ loadSettings().then(d => {
     });
   }
 });
+
+// Barcode lookup
+async function lookupBarcode(code) {
+  const barcode = code || document.getElementById('barcodeInput').value.trim();
+  if (!barcode) return;
+  try {
+    const data = await api('/products/barcode/' + encodeURIComponent(barcode));
+    if (!data.product) { showToast('No product found with that barcode', 'error'); return; }
+    const p = data.product;
+    if (p.stock_quantity < 1) { showToast('Product out of stock', 'error'); return; }
+    // Check if already added
+    const existing = selectedItems.findIndex(i => i.id === p.id);
+    if (existing !== -1) {
+      adjustQty(existing, 1);
+      showToast(p.name + ' quantity increased');
+    } else {
+      addProduct(p.id, p.name, p.discount_price > 0 ? p.discount_price : p.price, p.stock_quantity, p.primary_image || '');
+      showToast(p.name + ' added');
+    }
+    document.getElementById('barcodeInput').value = '';
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// Auto-lookup on Enter in barcode field
+document.getElementById('barcodeInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); lookupBarcode(); }
+});
+
+// Camera barcode scanning
+let cameraStream = null;
+let scanInterval = null;
+
+async function startCameraScan() {
+  const video = document.getElementById('cameraPreview');
+  const status = document.getElementById('cameraStatus');
+  const unsupported = document.getElementById('cameraUnsupported');
+  unsupported.style.display = 'none';
+
+  // Check for BarcodeDetector API support
+  if (!('BarcodeDetector' in window)) {
+    unsupported.style.display = '';
+    status.textContent = 'BarcodeDetector not available.';
+    return;
+  }
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = cameraStream;
+    await video.play();
+    status.textContent = 'Scanning... Point camera at a barcode.';
+
+    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'codabar', 'itf', 'qr_code', 'data_matrix', 'pdf417'] });
+    const modal = new bootstrap.Modal(document.getElementById('cameraScanModal'));
+    modal.show();
+
+    scanInterval = setInterval(async () => {
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          const code = barcodes[0].rawValue;
+          status.textContent = 'Barcode found: ' + code;
+          clearInterval(scanInterval);
+          stopCameraScan();
+          modal.hide();
+          // Look up and add product
+          document.getElementById('barcodeInput').value = code;
+          await lookupBarcode(code);
+        }
+      } catch(e) { /* detection frame error */ }
+    }, 500);
+  } catch(e) {
+    status.textContent = 'Camera access denied. Allow camera permission and try again.';
+  }
+}
+
+function stopCameraScan() {
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('cameraPreview');
+  if (video) video.srcObject = null;
+}
+
+// Clean up on page unload
+window.addEventListener('beforeunload', stopCameraScan);
 </script>

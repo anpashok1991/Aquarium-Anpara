@@ -78,16 +78,37 @@ router.get('/search', async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 2) return res.json({ products: [] });
     const products = await prisma.products.findMany({
-      where: { is_active: 1, name: { contains: q } },
+      where: { is_active: 1, OR: [{ name: { contains: q } }, { barcode: { contains: q } }] },
       orderBy: { name: 'asc' },
       take: 20,
       include: { product_images: { where: { is_primary: 1 }, take: 1 } }
     });
     const mapped = products.map(p => ({
       id: p.id, name: p.name, price: p.price, discount_price: p.discount_price,
-      stock_quantity: p.stock_quantity, primary_image: p.product_images[0]?.image_url || null
+      stock_quantity: p.stock_quantity, primary_image: p.product_images[0]?.image_url || null,
+      barcode: p.barcode, hsn_code: p.hsn_code
     }));
     res.json({ products: mapped });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Lookup product by barcode
+router.get('/barcode/:code', async (req, res) => {
+  try {
+    const code = req.params.code.trim();
+    if (!code) return res.json({ product: null });
+    const product = await prisma.products.findFirst({
+      where: { is_active: 1, barcode: code },
+      include: { product_images: { where: { is_primary: 1 }, take: 1 } }
+    });
+    if (!product) return res.json({ product: null });
+    res.json({
+      product: {
+        id: product.id, name: product.name, price: product.price, discount_price: product.discount_price,
+        stock_quantity: product.stock_quantity, primary_image: product.product_images[0]?.image_url || null,
+        barcode: product.barcode, hsn_code: product.hsn_code
+      }
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -181,9 +202,11 @@ router.get('/:slug', async (req, res) => {
 
 router.post('/', auth, staffOrAdmin, requireWritePermission('products'), async (req, res) => {
   try {
-    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, gst_percent, category_id, brand_id, breed_id,
+    const { name, description, short_description, sku, barcode, hsn_code, price, discount_price, cost_price, gst_percent, category_id, brand_id, breed_id,
       stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, video_url, images } = req.body;
 
+    if (!name) return res.status(400).json({ error: 'Product name is required' });
+    if (!hsn_code || !hsn_code.trim()) return res.status(400).json({ error: 'HSN Code is required' });
     let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     let finalSlug = slug;
     let counter = 1;
@@ -193,7 +216,7 @@ router.post('/', auth, staffOrAdmin, requireWritePermission('products'), async (
 
     const result = await prisma.products.create({
       data: {
-        name, slug: finalSlug, description, short_description, sku, barcode,
+        name, slug: finalSlug, description, short_description, sku: sku || null, barcode, hsn_code,
         price: price || 0, discount_price: discount_price || 0, cost_price: cost_price || 0, gst_percent: gst_percent || 0,
         category_id, brand_id, breed_id, stock_quantity: stock_quantity || 0,
         low_stock_threshold: low_stock_threshold || 5, weight: weight || 0,
@@ -223,15 +246,18 @@ router.post('/', auth, staffOrAdmin, requireWritePermission('products'), async (
 
 router.put('/:id', auth, staffOrAdmin, requireWritePermission('products'), async (req, res) => {
   try {
-    const { name, description, short_description, sku, barcode, price, discount_price, cost_price, gst_percent, category_id, brand_id, breed_id,
+    const { name, description, short_description, sku, barcode, hsn_code, price, discount_price, cost_price, gst_percent, category_id, brand_id, breed_id,
       stock_quantity, low_stock_threshold, weight, is_featured, is_best_seller, is_new_arrival, is_active, meta_title, meta_description, images, video_url } = req.body;
+
+    if (hsn_code !== undefined && !hsn_code.trim()) return res.status(400).json({ error: 'HSN Code cannot be empty' });
 
     const data = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
     if (short_description !== undefined) data.short_description = short_description;
-    if (sku !== undefined) data.sku = sku;
+    if (sku !== undefined) data.sku = sku || null;
     if (barcode !== undefined) data.barcode = barcode;
+    if (hsn_code !== undefined) data.hsn_code = hsn_code;
     if (price !== undefined) data.price = price;
     if (discount_price !== undefined) data.discount_price = discount_price;
     if (cost_price !== undefined) data.cost_price = cost_price;

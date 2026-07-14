@@ -287,6 +287,7 @@ model products {
   review_count        Int?             @default(0)
   sold_count          Int?             @default(0)
   gst_percent         Float?           @default(0)
+  hsn_code            String?
   meta_title          String?
   meta_description    String?
   video_url           String?
