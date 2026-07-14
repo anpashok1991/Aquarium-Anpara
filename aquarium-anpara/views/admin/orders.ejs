@@ -33,6 +33,7 @@
 </div>
 <script>
 let currentStatus = '';
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 function filterOrders(s,btn) { currentStatus = s; document.querySelectorAll('.status-filter').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); loadOrders(); }
 function searchOrders() {
   const q = document.getElementById('searchInput').value.trim();
@@ -63,7 +64,7 @@ async function loadOrders(extra) {
           ${o.payment_method === 'scan_pay' && o.payment_status === 'paid' ? '<br><small class="text-success fw-bold">Payment Approved</small>' : ''}
         </td>
         <td><select class="form-select form-select-sm" style="width:130px" onchange="updateOrderStatus(${o.id}, this.value)">
-          ${['pending','confirmed','processing','dispatched','delivered','cancelled'].map(s=>`<option value="${s}" ${o.order_status===s?'selected':''}>${s}</option>`).join('')}
+          ${['pending','confirmed','processing','dispatched','delivered','cancelled'].map(s=>`<option value="${s}" ${o.order_status===s?'selected':''}>${cap(s)}</option>`).join('')}
         </select>${o.payment_method === 'scan_pay' && o.payment_status === 'pending' ? `<div class="mt-1 d-flex gap-1"><button class="btn btn-success btn-sm" onclick="approvePayment(${o.id})"><i class="fas fa-check me-1"></i>Approve</button><button class="btn btn-danger btn-sm" onclick="rejectPayment(${o.id})"><i class="fas fa-times me-1"></i></button></div>` : ''}</td>
         <td>${new Date(o.created_at).toLocaleDateString()}</td>
         <td><button class="btn btn-sm btn-outline-primary" onclick="viewOrder(${o.id})"><i class="fas fa-eye"></i></button>

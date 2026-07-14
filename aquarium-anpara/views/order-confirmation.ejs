@@ -23,6 +23,7 @@
 </div>
 <script>
 let orderData = null;
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 async function loadOrder() {
   try {
     const data = await api('/orders');
@@ -32,7 +33,7 @@ async function loadOrder() {
       document.getElementById('orderDetails').innerHTML = `
         <div class="row mb-3"><div class="col-sm-6"><strong>Name:</strong> ${orderData.customer_name}</div><div class="col-sm-6"><strong>Phone:</strong> ${orderData.customer_phone}</div></div>
         <div class="row mb-3"><div class="col-12"><strong>Address:</strong> ${orderData.shipping_address}, ${orderData.shipping_city}, ${orderData.shipping_state} - ${orderData.shipping_pincode}</div></div>
-        <div class="row mb-3"><div class="col-sm-6"><strong>Payment:</strong> ${orderData.payment_method === 'cod' ? 'Cash' : orderData.payment_method.toUpperCase()}</div><div class="col-sm-6"><strong>Total:</strong> ₹${orderData.total.toLocaleString()}</div></div>
+        <div class="row mb-3"><div class="col-sm-6"><strong>Payment:</strong> ${orderData.payment_method === 'cod' ? 'Cash' : cap(orderData.payment_method)}</div><div class="col-sm-6"><strong>Total:</strong> ₹${orderData.total.toLocaleString()}</div></div>
         ${orderData.tax > 0 ? `<div class="row mb-3"><div class="col-12"><strong>GST:</strong> ₹${orderData.tax.toLocaleString()}</div></div>` : ''}
         ${isScanPay ? '<div class="alert alert-info"><i class="fas fa-info-circle me-1"></i>Your payment is being processed. We will confirm your order once the payment is approved by admin.</div>' : '<p class="text-muted"><i class="fas fa-truck me-2"></i>Estimated delivery: 3-5 business days</p>'}`;
       document.getElementById('whatsappBtn').onclick = () => sendOrderWhatsApp(orderData);
