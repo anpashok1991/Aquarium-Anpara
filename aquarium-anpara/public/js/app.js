@@ -123,8 +123,20 @@ async function toggleWishlist(productId) {
     const data = await api('/wishlist', { method: 'POST', body: JSON.stringify({ product_id: productId }) });
     showToast(data.message);
     document.querySelectorAll(`[data-wishlist="${productId}"]`).forEach(btn => {
-      btn.innerHTML = data.active ? '<i class="fas fa-heart text-danger"></i>' : '<i class="far fa-heart"></i>';
-      if (data.active) btn.classList.add('wishlist-active'); else btn.classList.remove('wishlist-active');
+      if (data.active) {
+        btn.innerHTML = '<i class="fas fa-heart text-danger"></i>';
+        btn.classList.add('wishlist-active');
+      } else {
+        // On wishlist page, remove the card; on other pages, toggle the icon
+        if (btn.closest('#wishlistGrid')) {
+          btn.style.transition = 'opacity 0.3s';
+          btn.style.opacity = '0';
+          setTimeout(() => btn.remove(), 300);
+        } else {
+          btn.innerHTML = '<i class="far fa-heart"></i>';
+          btn.classList.remove('wishlist-active');
+        }
+      }
     });
   } catch (e) { showToast(e.message, 'error'); }
 }
