@@ -165,6 +165,8 @@ app.use(async (req, res, next) => {
     res.locals.gaId = s.ga_id || '';
     res.locals.fbPixel = s.fb_pixel || '';
     res.locals.metaKeywords = s.meta_keywords || '';
+    try { res.locals.promotion1 = JSON.parse(s.promotion_1 || '{}'); } catch(e) { res.locals.promotion1 = {}; }
+    try { res.locals.promotion2 = JSON.parse(s.promotion_2 || '{}'); } catch(e) { res.locals.promotion2 = {}; }
   } catch (e) {
     res.locals.shopName = process.env.SHOP_NAME || 'Aquarium Anpara';
     res.locals.shopPhone = process.env.SHOP_PHONE || '';
@@ -178,6 +180,8 @@ app.use(async (req, res, next) => {
     res.locals.gaId = '';
     res.locals.fbPixel = '';
     res.locals.metaKeywords = '';
+    res.locals.promotion1 = {};
+    res.locals.promotion2 = {};
   }
   res.locals.googleClientId = process.env.GOOGLE_CLIENT_ID || '';
   res.locals.user = req.user || null;

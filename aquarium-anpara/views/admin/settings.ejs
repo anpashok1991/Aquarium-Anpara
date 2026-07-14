@@ -37,6 +37,71 @@
             <div class="form-check"><input class="form-check-input" type="checkbox" id="payBank" value="bank_transfer"><label class="form-check-label">Bank Transfer</label></div>
           </div>
         </div>
+        <div class="col-12"><hr><h5 class="fw-bold">Homepage Promotions</h5>
+          <p class="text-muted small">Configure up to 2 promotional spaces on the homepage. Leave disabled to show nothing.</p>
+          <% for (let i = 1; i <= 2; i++) { %>
+          <div class="card border mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between bg-light">
+              <strong>Promotion <%= i %></strong>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="promo<%= i %>Enabled">
+                <label class="form-check-label" for="promo<%= i %>Enabled">Enabled</label>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <label class="form-label small">Display Type</label>
+                  <select class="form-select form-select-sm" id="promo<%= i %>Type">
+                    <option value="image">Full Image Banner</option>
+                    <option value="text">Text with Icon</option>
+                    <option value="both">Image + Text</option>
+                    <option value="carousel">Carousel</option>
+                  </select>
+                </div>
+                <div class="col-md-8 promo-image-group" id="promo<%= i %>ImageGroup">
+                  <label class="form-label small">Image</label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="file" class="form-control form-control-sm" id="promo<%= i %>File" accept="image/*">
+                    <button class="btn btn-outline-danger btn-sm" type="button" onclick="removePromoImage(<%= i %>)" title="Remove"><i class="fas fa-times"></i></button>
+                  </div>
+                  <div id="promo<%= i %>ImagePreview" class="mt-1" style="display:none">
+                    <img src="" style="height:50px;width:auto;max-width:200px;object-fit:contain;border-radius:4px;border:1px solid var(--gray-light)">
+                  </div>
+                  <input type="hidden" id="promo<%= i %>Image">
+                </div>
+                <div class="col-md-6 promo-text-group" id="promo<%= i %>TextGroup">
+                  <label class="form-label small">Icon (.png)</label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="file" class="form-control form-control-sm" id="promo<%= i %>IconFile" accept="image/png">
+                    <button class="btn btn-outline-danger btn-sm" type="button" onclick="removePromoIcon(<%= i %>)" title="Remove"><i class="fas fa-times"></i></button>
+                  </div>
+                  <div id="promo<%= i %>IconPreview" class="mt-1" style="display:none">
+                    <img src="" style="height:30px;width:auto;object-fit:contain">
+                  </div>
+                  <input type="hidden" id="promo<%= i %>Icon">
+                </div>
+                <div class="col-md-6 promo-text-group">
+                  <label class="form-label small">Heading</label>
+                  <input type="text" class="form-control form-control-sm" id="promo<%= i %>Heading" placeholder="Special Offer!">
+                </div>
+                <div class="col-12 promo-text-group">
+                  <label class="form-label small">Text</label>
+                  <textarea class="form-control form-control-sm" id="promo<%= i %>Text" rows="2" placeholder="Description of the promotion"></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Link URL</label>
+                  <input type="text" class="form-control form-control-sm" id="promo<%= i %>Link" placeholder="/shop">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Link Text</label>
+                  <input type="text" class="form-control form-control-sm" id="promo<%= i %>LinkText" placeholder="Shop Now">
+                </div>
+              </div>
+            </div>
+          </div>
+          <% } %>
+        </div>
         <div class="col-12"><hr><h5 class="fw-bold">SEO Settings</h5></div>
         <div class="col-md-6"><label class="form-label">Google Search Console Verification Code</label><input type="text" class="form-control" id="googleVerification" placeholder="e.g. ABCDEF1234567890"></div>
         <div class="col-md-6"><label class="form-label">Google Analytics Measurement ID</label><input type="text" class="form-control" id="gaId" placeholder="e.g. G-XXXXXXXXXX"></div>
@@ -79,7 +144,62 @@ function getPaymentMethods() {
 function setPaymentMethods(arr) {
   document.querySelectorAll('[id^="pay"]').forEach(cb => cb.checked = arr.includes(cb.value));
 }
-async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('smtpHost').value=s.smtp_host||'';document.getElementById('smtpPort').value=s.smtp_port||'587';document.getElementById('smtpSecure').value=s.smtp_secure||'false';document.getElementById('smtpUser').value=s.smtp_user||'';document.getElementById('smtpPass').value=s.smtp_pass||'';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';try{setPaymentMethods(JSON.parse(s.payment_methods||'["cod"]'));}catch(e){setPaymentMethods(['cod']);}if(s.shop_logo){showLogoPreview(s.shop_logo);}}catch(e){}}
+function loadPromo(i, d) {
+  const en = document.getElementById('promo'+i+'Enabled');
+  const tp = document.getElementById('promo'+i+'Type');
+  const img = document.getElementById('promo'+i+'Image');
+  const icon = document.getElementById('promo'+i+'Icon');
+  const hd = document.getElementById('promo'+i+'Heading');
+  const tx = document.getElementById('promo'+i+'Text');
+  const lk = document.getElementById('promo'+i+'Link');
+  const lt = document.getElementById('promo'+i+'LinkText');
+  en.checked = d && d.enabled;
+  tp.value = (d && d.type) || 'image';
+  img.value = (d && d.image_url) || '';
+  icon.value = (d && d.icon_url) || '';
+  hd.value = (d && d.heading) || '';
+  tx.value = (d && d.text) || '';
+  lk.value = (d && d.link_url) || '';
+  lt.value = (d && d.link_text) || '';
+  if (img.value) { const p = document.querySelector('#promo'+i+'ImagePreview'); p.style.display='flex'; p.querySelector('img').src=img.value; }
+  if (icon.value) { const p = document.querySelector('#promo'+i+'IconPreview'); p.style.display='flex'; p.querySelector('img').src=icon.value; }
+  togglePromoType(i);
+}
+function togglePromoType(i) {
+  const t = document.getElementById('promo'+i+'Type').value;
+  document.getElementById('promo'+i+'ImageGroup').style.display = (t==='text')?'none':'';
+  document.querySelectorAll('#promo'+i+'TextGroup').forEach(el => el.style.display = (t==='image')?'none':'');
+}
+function removePromoImage(i) {
+  document.getElementById('promo'+i+'Image').value='';
+  document.getElementById('promo'+i+'File').value='';
+  document.querySelector('#promo'+i+'ImagePreview').style.display='none';
+}
+function removePromoIcon(i) {
+  document.getElementById('promo'+i+'Icon').value='';
+  document.getElementById('promo'+i+'IconFile').value='';
+  document.querySelector('#promo'+i+'IconPreview').style.display='none';
+}
+function setupPromoFileUpload(i) {
+  document.getElementById('promo'+i+'File').addEventListener('change', async function() {
+    if (this.files.length) {
+      const url = await uploadFile(this.files[0], 'settings');
+      document.getElementById('promo'+i+'Image').value = url;
+      const p = document.querySelector('#promo'+i+'ImagePreview');
+      p.style.display='flex'; p.querySelector('img').src=url;
+    }
+  });
+  document.getElementById('promo'+i+'IconFile').addEventListener('change', async function() {
+    if (this.files.length) {
+      const url = await uploadFile(this.files[0], 'settings');
+      document.getElementById('promo'+i+'Icon').value = url;
+      const p = document.querySelector('#promo'+i+'IconPreview');
+      p.style.display='flex'; p.querySelector('img').src=url;
+    }
+  });
+  document.getElementById('promo'+i+'Type').addEventListener('change', () => togglePromoType(i));
+}
+async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('smtpHost').value=s.smtp_host||'';document.getElementById('smtpPort').value=s.smtp_port||'587';document.getElementById('smtpSecure').value=s.smtp_secure||'false';document.getElementById('smtpUser').value=s.smtp_user||'';document.getElementById('smtpPass').value=s.smtp_pass||'';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';try{setPaymentMethods(JSON.parse(s.payment_methods||'["cod"]'));}catch(e){setPaymentMethods(['cod']);}if(s.shop_logo){showLogoPreview(s.shop_logo);}for(let i=1;i<=2;i++){try{const p=JSON.parse(s['promotion_'+i]||'{}');loadPromo(i,p);}catch(e){loadPromo(i,{});}}}catch(e){}}
 async function testEmail() {
   const email = document.getElementById('shopEmail').value;
   if (!email) { showToast('Please enter a Shop Email first', 'error'); return; }
@@ -88,7 +208,19 @@ async function testEmail() {
     showToast('Test email sent! Check your inbox.');
   } catch(e) { showToast(e.message, 'error'); }
 }
-async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}await api('/settings',{method:'PUT',body:JSON.stringify({shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,smtp_host:document.getElementById('smtpHost').value,smtp_port:document.getElementById('smtpPort').value,smtp_secure:document.getElementById('smtpSecure').value,smtp_user:document.getElementById('smtpUser').value,smtp_pass:document.getElementById('smtpPass').value,payment_methods:JSON.stringify(getPaymentMethods()),google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value})});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
-document.addEventListener('DOMContentLoaded',loadSettings);
+function getPromoData(i) {
+  return {
+    enabled: document.getElementById('promo'+i+'Enabled').checked,
+    type: document.getElementById('promo'+i+'Type').value,
+    image_url: document.getElementById('promo'+i+'Image').value,
+    icon_url: document.getElementById('promo'+i+'Icon').value,
+    heading: document.getElementById('promo'+i+'Heading').value,
+    text: document.getElementById('promo'+i+'Text').value,
+    link_url: document.getElementById('promo'+i+'Link').value,
+    link_text: document.getElementById('promo'+i+'LinkText').value
+  };
+}
+async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}const body={shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,smtp_host:document.getElementById('smtpHost').value,smtp_port:document.getElementById('smtpPort').value,smtp_secure:document.getElementById('smtpSecure').value,smtp_user:document.getElementById('smtpUser').value,smtp_pass:document.getElementById('smtpPass').value,payment_methods:JSON.stringify(getPaymentMethods()),google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value};for(let i=1;i<=2;i++){body['promotion_'+i]=JSON.stringify(getPromoData(i));}await api('/settings',{method:'PUT',body:JSON.stringify(body)});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
+document.addEventListener('DOMContentLoaded',()=>{loadSettings();for(let i=1;i<=2;i++)setupPromoFileUpload(i);});
 </script>
 <%- include('../partials/footer') %>
