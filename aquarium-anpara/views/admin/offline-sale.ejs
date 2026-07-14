@@ -414,5 +414,17 @@ document.getElementById('confirmGenerateBtn').addEventListener('click', async fu
 });
 
 loadDefaultProducts();
-loadSettings().then(d => { if (d.settings) loadScannerConfig(d.settings); });
+loadSettings().then(d => {
+  if (d.settings) {
+    loadScannerConfig(d.settings);
+    // Respect enabled payment methods from settings
+    const payMethods = d.settings.payment_methods || '["cod"]';
+    let enabled;
+    try { enabled = JSON.parse(payMethods); } catch { enabled = ['cod']; }
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
+      const wrapper = r.closest('.form-check-inline') || r.parentElement;
+      wrapper.style.display = enabled.includes(r.value) ? '' : 'none';
+    });
+  }
+});
 </script>
