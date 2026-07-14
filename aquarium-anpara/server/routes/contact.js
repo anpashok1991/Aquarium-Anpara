@@ -12,7 +12,7 @@ router.post('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/', auth, adminOnly, async (req, res) => {
+router.get('/', auth, staffOrAdmin, async (req, res) => {
   try {
     const messages = await prisma.contact_messages.findMany({ orderBy: { created_at: 'desc' } });
     res.json({ messages });

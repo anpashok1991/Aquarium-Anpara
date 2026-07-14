@@ -15,7 +15,7 @@ const auth = async (req, res, next) => {
     const decoded = jwt.verify(token, TOKEN_SECRET);
     const user = await prisma.users.findFirst({
       where: { id: decoded.id, is_active: 1 },
-      select: { id: true, name: true, email: true, phone: true, role: true, avatar: true, is_active: true, auth_provider: true, token_version: true }
+      select: { id: true, name: true, email: true, phone: true, role: true, permissions: true, avatar: true, is_active: true, auth_provider: true, token_version: true }
     });
     if (!user) return res.status(401).json({ error: 'Invalid token' });
     if (decoded.version !== (user.token_version || 0)) return res.status(401).json({ error: 'Session expired, please login again' });
@@ -33,7 +33,7 @@ const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, TOKEN_SECRET);
       const user = await prisma.users.findFirst({
         where: { id: decoded.id, is_active: 1 },
-        select: { id: true, name: true, email: true, phone: true, role: true, avatar: true, is_active: true, auth_provider: true, token_version: true }
+        select: { id: true, name: true, email: true, phone: true, role: true, permissions: true, avatar: true, is_active: true, auth_provider: true, token_version: true }
       });
       if (user && decoded.version === (user.token_version || 0)) req.user = user;
     }

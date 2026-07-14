@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../database');
 const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
-router.get('/', auth, adminOnly, async (req, res) => {
+router.get('/', auth, staffOrAdmin, async (req, res) => {
   try {
     const { search, low_stock } = req.query;
     let where = { is_active: 1 };
@@ -72,7 +72,7 @@ router.post('/adjust', auth, staffOrAdmin, requireWritePermission('inventory'), 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/logs', auth, adminOnly, async (req, res) => {
+router.get('/logs', auth, staffOrAdmin, async (req, res) => {
   try {
     const { product_id, type, page = 1, limit = 50 } = req.query;
     let where = {};
@@ -104,7 +104,7 @@ router.get('/logs', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/alerts', auth, adminOnly, async (req, res) => {
+router.get('/alerts', auth, staffOrAdmin, async (req, res) => {
   try {
     const allProducts = await prisma.products.findMany({
       where: { is_active: 1 },

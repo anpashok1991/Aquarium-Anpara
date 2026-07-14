@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../database');
 const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
-router.get('/', auth, adminOnly, async (req, res) => {
+router.get('/', auth, staffOrAdmin, async (req, res) => {
   try {
     const { search, is_active, page = 1, limit = 20 } = req.query;
     const where = {};
@@ -24,7 +24,7 @@ router.get('/', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', auth, adminOnly, async (req, res) => {
+router.get('/:id', auth, staffOrAdmin, async (req, res) => {
   try {
     const customer = await prisma.customers.findUnique({ where: { id: Number(req.params.id) } });
     if (!customer) return res.status(404).json({ error: 'Customer not found' });

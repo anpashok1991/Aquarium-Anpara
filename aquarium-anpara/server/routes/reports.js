@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../database');
-const { auth, adminOnly } = require('../middleware/auth');
+const { auth, adminOnly, staffOrAdmin } = require('../middleware/auth');
 
-router.get('/dashboard', auth, adminOnly, async (req, res) => {
+router.get('/dashboard', auth, staffOrAdmin, async (req, res) => {
   try {
     const totalProducts = await prisma.products.count({ where: { is_active: 1 } });
     const totalCategories = await prisma.categories.count({ where: { is_active: 1 } });
@@ -57,7 +57,7 @@ router.get('/dashboard', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/sales', auth, adminOnly, async (req, res) => {
+router.get('/sales', auth, staffOrAdmin, async (req, res) => {
   try {
     const { period = 'daily', start_date, end_date, search } = req.query;
     let groupBy, dateFormat;
@@ -83,7 +83,7 @@ router.get('/sales', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/products', auth, adminOnly, async (req, res) => {
+router.get('/products', auth, staffOrAdmin, async (req, res) => {
   try {
     const { search } = req.query;
     const where = search && search.trim() ? { name: { contains: search.trim() }, is_active: 1 } : { is_active: 1 };
@@ -104,14 +104,14 @@ router.get('/products', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/customers', auth, adminOnly, async (req, res) => {
+router.get('/customers', auth, staffOrAdmin, async (req, res) => {
   try {
     const customers = await prisma.customers.findMany({ orderBy: { total_spent: 'desc' } });
     res.json({ customers });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/orders', auth, adminOnly, async (req, res) => {
+router.get('/orders', auth, staffOrAdmin, async (req, res) => {
   try {
     const { status } = req.query;
     const where = status ? { order_status: status } : {};
@@ -120,7 +120,7 @@ router.get('/orders', auth, adminOnly, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/stock', auth, adminOnly, async (req, res) => {
+router.get('/stock', auth, staffOrAdmin, async (req, res) => {
   try {
     const { search } = req.query;
     const where = search && search.trim() ? { name: { contains: search.trim() }, is_active: 1 } : { is_active: 1 };

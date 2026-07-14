@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/all', auth, adminOnly, async (req, res) => {
+router.get('/all', auth, staffOrAdmin, async (req, res) => {
   try {
     const banners = await prisma.banners.findMany({ orderBy: { sort_order: 'asc' } });
     res.json({ banners });

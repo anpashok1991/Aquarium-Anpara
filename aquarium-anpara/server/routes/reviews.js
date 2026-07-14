@@ -78,7 +78,7 @@ router.put('/:id', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/pending', auth, staffOrAdmin, requireWritePermission('reviews'), async (req, res) => {
+router.get('/pending', auth, staffOrAdmin, async (req, res) => {
   try {
     const reviews = await prisma.reviews.findMany({
       where: { is_approved: 0 },

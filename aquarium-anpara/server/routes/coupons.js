@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../database');
 const { auth, adminOnly, staffOrAdmin, requireWritePermission } = require('../middleware/auth');
 
-router.get('/', auth, adminOnly, async (req, res) => {
+router.get('/', auth, staffOrAdmin, async (req, res) => {
   try {
     const coupons = await prisma.coupons.findMany({ orderBy: { created_at: 'desc' } });
     res.json({ coupons });
