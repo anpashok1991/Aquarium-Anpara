@@ -46,7 +46,7 @@
             </div>
             <div class="col-md-4">
               <label class="form-label">Pincode *</label>
-              <input type="text" class="form-control" id="pincode" required>
+              <input type="text" class="form-control" id="pincode" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
             </div>
           </div>
         </div>

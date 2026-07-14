@@ -18,6 +18,10 @@
                 <div class="list-group position-absolute w-100 z-3 shadow" id="searchResults" style="display:none;max-height:300px;overflow-y:auto"></div>
               </div>
             </div>
+            <div id="defaultProducts" class="mb-2">
+              <label class="form-label small text-muted fw-semibold">Quick Add Products</label>
+              <div id="defaultProductList" class="d-flex flex-column gap-1" style="max-height:240px;overflow-y:auto"></div>
+            </div>
             <div id="selectedProducts">
               <div class="text-center text-muted py-4" id="emptyProducts">
                 <i class="fas fa-box-open fa-3x mb-2"></i>
@@ -52,11 +56,18 @@
           <div class="card-body">
             <div class="mb-2">
               <label class="form-label">Payment Method</label>
-              <select class="form-select" id="paymentMethod">
-                <option value="cod">Cash</option>
-              </select>
+              <div class="d-flex gap-2">
+                <div class="form-check form-check-inline border rounded p-2 flex-grow-1">
+                  <input class="form-check-input" type="radio" name="paymentMethod" value="cod" id="pmCod" checked>
+                  <label class="form-check-label" for="pmCod"><i class="fas fa-money-bill me-1"></i>Cash</label>
+                </div>
+                <div class="form-check form-check-inline border rounded p-2 flex-grow-1">
+                  <input class="form-check-input" type="radio" name="paymentMethod" value="scan_pay" id="pmScanPay">
+                  <label class="form-check-label" for="pmScanPay"><i class="fas fa-qrcode me-1"></i>Scan & Pay</label>
+                </div>
+              </div>
             </div>
-            <div class="mb-2">
+            <div class="mb-2" id="paymentStatusWrap">
               <label class="form-label">Payment Status</label>
               <select class="form-select" id="paymentStatus">
                 <option value="paid">Paid</option>
@@ -96,9 +107,121 @@
   </div>
 </div>
 
+<!-- Confirm Invoice Modal -->
+<div class="modal fade" id="confirmInvoiceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-file-invoice text-success me-2"></i>Confirm Invoice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fw-semibold">Are you sure you want to generate this invoice?</p>
+        <div class="bg-light rounded p-3 small">
+          <div class="d-flex justify-content-between mb-1"><span>Customer:</span><span id="confirmCustomer" class="fw-semibold">-</span></div>
+          <div class="d-flex justify-content-between mb-1"><span>Items:</span><span id="confirmItems" class="fw-semibold">0</span></div>
+          <div class="d-flex justify-content-between mb-1"><span>Subtotal:</span><span id="confirmSubtotal" class="fw-semibold">₹0</span></div>
+          <div class="d-flex justify-content-between mb-1"><span>Discount:</span><span id="confirmDiscount" class="fw-semibold">₹0</span></div>
+          <hr class="my-1">
+          <div class="d-flex justify-content-between fw-bold fs-5"><span>Total:</span><span id="confirmTotal" class="text-success">₹0</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-success" id="confirmGenerateBtn"><i class="fas fa-file-invoice me-1"></i>Generate Invoice</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scan & Pay Modal -->
+<div class="modal fade" id="scanPayModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0"><h5 class="modal-title fw-bold"><i class="fas fa-qrcode me-2 text-primary"></i>Scan & Pay</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body text-center">
+        <h3 class="fw-bold text-primary mb-1">₹<span id="scanPayAmount">0</span></h3>
+        <p class="text-muted small mb-3">Show QR to customer for payment</p>
+        <div id="offlineDynamicQrWrap" class="mb-3" style="display:none">
+          <div class="text-center">
+            <img id="offlineDynamicQrImg" src="" alt="Dynamic UPI QR" style="width:180px;height:180px;object-fit:contain;border:2px solid var(--gray-light);border-radius:12px;padding:8px">
+            <div class="small mt-1 text-muted">Auto-filled amount QR</div>
+          </div>
+        </div>
+        <div id="offlineScannerList" class="d-flex flex-wrap justify-content-center gap-3 mb-3"></div>
+        <hr>
+        <div class="form-check mb-3 text-start">
+          <input class="form-check-input" type="checkbox" id="offlinePaymentReceived">
+          <label class="form-check-label fw-semibold" for="offlinePaymentReceived">Payment received from customer</label>
+        </div>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" id="offlineConfirmScanPayBtn" disabled><i class="fas fa-check me-1"></i>Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <%- include('../partials/footer') %>
 <script>
 let selectedItems = [];
+let scanPayData = null;
+
+async function loadSettings() {
+  try { return await api('/settings'); } catch(e) { return { settings: {} }; }
+}
+
+function loadScannerConfig(settings) {
+  const upiId = settings.upi_id || '';
+  if (upiId) {
+    const total = calcTotal();
+    const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Aquarium Anpara')}&am=${total.toFixed(2)}&cu=INR`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLink)}`;
+    document.getElementById('offlineDynamicQrImg').src = qrUrl;
+    document.getElementById('offlineDynamicQrWrap').style.display = '';
+  }
+  const s1 = settings.scanner_1, s2 = settings.scanner_2;
+  let q1, q2;
+  try { q1 = JSON.parse(s1 || '{}'); } catch(e) { q1 = {}; }
+  try { q2 = JSON.parse(s2 || '{}'); } catch(e) { q2 = {}; }
+  const scanners = [q1, q2].filter(s => s && s.qr);
+  const list = document.getElementById('offlineScannerList');
+  if (scanners.length) {
+    list.innerHTML = scanners.map(s => `
+      <div class="text-center" style="width:160px">
+        <img src="${s.qr}" style="width:160px;height:160px;object-fit:contain;border:2px solid var(--gray-light);border-radius:12px;padding:8px">
+        <div class="small mt-1 fw-semibold">${s.name || 'QR'}</div>
+      </div>`).join('');
+  } else {
+    list.innerHTML = '<p class="text-muted small">No payment scanners configured.</p>';
+  }
+}
+
+function calcTotal() {
+  const subtotal = selectedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const discount = Math.min(Number(document.getElementById('discountAmount').value) || 0, subtotal);
+  return subtotal - discount;
+}
+
+async function loadDefaultProducts() {
+  try {
+    const data = await api('/products?limit=15&page=1&active=1&sort=newest');
+    const list = document.getElementById('defaultProductList');
+    if (!data.products || !data.products.length) { list.innerHTML = '<small class="text-muted">No products available</small>'; return; }
+    list.innerHTML = data.products.map(p => {
+      const price = p.discount_price > 0 ? p.discount_price : p.price;
+      const img = p.primary_image ? `<img src="${p.primary_image}" style="width:28px;height:28px;object-fit:cover;border-radius:3px" onerror="this.style.display='none'">` : '<i class="fas fa-box text-muted fa-sm"></i>';
+      const eid = btoa(String(p.id)).replace(/=+$/,'');
+      return `<div class="d-flex align-items-center gap-2 p-1 border-bottom" style="cursor:pointer" onclick="addProduct(${p.id},'${p.name.replace(/'/g,"\\'")}',${price},${p.stock_quantity},'${(p.primary_image||'').replace(/'/g,"\\'")}')">
+        ${img}
+        <div class="flex-grow-1 text-truncate"><small class="fw-semibold">${p.name}</small></div>
+        <small class="text-muted">₹${price.toLocaleString()}</small>
+        <button class="btn btn-sm btn-outline-success py-0 px-1" title="Add"><i class="fas fa-plus fa-xs"></i></button>
+      </div>`;
+    }).join('');
+  } catch(e) { document.getElementById('defaultProductList').innerHTML = '<small class="text-muted">Failed to load products</small>'; }
+}
 
 function updateSummary() {
   const itemCount = selectedItems.reduce((s, i) => s + i.quantity, 0);
@@ -195,28 +318,84 @@ function addProduct(id, name, unitPrice, stock, image) {
   updateSummary();
 }
 
-document.getElementById('generateInvoice').addEventListener('click', async function() {
+// Payment method radio toggle
+document.querySelectorAll('input[name="paymentMethod"]').forEach(r => {
+  r.addEventListener('change', function() {
+    if (this.value === 'scan_pay') {
+      const total = calcTotal();
+      document.getElementById('scanPayAmount').textContent = total.toLocaleString();
+      const modal = new bootstrap.Modal(document.getElementById('scanPayModal'));
+      modal.show();
+      document.getElementById('paymentStatus').value = 'pending';
+    }
+  });
+});
+
+// Receipt preview
+document.getElementById('offlinePaymentReceipt')?.addEventListener('change', function() {
+  const preview = document.getElementById('offlineReceiptPreview');
+  if (this.files && this.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { preview.querySelector('img').src = e.target.result; preview.style.display = ''; };
+    reader.readAsDataURL(this.files[0]);
+  }
+});
+
+// Enable Done button when payment received checkbox is checked
+document.getElementById('offlinePaymentReceived').addEventListener('change', function() {
+  document.getElementById('offlineConfirmScanPayBtn').disabled = !this.checked;
+});
+
+// Confirm scan pay - just mark payment as received
+document.getElementById('offlineConfirmScanPayBtn').addEventListener('click', function() {
+  scanPayData = { received: true };
+  bootstrap.Modal.getInstance(document.getElementById('scanPayModal')).hide();
+  showToast('Payment recorded as received.');
+});
+
+document.getElementById('generateInvoice').addEventListener('click', function() {
   const customerName = document.getElementById('customerName').value.trim();
   const customerPhone = document.getElementById('customerPhone').value.trim();
   if (!customerName || !customerPhone) { showToast('Customer name and phone are required', 'error'); return; }
   if (!selectedItems.length) { showToast('Add at least one product', 'error'); return; }
 
-  this.disabled = true;
-  this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+  const subtotal = selectedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const discount = Math.min(Number(document.getElementById('discountAmount').value) || 0, subtotal);
+  const total = subtotal - discount;
+  const itemCount = selectedItems.reduce((s, i) => s + i.quantity, 0);
+
+  document.getElementById('confirmCustomer').textContent = customerName + ' (' + customerPhone + ')';
+  document.getElementById('confirmItems').textContent = itemCount;
+  document.getElementById('confirmSubtotal').textContent = '₹' + subtotal.toLocaleString();
+  document.getElementById('confirmDiscount').textContent = '-₹' + discount.toLocaleString();
+  document.getElementById('confirmTotal').textContent = '₹' + total.toLocaleString();
+
+  const modal = new bootstrap.Modal(document.getElementById('confirmInvoiceModal'));
+  modal.show();
+});
+
+document.getElementById('confirmGenerateBtn').addEventListener('click', async function() {
+  bootstrap.Modal.getInstance(document.getElementById('confirmInvoiceModal')).hide();
+
+  const btn = document.getElementById('generateInvoice');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
 
   try {
-    const data = await api('/admin/offline-sale', {
-      method: 'POST',
-      body: JSON.stringify({
-        items: selectedItems.map(i => ({ product_id: i.id, quantity: i.quantity })),
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        payment_method: document.getElementById('paymentMethod').value,
-        payment_status: document.getElementById('paymentStatus').value,
-        discount_amount: Number(document.getElementById('discountAmount').value) || 0,
-        notes: document.getElementById('saleNotes').value.trim()
-      })
-    });
+    const payMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const body = {
+      items: selectedItems.map(i => ({ product_id: i.id, quantity: i.quantity })),
+      customer_name: document.getElementById('customerName').value.trim(),
+      customer_phone: document.getElementById('customerPhone').value.trim(),
+      payment_method: payMethod,
+      payment_status: document.getElementById('paymentStatus').value,
+      discount_amount: Number(document.getElementById('discountAmount').value) || 0,
+      notes: document.getElementById('saleNotes').value.trim()
+    };
+    if (payMethod === 'scan_pay' && scanPayData) {
+      body.payment_status = 'paid';
+    }
+    const data = await api('/admin/offline-sale', { method: 'POST', body: JSON.stringify(body) });
     showToast('Offline sale created successfully!');
     window.open('/invoice/' + data.order.order_number, '_blank');
     selectedItems = [];
@@ -225,11 +404,15 @@ document.getElementById('generateInvoice').addEventListener('click', async funct
     document.getElementById('customerName').value = '';
     document.getElementById('customerPhone').value = '';
     document.getElementById('saleNotes').value = '';
+    document.getElementById('discountAmount').value = '0';
   } catch(e) {
     showToast(e.message, 'error');
   }
 
-  this.disabled = false;
-  this.innerHTML = '<i class="fas fa-file-invoice me-1"></i> Generate Invoice';
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-file-invoice me-1"></i> Generate Invoice';
 });
+
+loadDefaultProducts();
+loadSettings().then(d => { if (d.settings) loadScannerConfig(d.settings); });
 </script>

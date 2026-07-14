@@ -54,7 +54,7 @@
           <div class="row g-2 mb-2">
             <div class="col-5"><label class="form-label">City</label><input type="text" class="form-control" id="addrCity"></div>
             <div class="col-4"><label class="form-label">State</label><input type="text" class="form-control" id="addrState"></div>
-            <div class="col-3"><label class="form-label">Pincode</label><input type="text" class="form-control" id="addrPincode"></div>
+            <div class="col-3"><label class="form-label">Pincode</label><input type="text" class="form-control" id="addrPincode" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
           </div>
           <input type="hidden" id="addrId">
         </form>

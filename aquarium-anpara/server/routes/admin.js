@@ -72,7 +72,7 @@ router.get('/audit-logs', auth, adminOnly, async (req, res) => {
 
 router.post('/offline-sale', auth, staffOrAdmin, requireWritePermission('offline-sale'), async (req, res) => {
   try {
-    const { items, customer_name, customer_phone, payment_method, payment_status, discount_amount, notes } = req.body;
+    const { items, customer_name, customer_phone, payment_method, payment_status, discount_amount, notes, payment_screenshot, transaction_id } = req.body;
 
     if (!items || !items.length) return res.status(400).json({ error: 'At least one item is required' });
     if (!customer_name || !customer_phone) return res.status(400).json({ error: 'Customer name and phone are required' });
@@ -129,6 +129,8 @@ router.post('/offline-sale', auth, staffOrAdmin, requireWritePermission('offline
         total,
         payment_method: payment_method || 'cod',
         payment_status: payment_status || 'paid',
+        payment_screenshot: payment_screenshot || null,
+        transaction_id: transaction_id || null,
         order_status: 'delivered',
         sale_type: 'offline',
         notes: notes ? `Offline Sale - ${notes}` : 'Offline Sale at Store'

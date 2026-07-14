@@ -23,7 +23,7 @@
           <div class="row g-2 mb-2">
             <div class="col-5"><label class="form-label">City</label><input type="text" class="form-control" id="aCity"></div>
             <div class="col-4"><label class="form-label">State</label><input type="text" class="form-control" id="aState"></div>
-            <div class="col-3"><label class="form-label">Pincode</label><input type="text" class="form-control" id="aPincode"></div>
+            <div class="col-3"><label class="form-label">Pincode</label><input type="text" class="form-control" id="aPincode" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></div>
           </div>
         </form>
       </div>

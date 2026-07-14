@@ -10,7 +10,7 @@
       <div class="text-center border-bottom pb-3 mb-4">
         <h3 class="fw-bold"><%= shopName %></h3>
         <p class="mb-1"><%= shopAddress %></p>
-        <p class="mb-1">Phone: <%= shopPhone %> | Email: <%= shopEmail %></p>
+        <p class="mb-1">Phone: <%= shopPhone %> | Email: <%= shopEmail %><%= shopGst ? ' | GST: ' + shopGst : '' %></p>
         <h5 class="mt-3 fw-bold">TAX INVOICE</h5>
       </div>
       <div class="row mb-4">

@@ -275,6 +275,7 @@ app.use(async (req, res, next) => {
     res.locals.shopPhone = s.shop_phone || process.env.SHOP_PHONE || '';
     res.locals.shopEmail = s.shop_email || process.env.SHOP_EMAIL || '';
     res.locals.shopAddress = s.shop_address || process.env.SHOP_ADDRESS || '';
+    res.locals.shopGst = s.shop_gst || '';
     res.locals.whatsappNumber = s.whatsapp_number || process.env.WHATSAPP_NUMBER || '';
     res.locals.minOrderFreeDelivery = s.min_order_free_delivery || '500';
     res.locals.deliveryCharge = s.delivery_charge || '50';
@@ -296,6 +297,7 @@ app.use(async (req, res, next) => {
     res.locals.shopPhone = process.env.SHOP_PHONE || '';
     res.locals.shopEmail = process.env.SHOP_EMAIL || '';
     res.locals.shopAddress = process.env.SHOP_ADDRESS || '';
+    res.locals.shopGst = '';
     res.locals.whatsappNumber = process.env.WHATSAPP_NUMBER || '';
     res.locals.minOrderFreeDelivery = '500';
     res.locals.deliveryCharge = '50';
@@ -348,7 +350,7 @@ app.use((err, req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(500).json({ error: 'Internal server error' });
   }
-  res.status(500).render('error', { title: 'Error', error: err.message });
+  res.status(500).render('error', { title: 'Error', seo: { title: 'Error' }, error: err.message });
 });
 
 app.listen(PORT, () => {
