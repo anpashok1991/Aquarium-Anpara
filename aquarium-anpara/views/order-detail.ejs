@@ -109,7 +109,7 @@ async function loadItems() {
       <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom" id="item-${i.product_id}">
         <div class="d-flex align-items-center gap-2">
           <img src="${i.product_image || '/images/no-image.png'}" style="width:50px;height:50px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
-          <div><small class="fw-semibold">${i.product_name}</small><br><small class="text-muted">x${i.quantity} @ ₹${i.price.toLocaleString()}</small></div>
+          <div><a href="/product/${btoa(String(i.product_id)).replace(/=+$/,'')}" target="_blank" class="text-decoration-none fw-semibold">${i.product_name}</a><br><small class="text-muted">x${i.quantity} @ ₹${i.price.toLocaleString()}</small></div>
         </div>
         <strong>₹${i.total.toLocaleString()}</strong>
       </div>`).join('');

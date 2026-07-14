@@ -190,4 +190,34 @@ router.post('/backup', auth, adminOnly, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/reset-database', auth, adminOnly, async (req, res) => {
+  try {
+    const { delete_word } = req.body;
+    if (delete_word !== 'DELETE') {
+      return res.status(400).json({ error: 'Please type DELETE to confirm' });
+    }
+
+    const tables = [
+      'addresses', 'audit_logs', 'banners', 'brands', 'breeds', 'cart',
+      'categories', 'contact_messages', 'coupons', 'customers', 'gallery',
+      'inventory_logs', 'notifications', 'order_items', 'order_tracking',
+      'orders', 'payments', 'product_images', 'products', 'reviews', 'wishlists'
+    ];
+
+    await prisma.$executeRawUnsafe(`PRAGMA foreign_keys = OFF`);
+    for (const table of tables) {
+      await prisma.$executeRawUnsafe(`DELETE FROM "${table}"`);
+    }
+    // Reset auto-increment counters
+    for (const table of tables) {
+      try {
+        await prisma.$executeRawUnsafe(`DELETE FROM sqlite_sequence WHERE name = '${table}'`);
+      } catch (e) { /* table may not have auto-increment */ }
+    }
+    await prisma.$executeRawUnsafe(`PRAGMA foreign_keys = ON`);
+
+    res.json({ message: 'Database reset complete. Users and settings preserved.' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

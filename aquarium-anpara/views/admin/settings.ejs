@@ -140,6 +140,55 @@
         <div class="col-12"><label class="form-label">Default Meta Keywords</label><textarea class="form-control" id="metaKeywords" rows="2" placeholder="aquarium shop, pet store, aquarium fish, pet supplies"></textarea></div>
       </div>
       <button class="btn btn-primary btn-lg mt-4" onclick="saveSettings()"><i class="fas fa-save me-1"></i>Save Settings</button>
+      <hr class="mt-5"><div class="mt-4 p-4 rounded" style="border:2px solid #dc3545;background:#fff5f5">
+        <h5 class="fw-bold text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+        <p class="text-muted small">Reset the database to a clean state for testing. Preserves admin user account and settings.</p>
+        <button class="btn btn-outline-danger" onclick="startReset()"><i class="fas fa-trash-alt me-1"></i>Reset Database</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Database Modal (multi-step) -->
+<div class="modal fade" id="resetModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0"><h5 class="modal-title fw-bold text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Reset Database</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body text-center" id="resetStepBody">
+        <!-- Step 1: Warning -->
+        <div id="resetStep1">
+          <div class="mb-3"><i class="fas fa-trash-alt text-danger" style="font-size:3rem"></i></div>
+          <h5 class="fw-bold">This will permanently delete ALL data!</h5>
+          <p class="text-muted small">Every product, order, customer, category, brand, review, banner, coupon, and gallery image will be removed.</p>
+          <p class="text-muted small mb-0">Admin account and shop settings will be preserved.</p>
+          <button class="btn btn-danger btn-lg mt-3" onclick="resetStep(2)"><i class="fas fa-arrow-right me-1"></i>I Understand, Continue</button>
+        </div>
+        <!-- Step 2: Type DELETE -->
+        <div id="resetStep2" style="display:none">
+          <div class="mb-3"><i class="fas fa-keyboard text-warning" style="font-size:3rem"></i></div>
+          <h5 class="fw-bold">Type DELETE to confirm</h5>
+          <p class="text-muted small">Enter the word exactly as shown below to proceed.</p>
+          <div class="d-flex justify-content-center mb-3">
+            <div style="background:var(--dark,#212529);color:#fff;padding:8px 24px;border-radius:8px;font-family:monospace;font-size:1.3rem;letter-spacing:4px;font-weight:bold">DELETE</div>
+          </div>
+          <input type="text" class="form-control text-center form-control-lg" id="resetDeleteWord" placeholder="Type DELETE" maxlength="6" style="max-width:200px;margin:0 auto;text-transform:uppercase" oninput="checkDeleteWord(this.value)">
+          <button class="btn btn-danger btn-lg mt-3" id="resetStep2Btn" disabled onclick="resetStep(3)">Continue</button>
+        </div>
+        <!-- Step 3: Captcha -->
+        <div id="resetStep3" style="display:none">
+          <div class="mb-3"><i class="fas fa-shield-alt text-primary" style="font-size:3rem"></i></div>
+          <h5 class="fw-bold">Security Verification</h5>
+          <p class="text-muted small">Solve this to confirm you're not a robot.</p>
+          <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+            <span id="captchaNum1" class="fw-bold fs-3">0</span>
+            <span class="fw-bold fs-4">+</span>
+            <span id="captchaNum2" class="fw-bold fs-3">0</span>
+            <span class="fw-bold fs-4">=</span>
+            <input type="number" class="form-control form-control-lg text-center" id="captchaAnswer" placeholder="?" style="max-width:100px" oninput="checkCaptcha(this.value)">
+          </div>
+          <button class="btn btn-danger btn-lg mt-3" id="resetStep3Btn" disabled onclick="executeReset()"><i class="fas fa-trash-alt me-1"></i>Delete Everything</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -269,5 +318,49 @@ function getPromoData(i) {
 }
 async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}const body={shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,smtp_host:document.getElementById('smtpHost').value,smtp_port:document.getElementById('smtpPort').value,smtp_secure:document.getElementById('smtpSecure').value,smtp_user:document.getElementById('smtpUser').value,smtp_pass:document.getElementById('smtpPass').value,payment_methods:JSON.stringify(getPaymentMethods()),upi_id:document.getElementById('upiId').value,google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value};for(let i=1;i<=2;i++){body['promotion_'+i]=JSON.stringify(getPromoData(i));body['scanner_'+i]=JSON.stringify({name:document.getElementById('scanner'+i+'Name').value,qr:document.getElementById('scanner'+i+'Qr').value});}await api('/settings',{method:'PUT',body:JSON.stringify(body)});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
 document.addEventListener('DOMContentLoaded',()=>{loadSettings();document.querySelectorAll('[id^="pay"]').forEach(cb=>cb.addEventListener('change',()=>setPaymentMethods(getPaymentMethods())));for(let i=1;i<=2;i++){setupPromoFileUpload(i);setupScannerUpload(i);}});
+
+// Reset Database multi-step
+let resetCaptchaAnswer = 0;
+function startReset() {
+  // Reset to step 1
+  document.getElementById('resetStep1').style.display = '';
+  document.getElementById('resetStep2').style.display = 'none';
+  document.getElementById('resetStep3').style.display = 'none';
+  document.getElementById('resetDeleteWord').value = '';
+  document.getElementById('resetStep2Btn').disabled = true;
+  document.getElementById('captchaAnswer').value = '';
+  document.getElementById('resetStep3Btn').disabled = true;
+  new bootstrap.Modal(document.getElementById('resetModal')).show();
+}
+function resetStep(n) {
+  document.querySelectorAll('#resetStepBody > div').forEach(d => d.style.display = 'none');
+  document.getElementById('resetStep' + n).style.display = '';
+  if (n === 3) {
+    const n1 = Math.floor(Math.random() * 10) + 1;
+    const n2 = Math.floor(Math.random() * 10) + 1;
+    resetCaptchaAnswer = n1 + n2;
+    document.getElementById('captchaNum1').textContent = n1;
+    document.getElementById('captchaNum2').textContent = n2;
+  }
+}
+function checkDeleteWord(v) {
+  document.getElementById('resetStep2Btn').disabled = v !== 'DELETE';
+}
+function checkCaptcha(v) {
+  document.getElementById('resetStep3Btn').disabled = Number(v) !== resetCaptchaAnswer;
+}
+async function executeReset() {
+  const btn = document.getElementById('resetStep3Btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Resetting...';
+  try {
+    await api('/admin/reset-database', { method: 'POST', body: JSON.stringify({ delete_word: 'DELETE' }) });
+    bootstrap.Modal.getInstance(document.getElementById('resetModal')).hide();
+    showToast('Database reset complete! All data cleared.');
+    setTimeout(() => location.reload(), 1500);
+  } catch(e) {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash-alt me-1"></i>Delete Everything';
+    showToast(e.message, 'error');
+  }
+}
 </script>
 <%- include('../partials/footer') %>

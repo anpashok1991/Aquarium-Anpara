@@ -71,7 +71,7 @@ async function loadDashboard() {
 
     document.getElementById('recentOrders').innerHTML = data.recentOrders.map(o => `
       <tr><td><strong>${o.order_number}</strong></td><td>${o.customer_name}</td><td>₹${o.total.toLocaleString()}</td>
-      <td><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></td>
+      <td><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status.charAt(0).toUpperCase()+o.order_status.slice(1)}</span></td>
       <td>${new Date(o.created_at).toLocaleDateString()}</td></tr>`).join('');
 
     document.getElementById('topProducts').innerHTML = data.topProducts.map((p,i) => `

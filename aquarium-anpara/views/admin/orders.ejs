@@ -82,7 +82,7 @@ async function viewOrder(id) {
     const data = await api(`/orders/${id}`);
     const o = data.order;
     let items = '';
-    if (o.items) items = o.items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₹${i.price}</td><td>₹${i.total}</td></tr>`).join('');
+    if (o.items) items = o.items.map(i => { const eid = btoa(String(i.product_id)).replace(/=+$/,''); return `<tr><td><a href="/product/${eid}" target="_blank" class="text-decoration-none fw-semibold">${i.product_name}</a></td><td>${i.quantity}</td><td>₹${i.price}</td><td>₹${i.total}</td></tr>`; }).join('');
     const paymentExtra = (o.payment_method === 'scan_pay' && o.payment_status === 'pending') ? `
       ${o.payment_screenshot ? `<div class="mt-2"><strong>Payment Receipt:</strong><br><a href="${o.payment_screenshot}" target="_blank"><img src="${o.payment_screenshot}" style="max-height:100px;border-radius:4px;border:1px solid var(--gray-light)"></a></div>` : ''}
       ${o.transaction_id ? `<div class="mt-1"><strong>Transaction ID:</strong> ${o.transaction_id}</div>` : ''}
