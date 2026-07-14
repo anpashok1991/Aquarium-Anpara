@@ -214,6 +214,8 @@ model orders {
   sale_type         String?       @default("online")
   notes             String?
   coupon_code       String?
+  payment_screenshot String?
+  transaction_id    String?
   created_at        DateTime?     @default(now())
   updated_at        DateTime?     @default(now())
   order_items       order_items[]

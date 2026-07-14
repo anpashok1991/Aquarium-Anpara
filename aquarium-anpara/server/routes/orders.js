@@ -30,7 +30,7 @@ function generateOrderNumber() {
 router.post('/', optionalAuth, async (req, res) => {
   try {
     const { customer_name, customer_email, customer_phone, customer_whatsapp, shipping_address, shipping_city, shipping_state, shipping_pincode,
-      payment_method, coupon_code, notes, buy_now } = req.body;
+      payment_method, payment_screenshot, transaction_id, coupon_code, notes, buy_now } = req.body;
 
     if (!customer_name || !customer_phone || !shipping_address || !shipping_city || !shipping_state || !shipping_pincode) {
       return res.status(400).json({ error: 'All shipping details are required' });
@@ -162,6 +162,8 @@ router.post('/', optionalAuth, async (req, res) => {
         tax,
         total,
         payment_method: payment_method || 'cod',
+        payment_screenshot: payment_screenshot || null,
+        transaction_id: transaction_id || null,
         coupon_code: coupon_code || null,
         notes: notes || null
       }
@@ -346,6 +348,36 @@ router.put('/:id/status', auth, staffOrAdmin, requireWritePermission('orders'), 
       sendOrderStatusEmail(order, order.order_status, order_status);
     }
     res.json({ order });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Approve or reject scan_pay payment
+router.put('/:id/payment-approval', auth, staffOrAdmin, requireWritePermission('orders'), async (req, res) => {
+  try {
+    const { action } = req.body; // 'approve' or 'reject'
+    const orderId = Number(req.params.id);
+    const order = await prisma.orders.findFirst({ where: { id: orderId } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.payment_method !== 'scan_pay') return res.status(400).json({ error: 'Payment approval only for scan_pay orders' });
+
+    if (action === 'approve') {
+      await prisma.orders.update({
+        where: { id: orderId },
+        data: { payment_status: 'paid', updated_at: new Date() }
+      });
+      await addTracking(orderId, order.order_status || 'pending', 'Payment approved by admin');
+    } else if (action === 'reject') {
+      await prisma.orders.update({
+        where: { id: orderId },
+        data: { payment_status: 'failed', updated_at: new Date() }
+      });
+      await addTracking(orderId, order.order_status || 'pending', 'Payment rejected by admin');
+    } else {
+      return res.status(400).json({ error: 'Invalid action. Use "approve" or "reject"' });
+    }
+
+    const updated = await prisma.orders.findFirst({ where: { id: orderId } });
+    res.json({ order: updated });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

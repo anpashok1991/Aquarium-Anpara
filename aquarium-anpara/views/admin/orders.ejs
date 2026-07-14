@@ -58,10 +58,13 @@ async function loadOrders(extra) {
       <tr>
         <td><strong>${o.order_number}</strong>${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline</span>' : ''}</td><td>${o.customer_name}</td><td>${o.customer_phone}</td>
         <td>₹${o.total.toLocaleString()}</td>
-        <td><span class="badge bg-${o.payment_status==='paid'?'success':'warning'}">${o.payment_method === 'cod' ? 'Cash' : o.payment_method}</span></td>
+        <td><span class="badge bg-${o.payment_status==='paid'?'success':o.payment_status==='failed'?'danger':'warning'}">${o.payment_method === 'cod' ? 'Cash' : o.payment_method === 'scan_pay' ? 'Scan' : o.payment_method}</span>
+          ${o.payment_method === 'scan_pay' && o.payment_status === 'pending' ? '<br><small class="text-warning fw-bold">Awaiting Approval</small>' : ''}
+          ${o.payment_method === 'scan_pay' && o.payment_status === 'paid' ? '<br><small class="text-success fw-bold">Payment Approved</small>' : ''}
+        </td>
         <td><select class="form-select form-select-sm" style="width:130px" onchange="updateOrderStatus(${o.id}, this.value)">
           ${['pending','confirmed','processing','dispatched','delivered','cancelled'].map(s=>`<option value="${s}" ${o.order_status===s?'selected':''}>${s}</option>`).join('')}
-        </select></td>
+        </select>${o.payment_method === 'scan_pay' && o.payment_status === 'pending' ? `<div class="mt-1 d-flex gap-1"><button class="btn btn-success btn-sm" onclick="approvePayment(${o.id})"><i class="fas fa-check me-1"></i>Approve</button><button class="btn btn-danger btn-sm" onclick="rejectPayment(${o.id})"><i class="fas fa-times me-1"></i></button></div>` : ''}</td>
         <td>${new Date(o.created_at).toLocaleDateString()}</td>
         <td><button class="btn btn-sm btn-outline-primary" onclick="viewOrder(${o.id})"><i class="fas fa-eye"></i></button>
         <button class="btn btn-sm btn-outline-secondary" onclick="viewTracking(${o.id})"><i class="fas fa-history"></i></button>
@@ -79,20 +82,41 @@ async function viewOrder(id) {
     const o = data.order;
     let items = '';
     if (o.items) items = o.items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₹${i.price}</td><td>₹${i.total}</td></tr>`).join('');
+    const paymentExtra = (o.payment_method === 'scan_pay' && o.payment_status === 'pending') ? `
+      ${o.payment_screenshot ? `<div class="mt-2"><strong>Payment Receipt:</strong><br><a href="${o.payment_screenshot}" target="_blank"><img src="${o.payment_screenshot}" style="max-height:100px;border-radius:4px;border:1px solid var(--gray-light)"></a></div>` : ''}
+      ${o.transaction_id ? `<div class="mt-1"><strong>Transaction ID:</strong> ${o.transaction_id}</div>` : ''}
+      <div class="mt-2 d-flex gap-2"><button class="btn btn-success btn-sm" onclick="approvePayment(${o.id})"><i class="fas fa-check me-1"></i>Approve Payment</button><button class="btn btn-danger btn-sm" onclick="rejectPayment(${o.id})"><i class="fas fa-times me-1"></i>Reject</button></div>` : '';
     const modal = document.createElement('div');
     modal.className = 'modal fade'; modal.innerHTML = `<div class="modal-dialog modal-lg"><div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">Order #${o.order_number}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <div class="row mb-3"><div class="col-6"><strong>Customer:</strong> ${o.customer_name}<br><strong>Phone:</strong> ${o.customer_phone}<br><strong>Email:</strong> ${o.customer_email||'-'}</div>
-        <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline Sale</span>' : ''}<br><strong>Payment:</strong> ${o.payment_method === 'cod' ? 'Cash' : o.payment_method.toUpperCase()}<br><strong>Status:</strong> ${o.order_status}</div></div>
+        <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline Sale</span>' : ''}<br><strong>Payment:</strong> ${o.payment_method === 'cod' ? 'Cash' : o.payment_method.toUpperCase()}<br><strong>Payment Status:</strong> ${o.payment_status}<br><strong>Order Status:</strong> ${o.order_status}</div></div>
         <table class="table table-sm"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
         <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br>${o.tax > 0 ? '<strong>GST: ₹' + o.tax.toLocaleString() + '</strong><br>' : ''}<strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5>
+        ${paymentExtra}
         ${o.order_status === 'delivered' || o.order_status === 'completed' || o.sale_type === 'offline' ? `<a href="/invoice/${o.order_number}" target="_blank" class="btn btn-outline-primary btn-sm mt-2"><i class="fas fa-receipt me-1"></i>View Invoice</a>` : ''}</div>
       </div></div></div>`;
     document.body.appendChild(modal);
     const bsModal = new bootstrap.Modal(modal);
     bsModal.show();
     modal.addEventListener('hidden.bs.modal', () => modal.remove());
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function approvePayment(id) {
+  if (!confirm('Approve payment for this order?')) return;
+  try {
+    await api(`/orders/${id}/payment-approval`, { method:'PUT', body: JSON.stringify({ action:'approve' }) });
+    showToast('Payment approved');
+    loadOrders();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function rejectPayment(id) {
+  if (!confirm('Reject payment for this order?')) return;
+  try {
+    await api(`/orders/${id}/payment-approval`, { method:'PUT', body: JSON.stringify({ action:'reject' }) });
+    showToast('Payment rejected');
+    loadOrders();
   } catch(e) { showToast(e.message, 'error'); }
 }
 async function viewTracking(id) {

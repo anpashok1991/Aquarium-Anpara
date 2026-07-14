@@ -14,7 +14,7 @@ async function loadOrders() {
       <div class="glass-card p-3 mb-3">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
           <div><h6 class="mb-1">Order #${o.order_number}</h6><small class="text-muted">${new Date(o.created_at).toLocaleDateString()}</small></div>
-          <div><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.order_status}</span></div>
+          <div><span class="badge bg-${o.order_status==='delivered'?'success':o.order_status==='cancelled'?'danger':'warning'}">${o.payment_method === 'scan_pay' && o.payment_status === 'pending' ? 'Pending Approval' : o.order_status}</span></div>
           <div class="fw-bold">₹${o.total.toLocaleString()}</div>
           <a href="/orders/${o.order_number}" class="btn btn-outline-primary btn-sm">View Details</a>
         </div>

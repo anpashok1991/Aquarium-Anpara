@@ -35,7 +35,38 @@
             <div class="form-check"><input class="form-check-input" type="checkbox" id="payCod" value="cod" checked><label class="form-check-label">Cash on Delivery</label></div>
             <div class="form-check"><input class="form-check-input" type="checkbox" id="payUpi" value="upi"><label class="form-check-label">UPI Payment</label></div>
             <div class="form-check"><input class="form-check-input" type="checkbox" id="payBank" value="bank_transfer"><label class="form-check-label">Bank Transfer</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="payScan" value="scan_pay"><label class="form-check-label">Scan & Pay</label></div>
           </div>
+        </div>
+        <div class="col-12" id="scannerConfig" style="display:none">
+          <label class="form-label mt-2 fw-bold">Payment Scanners</label>
+          <p class="text-muted small">Configure up to 2 UPI QR scanners visible when customers choose Scan & Pay.</p>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small">Your UPI ID (VPA)</label>
+              <input type="text" class="form-control form-control-sm" id="upiId" placeholder="e.g. merchant@paytm or merchant@upi">
+              <div class="form-text small">When set, a dynamic QR with the exact order amount will also be shown for auto-fill.</div>
+            </div>
+          </div>
+          <% for (let i = 1; i <= 2; i++) { %>
+          <div class="row g-2 mb-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small">Scanner <%= i %> Name</label>
+              <input type="text" class="form-control form-control-sm" id="scanner<%= i %>Name" placeholder="e.g. Google Pay">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">QR Code Image</label>
+              <div class="d-flex align-items-center gap-2">
+                <input type="file" class="form-control form-control-sm" id="scanner<%= i %>File" accept="image/*">
+                <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeScannerQr(<%= i %>)" title="Remove"><i class="fas fa-times"></i></button>
+              </div>
+              <div id="scanner<%= i %>Preview" class="mt-1" style="display:none">
+                <img src="" style="height:60px;width:auto;object-fit:contain;border:1px solid var(--gray-light);border-radius:4px">
+              </div>
+              <input type="hidden" id="scanner<%= i %>Qr">
+            </div>
+          </div>
+          <% } %>
         </div>
         <div class="col-12"><hr><h5 class="fw-bold">Homepage Promotions</h5>
           <p class="text-muted small">Configure up to 2 promotional spaces on the homepage. Leave disabled to show nothing.</p>
@@ -143,6 +174,22 @@ function getPaymentMethods() {
 }
 function setPaymentMethods(arr) {
   document.querySelectorAll('[id^="pay"]').forEach(cb => cb.checked = arr.includes(cb.value));
+  document.getElementById('scannerConfig').style.display = arr.includes('scan_pay') ? '' : 'none';
+}
+function removeScannerQr(i) {
+  document.getElementById('scanner'+i+'Qr').value='';
+  document.getElementById('scanner'+i+'File').value='';
+  document.getElementById('scanner'+i+'Preview').style.display='none';
+}
+function setupScannerUpload(i) {
+  document.getElementById('scanner'+i+'File').addEventListener('change', async function() {
+    if (this.files.length) {
+      const url = await uploadFile(this.files[0], 'settings');
+      document.getElementById('scanner'+i+'Qr').value = url;
+      const p = document.getElementById('scanner'+i+'Preview');
+      p.style.display='flex'; p.querySelector('img').src=url;
+    }
+  });
 }
 function loadPromo(i, d) {
   const en = document.getElementById('promo'+i+'Enabled');
@@ -199,7 +246,7 @@ function setupPromoFileUpload(i) {
   });
   document.getElementById('promo'+i+'Type').addEventListener('change', () => togglePromoType(i));
 }
-async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('smtpHost').value=s.smtp_host||'';document.getElementById('smtpPort').value=s.smtp_port||'587';document.getElementById('smtpSecure').value=s.smtp_secure||'false';document.getElementById('smtpUser').value=s.smtp_user||'';document.getElementById('smtpPass').value=s.smtp_pass||'';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';try{setPaymentMethods(JSON.parse(s.payment_methods||'["cod"]'));}catch(e){setPaymentMethods(['cod']);}if(s.shop_logo){showLogoPreview(s.shop_logo);}for(let i=1;i<=2;i++){try{const p=JSON.parse(s['promotion_'+i]||'{}');loadPromo(i,p);}catch(e){loadPromo(i,{});}}}catch(e){}}
+async function loadSettings(){try{const d=await api('/settings');const s=d.settings;document.getElementById('shopName').value=s.shop_name||'';document.getElementById('shopPhone').value=s.shop_phone||'';document.getElementById('shopEmail').value=s.shop_email||'';document.getElementById('whatsappNumber').value=s.whatsapp_number||'';document.getElementById('shopAddress').value=s.shop_address||'';document.getElementById('shopLogo').value=s.shop_logo||'';document.getElementById('minOrder').value=s.min_order_free_delivery||'500';document.getElementById('deliveryCharge').value=s.delivery_charge||'50';document.getElementById('smtpHost').value=s.smtp_host||'';document.getElementById('smtpPort').value=s.smtp_port||'587';document.getElementById('smtpSecure').value=s.smtp_secure||'false';document.getElementById('smtpUser').value=s.smtp_user||'';document.getElementById('smtpPass').value=s.smtp_pass||'';document.getElementById('googleVerification').value=s.google_verification||'';document.getElementById('gaId').value=s.ga_id||'';document.getElementById('fbPixel').value=s.fb_pixel||'';document.getElementById('metaKeywords').value=s.meta_keywords||'';document.getElementById('upiId').value=s.upi_id||'';try{setPaymentMethods(JSON.parse(s.payment_methods||'["cod"]'));}catch(e){setPaymentMethods(['cod']);}if(s.shop_logo){showLogoPreview(s.shop_logo);}for(let i=1;i<=2;i++){try{const p=JSON.parse(s['promotion_'+i]||'{}');loadPromo(i,p);}catch(e){loadPromo(i,{});}}for(let i=1;i<=2;i++){try{const qr=JSON.parse(s['scanner_'+i]||'{}');document.getElementById('scanner'+i+'Name').value=qr.name||'';document.getElementById('scanner'+i+'Qr').value=qr.qr||'';if(qr.qr){const p=document.getElementById('scanner'+i+'Preview');p.style.display='flex';p.querySelector('img').src=qr.qr;}}catch(e){}}}catch(e){}}
 async function testEmail() {
   const email = document.getElementById('shopEmail').value;
   if (!email) { showToast('Please enter a Shop Email first', 'error'); return; }
@@ -220,7 +267,7 @@ function getPromoData(i) {
     link_text: document.getElementById('promo'+i+'LinkText').value
   };
 }
-async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}const body={shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,smtp_host:document.getElementById('smtpHost').value,smtp_port:document.getElementById('smtpPort').value,smtp_secure:document.getElementById('smtpSecure').value,smtp_user:document.getElementById('smtpUser').value,smtp_pass:document.getElementById('smtpPass').value,payment_methods:JSON.stringify(getPaymentMethods()),google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value};for(let i=1;i<=2;i++){body['promotion_'+i]=JSON.stringify(getPromoData(i));}await api('/settings',{method:'PUT',body:JSON.stringify(body)});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
-document.addEventListener('DOMContentLoaded',()=>{loadSettings();for(let i=1;i<=2;i++)setupPromoFileUpload(i);});
+async function saveSettings(){try{const fileInput=document.getElementById('shopLogoFile');let logoUrl=document.getElementById('shopLogo').value;if(fileInput.files.length>0){logoUrl=await uploadFile(fileInput.files[0],'settings');}const body={shop_name:document.getElementById('shopName').value,shop_phone:document.getElementById('shopPhone').value,shop_email:document.getElementById('shopEmail').value,whatsapp_number:document.getElementById('whatsappNumber').value,shop_address:document.getElementById('shopAddress').value,shop_logo:logoUrl,min_order_free_delivery:document.getElementById('minOrder').value,delivery_charge:document.getElementById('deliveryCharge').value,smtp_host:document.getElementById('smtpHost').value,smtp_port:document.getElementById('smtpPort').value,smtp_secure:document.getElementById('smtpSecure').value,smtp_user:document.getElementById('smtpUser').value,smtp_pass:document.getElementById('smtpPass').value,payment_methods:JSON.stringify(getPaymentMethods()),upi_id:document.getElementById('upiId').value,google_verification:document.getElementById('googleVerification').value,ga_id:document.getElementById('gaId').value,fb_pixel:document.getElementById('fbPixel').value,meta_keywords:document.getElementById('metaKeywords').value};for(let i=1;i<=2;i++){body['promotion_'+i]=JSON.stringify(getPromoData(i));body['scanner_'+i]=JSON.stringify({name:document.getElementById('scanner'+i+'Name').value,qr:document.getElementById('scanner'+i+'Qr').value});}await api('/settings',{method:'PUT',body:JSON.stringify(body)});showToast('Settings saved!');}catch(e){showToast(e.message,'error');}}
+document.addEventListener('DOMContentLoaded',()=>{loadSettings();document.querySelectorAll('[id^="pay"]').forEach(cb=>cb.addEventListener('change',()=>setPaymentMethods(getPaymentMethods())));for(let i=1;i<=2;i++){setupPromoFileUpload(i);setupScannerUpload(i);}});
 </script>
 <%- include('../partials/footer') %>

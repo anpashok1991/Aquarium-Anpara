@@ -178,7 +178,7 @@ router.get('/checkout', (req, res) => {
 });
 router.get('/order-confirmation/:orderNumber', (req, res) => {
   const seo = { title: 'Order Confirmed', robots: 'noindex' };
-  res.render('order-confirmation', { title: 'Order Confirmed', seo, orderNumber: req.params.orderNumber });
+  res.render('order-confirmation', { title: 'Order Confirmed', seo, orderNumber: req.params.orderNumber, paymentMethod: req.query.pay || '' });
 });
 router.get('/orders', (req, res) => {
   const seo = { title: 'My Orders', robots: 'noindex' };

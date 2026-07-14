@@ -3,9 +3,11 @@
   <div class="row justify-content-center">
     <div class="col-md-8">
       <div class="text-center mb-4">
-        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:80px;height:80px"><i class="fas fa-check fa-3x"></i></div>
-        <h2 class="fw-bold mt-3">Order Placed Successfully!</h2>
-        <p class="text-muted">Thank you for your order. We'll contact you soon.</p>
+        <div class="bg-<%= paymentMethod === 'scan_pay' ? 'warning' : 'success' %> text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:80px;height:80px">
+          <i class="fas fa-<%= paymentMethod === 'scan_pay' ? 'clock' : 'check' %> fa-3x"></i>
+        </div>
+        <h2 class="fw-bold mt-3"><%= paymentMethod === 'scan_pay' ? 'Order Placed - Pending Approval' : 'Order Placed Successfully!' %></h2>
+        <p class="text-muted"><%= paymentMethod === 'scan_pay' ? 'Your payment is being reviewed. We will confirm once approved.' : 'Thank you for your order. We\'ll contact you soon.' %></p>
       </div>
       <div class="glass-card p-4">
         <h5 class="fw-bold mb-3"><i class="fas fa-receipt text-primary me-2"></i>Order #<%= orderNumber %></h5>
@@ -26,12 +28,13 @@ async function loadOrder() {
     const data = await api('/orders');
     orderData = data.orders.find(o => o.order_number === '<%= orderNumber %>');
     if (orderData) {
+      const isScanPay = orderData.payment_method === 'scan_pay';
       document.getElementById('orderDetails').innerHTML = `
         <div class="row mb-3"><div class="col-sm-6"><strong>Name:</strong> ${orderData.customer_name}</div><div class="col-sm-6"><strong>Phone:</strong> ${orderData.customer_phone}</div></div>
         <div class="row mb-3"><div class="col-12"><strong>Address:</strong> ${orderData.shipping_address}, ${orderData.shipping_city}, ${orderData.shipping_state} - ${orderData.shipping_pincode}</div></div>
         <div class="row mb-3"><div class="col-sm-6"><strong>Payment:</strong> ${orderData.payment_method === 'cod' ? 'Cash' : orderData.payment_method.toUpperCase()}</div><div class="col-sm-6"><strong>Total:</strong> ₹${orderData.total.toLocaleString()}</div></div>
         ${orderData.tax > 0 ? `<div class="row mb-3"><div class="col-12"><strong>GST:</strong> ₹${orderData.tax.toLocaleString()}</div></div>` : ''}
-        <p class="text-muted"><i class="fas fa-truck me-2"></i>Estimated delivery: 3-5 business days</p>`;
+        ${isScanPay ? '<div class="alert alert-info"><i class="fas fa-info-circle me-1"></i>Your payment is being processed. We will confirm your order once the payment is approved by admin.</div>' : '<p class="text-muted"><i class="fas fa-truck me-2"></i>Estimated delivery: 3-5 business days</p>'}`;
       document.getElementById('whatsappBtn').onclick = () => sendOrderWhatsApp(orderData);
     }
   } catch(e) {}
