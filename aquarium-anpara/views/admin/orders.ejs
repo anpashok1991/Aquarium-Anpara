@@ -62,6 +62,7 @@ async function loadOrders(extra) {
         <td><span class="badge bg-${o.payment_status==='paid'?'success':o.payment_status==='failed'?'danger':'warning'}">${o.payment_method === 'cod' ? 'Cash' : o.payment_method === 'scan_pay' ? 'Scan' : o.payment_method}</span>
           ${o.payment_method === 'scan_pay' && o.payment_status === 'pending' ? '<br><small class="text-warning fw-bold">Awaiting Approval</small>' : ''}
           ${o.payment_method === 'scan_pay' && o.payment_status === 'paid' ? '<br><small class="text-success fw-bold">Payment Approved</small>' : ''}
+          ${o.refund_status && o.payment_status === 'paid' ? `<br><span class="badge bg-${o.refund_status==='processed'?'success':o.refund_status==='failed'?'danger':'info'} mt-1">Refund: ${cap(o.refund_status)}${o.refund_amount > 0 ? ' ₹' + Number(o.refund_amount).toLocaleString() : ''}</span>` : ''}
         </td>
         <td><select class="form-select form-select-sm" style="width:130px" onchange="updateOrderStatus(${o.id}, this.value)">
           ${['pending','confirmed','processing','dispatched','delivered','cancelled'].map(s=>`<option value="${s}" ${o.order_status===s?'selected':''}>${cap(s)}</option>`).join('')}
@@ -92,9 +93,9 @@ async function viewOrder(id) {
       <div class="modal-header"><h5 class="modal-title">Order #${o.order_number}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <div class="row mb-3"><div class="col-6"><strong>Customer:</strong> ${o.customer_name}<br><strong>Phone:</strong> ${o.customer_phone}<br><strong>Email:</strong> ${o.customer_email||'-'}</div>
-        <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline Sale</span>' : ''}<br><strong>Payment:</strong> ${o.payment_method === 'cod' ? 'Cash' : o.payment_method.toUpperCase()}<br><strong>Payment Status:</strong> ${o.payment_status}<br><strong>Order Status:</strong> ${o.order_status}</div></div>
+        <div class="col-6"><strong>Address:</strong> ${o.shipping_address}, ${o.shipping_city}, ${o.shipping_state} - ${o.shipping_pincode}${o.sale_type === 'offline' ? ' <span class="badge bg-info ms-1">Offline Sale</span>' : ''}<br><strong>Payment:</strong> ${o.payment_method === 'cod' ? 'Cash' : o.payment_method.toUpperCase()}<br><strong>Payment Status:</strong> ${o.payment_status}<br><strong>Order Status:</strong> ${o.order_status}          ${o.refund_status && o.payment_status === 'paid' ? `<br><strong>Refund Status:</strong> ${o.refund_status}${o.refund_amount > 0 ? ' (₹' + Number(o.refund_amount).toLocaleString() + ')' : ''}${o.refund_status === 'pending' ? ` <button class="btn btn-sm btn-success py-0 px-1" onclick="updateRefund(${o.id},'processed')" title="Mark Refunded"><i class="fas fa-check fa-xs"></i></button> <button class="btn btn-sm btn-danger py-0 px-1" onclick="updateRefund(${o.id},'failed')" title="Mark Failed"><i class="fas fa-times fa-xs"></i></button>` : ''}` : ''}</div></div>
         <table class="table table-sm"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
-        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br>${o.tax > 0 ? '<strong>GST: ₹' + o.tax.toLocaleString() + '</strong><br>' : ''}<strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br><h5>Total: ₹${o.total.toLocaleString()}</h5>
+        <div class="text-end"><strong>Subtotal: ₹${o.subtotal.toLocaleString()}</strong><br>${o.tax > 0 ? '<strong>GST: ₹' + o.tax.toLocaleString() + '</strong><br>' : ''}<strong>Discount: -₹${o.discount}</strong><br><strong>Shipping: ₹${o.shipping_charge}</strong><br>${o.platform_fee > 0 ? '<strong>Platform Fee: ₹' + Number(o.platform_fee).toLocaleString() + '</strong><br>' : ''}${o.cancel_charge > 0 ? '<strong>Cancel Charge: -₹' + Number(o.cancel_charge).toLocaleString() + '</strong><br>' : ''}<h5>Total: ₹${o.total.toLocaleString()}</h5>
         ${paymentExtra}
         ${o.order_status === 'delivered' || o.order_status === 'completed' || o.sale_type === 'offline' ? `<a href="/invoice/${o.order_number}" target="_blank" class="btn btn-outline-primary btn-sm mt-2"><i class="fas fa-receipt me-1"></i>View Invoice</a>` : ''}</div>
       </div></div></div>`;
@@ -117,6 +118,14 @@ async function rejectPayment(id) {
   try {
     await api(`/orders/${id}/payment-approval`, { method:'PUT', body: JSON.stringify({ action:'reject' }) });
     showToast('Payment rejected');
+    loadOrders();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function updateRefund(id, status) {
+  if (!confirm(`Mark refund as "${status}"?`)) return;
+  try {
+    await api(`/orders/${id}/refund-status`, { method:'PUT', body: JSON.stringify({ refund_status: status }) });
+    showToast('Refund status updated');
     loadOrders();
   } catch(e) { showToast(e.message, 'error'); }
 }

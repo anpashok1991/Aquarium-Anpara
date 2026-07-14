@@ -72,6 +72,8 @@
             <% if (order.discount > 0) { %><p class="mb-1">Discount: -₹<%= Number(order.discount).toLocaleString() %></p><% } %>
             <% if (order.coupon_code) { %><p class="mb-1">Coupon: <%= order.coupon_code %></p><% } %>
             <p class="mb-1">Shipping: <%= order.shipping_charge > 0 ? '₹' + Number(order.shipping_charge).toLocaleString() : 'FREE' %></p>
+            <% if (Number(order.platform_fee) > 0) { %><p class="mb-1">Platform Fee: ₹<%= Number(order.platform_fee).toLocaleString() %></p><% } %>
+            <% if (Number(order.cancel_charge) > 0) { %><p class="mb-1">Cancellation Charge: -₹<%= Number(order.cancel_charge).toLocaleString() %></p><% } %>
             <h4 class="fw-bold mt-2">Total: ₹<%= Number(order.total).toLocaleString() %></h4>
           </div>
         </div>

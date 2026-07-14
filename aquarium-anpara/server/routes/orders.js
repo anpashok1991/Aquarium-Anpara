@@ -140,8 +140,14 @@ router.post('/', optionalAuth, async (req, res) => {
       }
     }
 
-    const shipping_charge = subtotal >= 500 ? 0 : 50;
-    const total = subtotal - discount + shipping_charge;
+    const shipSetting = await prisma.settings.findUnique({ where: { key: 'delivery_charge' } });
+    const minOrderSetting = await prisma.settings.findUnique({ where: { key: 'min_order_free_delivery' } });
+    const pfSetting = await prisma.settings.findUnique({ where: { key: 'platform_fee' } });
+    const minOrder = Number(minOrderSetting?.value) || 500;
+    const deliveryCharge = Number(shipSetting?.value) || 50;
+    const platformFee = Number(pfSetting?.value) || 0;
+    const shipping_charge = subtotal >= minOrder ? 0 : deliveryCharge;
+    const total = subtotal - discount + shipping_charge + platformFee;
     const orderNumber = generateOrderNumber();
 
     const newOrder = await prisma.orders.create({
@@ -159,6 +165,7 @@ router.post('/', optionalAuth, async (req, res) => {
         subtotal,
         discount,
         shipping_charge,
+        platform_fee: platformFee,
         tax,
         total,
         payment_method: payment_method || 'cod',
@@ -323,8 +330,23 @@ router.put('/:id/status', auth, staffOrAdmin, requireWritePermission('orders'), 
     }
     // Restore stock when cancelling
     if (order_status === 'cancelled') {
-      const current = await prisma.orders.findFirst({ where: { id: Number(req.params.id) }, select: { order_status: true } });
+      const current = await prisma.orders.findFirst({ where: { id: Number(req.params.id) }, select: { order_status: true, payment_method: true, total: true, platform_fee: true } });
       if (current && current.order_status !== 'cancelled') {
+        const isPrepaid = !['cod'].includes(current.payment_method);
+        const isDispatchedOrAfter = ['dispatched', 'delivered'].includes(current.order_status);
+        let cancelCharge = 0;
+        if (isPrepaid && isDispatchedOrAfter) {
+          const chargeSetting = await prisma.settings.findUnique({ where: { key: 'cancel_charge_percent' } });
+          const chargePercent = Number(chargeSetting?.value) || 0;
+          cancelCharge = current.total * chargePercent / 100;
+          data.cancel_charge = cancelCharge;
+        }
+        const pfVal = Number(current.platform_fee) || 0;
+        const hasDeductions = cancelCharge > 0 || pfVal > 0;
+        if (hasDeductions) {
+          data.refund_status = 'pending';
+          data.refund_amount = Math.max(0, current.total - pfVal - cancelCharge);
+        }
         const items = await prisma.order_items.findMany({ where: { order_id: Number(req.params.id) } });
         for (const item of items) {
           await prisma.products.update({
@@ -381,16 +403,53 @@ router.put('/:id/payment-approval', auth, staffOrAdmin, requireWritePermission('
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Update refund status
+router.put('/:id/refund-status', auth, staffOrAdmin, requireWritePermission('orders'), async (req, res) => {
+  try {
+    const { refund_status } = req.body;
+    if (!['pending', 'processed', 'failed'].includes(refund_status)) {
+      return res.status(400).json({ error: 'Invalid refund status' });
+    }
+    const order = await prisma.orders.update({
+      where: { id: Number(req.params.id) },
+      data: { refund_status, updated_at: new Date() }
+    });
+    await addTracking(order.id, order.order_status, `Refund status: ${refund_status}`);
+    res.json({ order });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.put('/cancel/:orderNumber', auth, async (req, res) => {
   try {
     const orderNumber = req.params.orderNumber.toUpperCase();
     const order = await prisma.orders.findFirst({ where: { order_number: orderNumber } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
-    if (order.order_status !== 'pending') return res.status(400).json({ error: 'Only pending orders can be cancelled' });
+    if (['delivered', 'cancelled'].includes(order.order_status)) return res.status(400).json({ error: 'This order cannot be cancelled' });
+
+    const isPrepaid = !['cod'].includes(order.payment_method);
+    const isDispatchedOrAfter = ['dispatched', 'delivered'].includes(order.order_status);
+
+    const pfVal = Number(order.platform_fee) || 0;
+    let cancelCharge = 0;
+
+    if (isPrepaid && isDispatchedOrAfter) {
+      const chargeSetting = await prisma.settings.findUnique({ where: { key: 'cancel_charge_percent' } });
+      const chargePercent = Number(chargeSetting?.value) || 0;
+      cancelCharge = order.total * chargePercent / 100;
+    }
+
+    const refundAmount = Math.max(0, order.total - pfVal - cancelCharge);
+
     await prisma.orders.update({
       where: { id: order.id },
-      data: { order_status: 'cancelled', updated_at: new Date() }
+      data: { 
+        order_status: 'cancelled', 
+        cancel_charge: cancelCharge,
+        refund_status: pfVal > 0 || cancelCharge > 0 ? 'pending' : null,
+        refund_amount: refundAmount,
+        updated_at: new Date() 
+      }
     });
     // Restore stock
     const items = await prisma.order_items.findMany({ where: { order_id: order.id } });

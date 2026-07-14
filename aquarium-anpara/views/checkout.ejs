@@ -89,6 +89,7 @@
         <hr>
         <div class="d-flex justify-content-between mb-1"><span>Subtotal</span><span id="sub">₹0</span></div>
         <div class="d-flex justify-content-between mb-1"><span>Delivery</span><span id="del" class="text-success">Free</span></div>
+        <div class="d-flex justify-content-between mb-1"><span>Platform Fee</span><span id="pfAmt">₹0</span></div>
         <div class="d-flex justify-content-between mb-1"><span>Discount</span><span id="disc" class="text-danger">-₹0</span></div>
         <div class="d-flex justify-content-between mb-1" id="gstRow"><span>GST</span><span id="gstAmt">₹0</span></div>
         <hr>
@@ -194,6 +195,7 @@ async function loadCheckout() {
     // Load scanner QR images + UPI ID
     const upiId = settingsData.settings?.upi_id || '';
     window._upiId = upiId;
+    window._platformFee = settingsData.settings?.platform_fee || '0';
     const s1 = settingsData.settings?.scanner_1, s2 = settingsData.settings?.scanner_2;
       let q1, q2;
       try { q1 = JSON.parse(s1 || '{}'); } catch { q1 = {}; }
@@ -266,9 +268,11 @@ function renderSummary() {
     const lineTotal = i.unit_price * i.quantity;
     tax += pct > 0 ? lineTotal * pct / (100 + pct) : 0;
   });
-  const total = subtotal - discount + delivery;
+  const platformFee = parseFloat(window._platformFee || '0');
+  const total = subtotal - discount + delivery + platformFee;
   document.getElementById('sub').textContent = '₹' + subtotal.toLocaleString();
   document.getElementById('del').textContent = delivery === 0 ? 'Free' : '₹' + delivery;
+  document.getElementById('pfAmt').textContent = platformFee > 0 ? '₹' + platformFee.toLocaleString() : '₹0';
   document.getElementById('disc').textContent = discount > 0 ? '-₹' + discount.toLocaleString() : '-₹0';
   document.getElementById('gstAmt').textContent = tax > 0 ? '₹' + tax.toLocaleString() : '₹0';
   document.getElementById('gstRow').style.display = tax > 0 ? '' : 'none';

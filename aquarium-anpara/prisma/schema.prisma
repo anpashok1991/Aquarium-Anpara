@@ -216,6 +216,10 @@ model orders {
   coupon_code       String?
   payment_screenshot String?
   transaction_id    String?
+  platform_fee      Float?        @default(0)
+  cancel_charge     Float?        @default(0)
+  refund_status     String?
+  refund_amount     Float?        @default(0)
   created_at        DateTime?     @default(now())
   updated_at        DateTime?     @default(now())
   order_items       order_items[]

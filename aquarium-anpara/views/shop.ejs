@@ -409,8 +409,14 @@ function goToPage(page) {
     document.getElementById('breedFilter').value = breedVal;
     document.getElementById('mobileBreedFilter').value = breedVal;
   }
-  document.getElementById('categoryFilter').addEventListener('change', toggleBreedBrand);
-  document.getElementById('mobileCategoryFilter').addEventListener('change', toggleBreedBrand);
+  document.getElementById('categoryFilter').addEventListener('change', function() {
+    document.getElementById('mobileCategoryFilter').value = this.value;
+    toggleBreedBrand();
+  });
+  document.getElementById('mobileCategoryFilter').addEventListener('change', function() {
+    document.getElementById('categoryFilter').value = this.value;
+    toggleBreedBrand();
+  });
   toggleBreedBrand();
   loadShopProducts();
   if (isLoggedIn()) {

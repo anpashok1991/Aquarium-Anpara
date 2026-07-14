@@ -146,6 +146,22 @@ app.disable('view cache');
     await prisma.$executeRawUnsafe(`ALTER TABLE orders ADD COLUMN transaction_id TEXT DEFAULT NULL`);
     console.log('✅ transaction_id column added to orders table');
   } catch (e) { /* column already exists */ }
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE orders ADD COLUMN platform_fee REAL DEFAULT 0`);
+    console.log('✅ platform_fee column added to orders table');
+  } catch (e) { /* column already exists */ }
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE orders ADD COLUMN cancel_charge REAL DEFAULT 0`);
+    console.log('✅ cancel_charge column added to orders table');
+  } catch (e) { /* column already exists */ }
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE orders ADD COLUMN refund_status TEXT DEFAULT NULL`);
+    console.log('✅ refund_status column added to orders table');
+  } catch (e) { /* column already exists */ }
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE orders ADD COLUMN refund_amount REAL DEFAULT 0`);
+    console.log('✅ refund_amount column added to orders table');
+  } catch (e) { /* column already exists */ }
 })();
 
 // Auto-migrate: update payment_method CHECK constraint to include 'scan_pay'
@@ -269,6 +285,8 @@ app.use(async (req, res, next) => {
     res.locals.fbPixel = s.fb_pixel || '';
     res.locals.metaKeywords = s.meta_keywords || '';
     res.locals.upiId = s.upi_id || '';
+    res.locals.cancelChargePercent = s.cancel_charge_percent || '0';
+    res.locals.platformFee = s.platform_fee || '0';
     try { res.locals.promotion1 = JSON.parse(s.promotion_1 || '{}'); } catch(e) { res.locals.promotion1 = {}; }
     try { res.locals.promotion2 = JSON.parse(s.promotion_2 || '{}'); } catch(e) { res.locals.promotion2 = {}; }
     try { res.locals.scanner1 = JSON.parse(s.scanner_1 || '{}'); } catch(e) { res.locals.scanner1 = {}; }
@@ -287,6 +305,8 @@ app.use(async (req, res, next) => {
     res.locals.fbPixel = '';
     res.locals.metaKeywords = '';
     res.locals.upiId = '';
+    res.locals.cancelChargePercent = '0';
+    res.locals.platformFee = '0';
     res.locals.promotion1 = {};
     res.locals.promotion2 = {};
     res.locals.scanner1 = {};

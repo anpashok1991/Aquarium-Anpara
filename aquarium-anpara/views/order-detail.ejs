@@ -35,8 +35,38 @@
   </div>
 </div>
 
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Cancel Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to cancel this order?</p>
+        <div id="refundBreakdown" class="bg-light rounded p-3 mb-3" style="display:none">
+          <h6 class="fw-bold mb-2">Refund Summary</h6>
+          <div class="d-flex justify-content-between mb-1"><span>Order Total</span><span id="cbTotal">₹0</span></div>
+          <div class="d-flex justify-content-between mb-1 text-danger"><span>Platform Fee (non-refundable)</span><span id="cbPlatformFee">-₹0</span></div>
+          <div class="d-flex justify-content-between mb-1 text-danger" id="cbCancelRow"><span>Cancellation Charge</span><span id="cbCancelCharge">-₹0</span></div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold fs-5"><span>Refund Amount</span><span id="cbRefund" class="text-success">₹0</span></div>
+        </div>
+        <p class="text-muted small">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Go Back</button>
+        <button class="btn btn-danger" id="confirmCancelBtn" onclick="confirmCancelOrder()"><i class="fas fa-ban me-1"></i>Yes, Cancel Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 let order = null;
+const cancelChargePercent = Number('<%= cancelChargePercent %>');
+const platformFee = Number('<%= platformFee %>');
 
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
@@ -47,7 +77,9 @@ async function loadOrder() {
     const data = await api('/orders');
     order = data.orders.find(o => o.order_number === '<%= orderNumber %>');
     if (!order) { container.innerHTML = '<p class="text-muted">Order not found.</p>'; return; }
-    const canModify = order.order_status === 'pending';
+    const canModify = ['pending', 'confirmed', 'processing', 'dispatched'].includes(order.order_status);
+    const isPrepaid = !['cod'].includes(order.payment_method);
+    const isDispatchedOrAfter = ['dispatched', 'delivered'].includes(order.order_status);
     const statusColor = { delivered:'success', cancelled:'danger', confirmed:'info', processing:'warning', dispatched:'primary', pending:'secondary' };
     container.innerHTML = `
       <div class="glass-card p-3 mb-3">
@@ -71,12 +103,13 @@ async function loadOrder() {
             <div class="col-md-6">
               <h6 class="fw-bold"><i class="fas fa-credit-card me-2"></i>Payment</h6>
               <p class="mb-1">${order.payment_method === 'cod' ? 'Cash' : order.payment_method.toUpperCase()} ${order.payment_status === 'paid' ? '<span class="badge bg-success">Paid</span>' : '<span class="badge bg-warning text-dark">' + order.payment_status + '</span>'}</p>
+              ${order.refund_status && order.payment_status === 'paid' ? `<p class="mb-0 small fw-semibold">Refund - ${order.refund_amount > 0 ? '₹' + Number(order.refund_amount).toLocaleString() : '₹0'} <span class="badge bg-${order.refund_status === 'processed' ? 'success' : order.refund_status === 'failed' ? 'danger' : 'info'}">${cap(order.refund_status)}</span></p>` : ''}
             </div>
             <div class="col-md-6">
               <h6 class="fw-bold"><i class="fas fa-tag me-2"></i>Total</h6>
               ${order.order_status === 'delivered' || order.order_status === 'completed' || order.sale_type === 'offline' ? `<div class="mb-2"><a href="/invoice/${order.order_number}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fas fa-receipt me-1"></i>View Invoice</a></div>` : ''}
               <p class="mb-1 fw-bold fs-5">₹${order.total.toLocaleString()}</p>
-              <small class="text-muted">Subtotal: ₹${order.subtotal.toLocaleString()}${order.discount > 0 ? ' | Discount: -₹' + order.discount.toLocaleString() : ''}${order.tax > 0 ? ' | GST: ₹' + order.tax.toLocaleString() : ''} | Delivery: ${order.shipping_charge === 0 ? 'Free' : '₹' + order.shipping_charge}</small>
+              <small class="text-muted">Subtotal: ₹${order.subtotal.toLocaleString()}${order.discount > 0 ? ' | Discount: -₹' + order.discount.toLocaleString() : ''}${order.tax > 0 ? ' | GST: ₹' + order.tax.toLocaleString() : ''}${order.platform_fee > 0 ? ' | Platform Fee: ₹' + Number(order.platform_fee).toLocaleString() : ''}${order.cancel_charge > 0 ? ' | Cancel Charge: -₹' + Number(order.cancel_charge).toLocaleString() : ''} | Delivery: ${order.shipping_charge === 0 ? 'Free' : '₹' + order.shipping_charge}</small>
             </div>
           </div>
           ${order.notes ? '<div class="mt-2"><small class="text-muted"><strong>Notes:</strong> ' + order.notes + '</small></div>' : ''}
@@ -90,7 +123,7 @@ async function loadOrder() {
         <h6 class="fw-bold mb-3"><i class="fas fa-history me-2"></i>Tracking Timeline</h6>
         <div id="trackingTimeline"><p class="text-muted small">Loading tracking...</p></div>
       </div>
-      ${canModify ? '<button class="btn btn-danger btn-lg w-100" onclick="cancelOrder()"><i class="fas fa-ban me-2"></i>Cancel Order</button>' : ''}
+      ${canModify ? `<button class="btn btn-danger btn-lg w-100" onclick="cancelOrder()"><i class="fas fa-ban me-2"></i>Cancel Order</button>${isPrepaid && isDispatchedOrAfter ? '<p class="text-danger small mt-1">A cancellation charge may apply for dispatched orders.</p>' : ''}` : ''}
       ${order.order_status === 'delivered' || order.order_status === 'completed' ? '<div class="mt-4"><h5 class="fw-bold mb-3"><i class="fas fa-star me-2"></i>Write a Review</h5><div id="reviewSection"></div></div>' : '<p class="text-muted text-center mt-3">This order can no longer be modified.</p>'}
     `;
     loadItems();
@@ -345,7 +378,32 @@ async function saveAddress() {
 }
 
 async function cancelOrder() {
-  if (!confirm('Are you sure you want to cancel this order?')) return;
+  const prepaid = !['cod'].includes(order.payment_method);
+  const dispatched = ['dispatched', 'delivered'].includes(order.order_status);
+  const pfVal = platformFee;
+  const cancelPct = cancelChargePercent;
+  const cancelChargeVal = prepaid && dispatched ? order.total * cancelPct / 100 : 0;
+  const refund = order.total - pfVal - cancelChargeVal;
+
+  document.getElementById('cbTotal').textContent = '₹' + order.total.toLocaleString();
+  document.getElementById('cbPlatformFee').textContent = '-₹' + pfVal.toLocaleString();
+  if (cancelChargeVal > 0) {
+    document.getElementById('cbCancelRow').style.display = '';
+    document.getElementById('cbCancelCharge').textContent = '-₹' + cancelChargeVal.toLocaleString();
+  } else {
+    document.getElementById('cbCancelRow').style.display = 'none';
+  }
+  document.getElementById('cbRefund').textContent = '₹' + Math.max(0, refund).toLocaleString();
+
+  const breakdown = document.getElementById('refundBreakdown');
+  breakdown.style.display = pfVal > 0 || cancelChargeVal > 0 ? '' : 'none';
+
+  const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+  modal.show();
+}
+
+async function confirmCancelOrder() {
+  bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
   try {
     await api(`/orders/cancel/${order.order_number}`, { method: 'PUT' });
     showToast('Order cancelled');
