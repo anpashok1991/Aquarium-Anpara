@@ -27,7 +27,7 @@
       <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-danger"><i class="fas fa-clock"></i></div><h3 id="todayOrders">-</h3><p>Today's Orders</p></div></div>
       <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-success"><i class="fas fa-calendar"></i></div><h3 id="monthlyRevenue">-</h3><p>Monthly Revenue</p></div></div>
       <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-warning"><i class="fas fa-exclamation-triangle"></i></div><h3 id="lowStock">-</h3><p>Low Stock</p></div></div>
-      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-danger"><i class="fas fa-times-circle"></i></div><h3 id="outOfStock">-</h3><p>Out of Stock</p></div></div>
+      <div class="col-6 col-lg-3"><div class="admin-stat text-center"><div class="text-danger"><i class="fas fa-eye"></i></div><h3 id="visitorCount">-</h3><p>Visitors</p></div></div>
     </div>
 
     <div class="row g-4">
@@ -67,7 +67,7 @@ async function loadDashboard() {
     document.getElementById('todayOrders').textContent = data.todayOrders;
     document.getElementById('monthlyRevenue').textContent = '₹' + data.monthlyRevenue.toLocaleString();
     document.getElementById('lowStock').textContent = data.lowStockProducts;
-    document.getElementById('outOfStock').textContent = data.outOfStockProducts;
+    document.getElementById('visitorCount').textContent = Number(data.visitorCount || 100000).toLocaleString();
 
     document.getElementById('recentOrders').innerHTML = data.recentOrders.map(o => `
       <tr><td><strong>${o.order_number}</strong></td><td>${o.customer_name}</td><td>₹${o.total.toLocaleString()}</td>

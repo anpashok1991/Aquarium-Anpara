@@ -17,6 +17,7 @@
           <input type="text" class="form-control" id="salesSearch" placeholder="Search customer or order #..." style="width:220px" oninput="autoSearch(this.value,loadSalesReport)">
           <button class="btn btn-outline-primary" onclick="loadSalesReport()"><i class="fas fa-search"></i></button>
           <button class="btn btn-outline-secondary" onclick="document.getElementById('salesSearch').value='';document.getElementById('salesStartDate').value='';document.getElementById('salesEndDate').value='';loadSalesReport()"><i class="fas fa-times"></i></button>
+          <button class="btn btn-outline-success" onclick="exportCSV('sales')"><i class="fas fa-file-excel me-1"></i>Export</button>
         </div>
         <div class="card border-0 shadow-sm"><div class="card-body"><table class="table table-hover mb-0"><thead><tr><th>Period</th><th>Orders</th><th>Subtotal</th><th>Discount</th><th>Shipping</th><th>Revenue</th></tr></thead><tbody id="salesTable"></tbody></table></div></div>
       </div>
@@ -25,6 +26,7 @@
           <input type="text" class="form-control" id="prodSearch" placeholder="Search product name..." style="max-width:300px" oninput="autoSearch(this.value,loadProductReport)">
           <button class="btn btn-outline-primary" onclick="loadProductReport()"><i class="fas fa-search"></i></button>
           <button class="btn btn-outline-secondary" onclick="document.getElementById('prodSearch').value='';loadProductReport()"><i class="fas fa-times"></i></button>
+          <button class="btn btn-outline-success" onclick="exportCSV('products')"><i class="fas fa-file-excel me-1"></i>Export</button>
         </div>
         <div class="card border-0 shadow-sm"><div class="card-body"><table class="table table-hover mb-0"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Sold</th><th>Profit/Unit</th><th>Total Profit</th></tr></thead><tbody id="prodReportTable"></tbody></table></div></div>
       </div>
@@ -33,6 +35,7 @@
           <input type="text" class="form-control" id="stockSearch" placeholder="Search product name..." style="max-width:300px" oninput="autoSearch(this.value,loadStockReport)">
           <button class="btn btn-outline-primary" onclick="loadStockReport()"><i class="fas fa-search"></i></button>
           <button class="btn btn-outline-secondary" onclick="document.getElementById('stockSearch').value='';loadStockReport()"><i class="fas fa-times"></i></button>
+          <button class="btn btn-outline-success" onclick="exportCSV('stock')"><i class="fas fa-file-excel me-1"></i>Export</button>
         </div>
         <div class="card border-0 shadow-sm"><div class="card-body"><h5>Total Stock Value: <span id="stockValue" class="text-primary"></span></h5><table class="table table-hover mb-0"><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Cost Price</th><th>Value</th></tr></thead><tbody id="stockTable"></tbody></table></div></div>
       </div>
@@ -41,6 +44,7 @@
 </div>
 <script>
 let searchTimer;
+let reportData = { sales: [], products: [], stock: [] };
 function autoSearch(val, loadFn) {
   clearTimeout(searchTimer);
   if (val.length >= 2) {
@@ -49,9 +53,28 @@ function autoSearch(val, loadFn) {
     searchTimer = setTimeout(loadFn, 100);
   }
 }
-async function loadSalesReport(){try{const p=new URLSearchParams();p.set('period',document.getElementById('salesPeriod').value);const sd=document.getElementById('salesStartDate').value;if(sd)p.set('start_date',sd);const ed=document.getElementById('salesEndDate').value;if(ed)p.set('end_date',ed);const ss=document.getElementById('salesSearch').value.trim();if(ss)p.set('search',ss);const d=await api('/reports/sales?'+p.toString());document.getElementById('salesTable').innerHTML=d.sales.map(s=>`<tr><td>${s.period}</td><td>${s.orders}</td><td>₹${(s.subtotal||0).toLocaleString()}</td><td>₹${(s.discount||0).toLocaleString()}</td><td>₹${(s.shipping||0).toLocaleString()}</td><td><strong>₹${(s.revenue||0).toLocaleString()}</strong></td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No data</td></tr>';}catch(e){}}
-async function loadProductReport(){try{const ss=document.getElementById('prodSearch').value.trim();const d=await api('/reports/products'+(ss?'?search='+encodeURIComponent(ss):''));document.getElementById('prodReportTable').innerHTML=d.products.map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>₹${p.price}</td><td>${p.sold_count}</td><td>₹${(p.profit_per_unit||0).toFixed(0)}</td><td>₹${(p.total_profit||0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No products found</td></tr>';}catch(e){}}
-async function loadStockReport(){try{const ss=document.getElementById('stockSearch').value.trim();const d=await api('/reports/stock'+(ss?'?search='+encodeURIComponent(ss):''));document.getElementById('stockValue').textContent='₹'+d.totalValue.toLocaleString();document.getElementById('stockTable').innerHTML=d.products.map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>${p.stock_quantity}</td><td>₹${p.cost_price}</td><td>₹${p.stock_value.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-muted">No products found</td></tr>';}catch(e){}}
+async function loadSalesReport(){try{const p=new URLSearchParams();p.set('period',document.getElementById('salesPeriod').value);const sd=document.getElementById('salesStartDate').value;if(sd)p.set('start_date',sd);const ed=document.getElementById('salesEndDate').value;if(ed)p.set('end_date',ed);const ss=document.getElementById('salesSearch').value.trim();if(ss)p.set('search',ss);const d=await api('/reports/sales?'+p.toString());reportData.sales=d.sales||[];document.getElementById('salesTable').innerHTML=(d.sales||[]).map(s=>`<tr><td>${s.period}</td><td>${s.orders}</td><td>₹${(s.subtotal||0).toLocaleString()}</td><td>₹${(s.discount||0).toLocaleString()}</td><td>₹${(s.shipping||0).toLocaleString()}</td><td><strong>₹${(s.revenue||0).toLocaleString()}</strong></td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No data</td></tr>';}catch(e){}}
+async function loadProductReport(){try{const ss=document.getElementById('prodSearch').value.trim();const d=await api('/reports/products'+(ss?'?search='+encodeURIComponent(ss):''));reportData.products=d.products||[];document.getElementById('prodReportTable').innerHTML=(d.products||[]).map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>₹${p.price}</td><td>${p.sold_count}</td><td>₹${(p.profit_per_unit||0).toFixed(0)}</td><td>₹${(p.total_profit||0).toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="6" class="text-center text-muted">No products found</td></tr>';}catch(e){}}
+async function loadStockReport(){try{const ss=document.getElementById('stockSearch').value.trim();const d=await api('/reports/stock'+(ss?'?search='+encodeURIComponent(ss):''));reportData.stock=d.products||[];document.getElementById('stockValue').textContent='₹'+d.totalValue.toLocaleString();document.getElementById('stockTable').innerHTML=(d.products||[]).map(p=>`<tr><td>${p.name}</td><td>${p.category_name||'-'}</td><td>${p.stock_quantity}</td><td>₹${p.cost_price}</td><td>₹${p.stock_value.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-muted">No products found</td></tr>';}catch(e){}}
+function exportCSV(type) {
+  let rows, filename;
+  if (type === 'sales') {
+    rows = [['Period','Orders','Subtotal','Discount','Shipping','Revenue']];
+    (reportData.sales||[]).forEach(s => rows.push([s.period,s.orders,s.subtotal||0,s.discount||0,s.shipping||0,s.revenue||0]));
+    filename = 'sales-report.csv';
+  } else if (type === 'products') {
+    rows = [['Product','Category','Price','Sold','Profit/Unit','Total Profit']];
+    (reportData.products||[]).forEach(p => rows.push([p.name,p.category_name||'',p.price,p.sold_count,(p.profit_per_unit||0).toFixed(0),(p.total_profit||0).toFixed(0)]));
+    filename = 'products-report.csv';
+  } else if (type === 'stock') {
+    rows = [['Product','Category','Stock','Cost Price','Value']];
+    (reportData.stock||[]).forEach(p => rows.push([p.name,p.category_name||'',p.stock_quantity,p.cost_price,p.stock_value]));
+    filename = 'stock-report.csv';
+  }
+  const csv = rows.map(r => r.map(v => typeof v === 'string' && (v.includes(',')||v.includes('"')) ? '"'+v.replace(/"/g,'""')+'"' : v).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
 document.addEventListener('DOMContentLoaded',loadSalesReport);
 </script>
 <%- include('../partials/footer') %>

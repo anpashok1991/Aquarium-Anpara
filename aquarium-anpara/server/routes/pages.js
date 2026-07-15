@@ -319,6 +319,7 @@ router.get('/admin/barcode-labels', requireAdminPage, (req, res) => { res.render
 router.get('/admin/coupons', requireAdminPage, (req, res) => { res.render('admin/coupons', { title: 'Manage Coupons', seo: { robots: 'noindex' } }); });
 router.get('/admin/reviews', requireAdminPage, (req, res) => { res.render('admin/reviews', { title: 'Manage Reviews', seo: { robots: 'noindex' } }); });
 router.get('/admin/reports', requireAdminPage, (req, res) => { res.render('admin/reports', { title: 'Reports', seo: { robots: 'noindex' } }); });
+router.get('/admin/abandoned-carts', requireAdminPage, (req, res) => { res.render('admin/abandoned-carts', { title: 'Abandoned Carts', seo: { robots: 'noindex' } }); });
 router.get('/admin/banners', requireAdminPage, (req, res) => { res.render('admin/banners', { title: 'Manage Banners', seo: { robots: 'noindex' } }); });
 router.get('/admin/gallery', requireAdminPage, (req, res) => { res.render('admin/gallery', { title: 'Manage Gallery', seo: { robots: 'noindex' } }); });
 router.get('/admin/settings', requireAdminPage, (req, res) => { res.render('admin/settings', { title: 'Settings', seo: { robots: 'noindex' } }); });

@@ -1,0 +1,104 @@
+<%- include('../partials/header') %>
+<div class="d-flex">
+  <%- include('../partials/admin-sidebar') %>
+  <div class="admin-content flex-grow-1">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex align-items-center">
+        <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+        <div>
+          <h3 class="fw-bold mb-0">Abandoned Carts</h3>
+          <small class="text-muted">Users who added products but didn't place an order</small>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-primary btn-sm" onclick="loadAbandonedCarts()"><i class="fas fa-sync me-1"></i>Refresh</button>
+        <button class="btn btn-success btn-sm" onclick="exportAbandonedCSV()"><i class="fas fa-file-excel me-1"></i>Export</button>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <i class="fas fa-lightbulb me-1"></i> Contact these users to offer discounts and convert them into customers.
+    </div>
+
+    <div id="abandonedStats" class="row g-3 mb-4"></div>
+    <div id="abandonedList"></div>
+    <div id="abandonedEmpty" class="text-center py-5" style="display:none">
+      <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+      <h5>No abandoned carts</h5>
+      <p class="text-muted">All users who added items have completed their orders.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadAbandonedCarts() {
+  try {
+    const d = await api('/reports/abandoned-carts');
+    const list = document.getElementById('abandonedList');
+    const empty = document.getElementById('abandonedEmpty');
+    const stats = document.getElementById('abandonedStats');
+
+    if (!d.carts || !d.carts.length) {
+      list.innerHTML = '';
+      stats.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    const totalAbandoned = d.carts.length;
+    const totalValue = d.carts.reduce((s, c) => s + c.total, 0);
+    const withPhone = d.carts.filter(c => c.customer_phone).length;
+
+    stats.innerHTML = `
+      <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body text-center"><h3 class="text-warning">${totalAbandoned}</h3><p class="mb-0 text-muted">Abandoned Carts</p></div></div></div>
+      <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body text-center"><h3 class="text-primary">₹${totalValue.toLocaleString()}</h3><p class="mb-0 text-muted">Potential Revenue</p></div></div></div>
+      <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body text-center"><h3 class="text-success">${withPhone}/${totalAbandoned}</h3><p class="mb-0 text-muted">Contactable</p></div></div></div>`;
+
+    list.innerHTML = d.carts.map(c => `
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h5 class="fw-bold mb-1">${escHtml(c.customer_name)}</h5>
+              ${c.customer_phone ? '<a href="tel:' + c.customer_phone + '" class="text-decoration-none"><i class="fas fa-phone me-1"></i>' + c.customer_phone + '</a>' : '<span class="text-muted"><i class="fas fa-user-slash me-1"></i>No phone (guest)</span>'}
+              ${c.customer_email ? ' | <small>' + c.customer_email + '</small>' : ''}
+            </div>
+            <div class="text-end">
+              <h4 class="text-primary fw-bold mb-1">₹${c.total.toLocaleString()}</h4>
+              <small class="text-muted">${c.items.length} item${c.items.length > 1 ? 's' : ''}</small>
+            </div>
+          </div>
+          <div class="small text-muted mb-2">Last active: ${new Date(c.last_active).toLocaleString()}</div>
+          <div class="d-flex flex-wrap gap-1">
+            ${c.items.map(i => `<span class="badge bg-light text-dark border">${escHtml(i.product_name)} x${i.quantity} - ₹${(i.price * i.quantity).toLocaleString()}</span>`).join('')}
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('abandonedList').innerHTML = '<div class="alert alert-danger">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function escHtml(s) { return String(s || '').replace(/[&<>"']/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+function exportAbandonedCSV() {
+  const rows = [['Customer Name','Phone','Email','Items','Total','Last Active']];
+  const cards = document.querySelectorAll('#abandonedList .card');
+  cards.forEach(card => {
+    const name = card.querySelector('h5')?.textContent || '';
+    const phone = card.querySelector('a[href^="tel:"]')?.textContent || '';
+    const email = card.querySelector('small')?.textContent || '';
+    const total = card.querySelector('h4')?.textContent?.replace('₹','') || '0';
+    const lastActive = card.querySelector('.text-muted')?.textContent?.replace('Last active: ','') || '';
+    const items = Array.from(card.querySelectorAll('.badge')).map(b => b.textContent.trim()).join('; ');
+    rows.push([name, phone, email, items, total, lastActive]);
+  });
+  const csv = rows.map(r => r.map(v => typeof v === 'string' && (v.includes(',')||v.includes('"')||v.includes('\n')) ? '"'+v.replace(/"/g,'""')+'"' : v).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'abandoned-carts.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+document.addEventListener('DOMContentLoaded', loadAbandonedCarts);
+</script>
+<%- include('../partials/footer') %>

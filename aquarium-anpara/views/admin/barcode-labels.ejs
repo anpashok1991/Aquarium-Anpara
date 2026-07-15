@@ -34,9 +34,9 @@ async function loadLabels() {
     empty.style.display = 'none';
     grid.innerHTML = products.map(p => `
       <div class="col-6 col-md-3 col-lg-2">
-        <div class="border rounded p-2 text-center" style="page-break-inside:avoid">
+        <div class="border rounded p-3 text-center" style="page-break-inside:avoid;break-inside:avoid">
           <svg class="barcode-svg" data-barcode="${p.barcode}"></svg>
-          <div class="small fw-semibold mt-1 text-truncate" title="${p.name}">${p.name}</div>
+          <div class="small fw-semibold mt-2 text-truncate" title="${p.name}">${p.name}</div>
           <div class="small text-muted">₹${(p.discount_price > 0 ? p.discount_price : p.price).toLocaleString()}</div>
         </div>
       </div>`).join('');
@@ -51,12 +51,15 @@ async function loadLabels() {
 document.addEventListener('DOMContentLoaded', loadLabels);
 </script>
 <style>
+#labelGrid .col-6, #labelGrid .col-md-3, #labelGrid .col-lg-2 { padding: 6px; }
+#labelGrid .border { margin: 0; }
 @media print {
   .no-print { display: none !important; }
   .admin-content { padding: 10px !important; }
-  .col-6 { width: 50% !important; }
-  .col-md-3 { width: 25% !important; }
-  .col-lg-2 { width: 16.666% !important; }
+  .col-6 { width: 33.33% !important; }
+  #labelGrid { margin: 0 auto; max-width: 100%; }
+  #labelGrid .col-6 { padding: 8px; }
+  #labelGrid .border { border: 1px solid #ccc !important; box-shadow: none !important; }
 }
 </style>
 <%- include('../partials/footer') %>

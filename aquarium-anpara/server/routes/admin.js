@@ -36,6 +36,11 @@ router.post('/users', auth, adminOnly, async (req, res) => {
       data: { name, email, phone: phone || null, password: hash, role },
       select: { id: true, name: true, email: true, phone: true, role: true, is_active: true, created_at: true }
     });
+    if (role === 'customer') {
+      await prisma.customers.create({
+        data: { user_id: user.id, name, email, phone: phone || null }
+      });
+    }
     res.json({ user });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -51,9 +51,12 @@ router.get('/dashboard', auth, staffOrAdmin, async (req, res) => {
       GROUP BY DATE(created_at) ORDER BY date
     `;
 
+    const visitorSetting = await prisma.settings.findUnique({ where: { key: 'visitor_count' } });
+    const visitorCount = parseInt(visitorSetting?.value || '100000');
+
     res.json({ totalProducts, totalCategories, totalOrders, todayOrders, totalCustomers,
       totalRevenue, monthlyRevenue, lowStockProducts, outOfStockProducts,
-      recentOrders, topProducts: topProductsMapped, dailySales });
+      recentOrders, topProducts: topProductsMapped, dailySales, visitorCount });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -137,6 +140,46 @@ router.get('/stock', auth, staffOrAdmin, async (req, res) => {
     }));
     const totalValue = mapped.reduce((sum, p) => sum + p.stock_value, 0);
     res.json({ products: mapped, totalValue });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/abandoned-carts', auth, staffOrAdmin, async (req, res) => {
+  try {
+    const carts = await prisma.cart.findMany({
+      include: {
+        products: { select: { id: true, name: true, price: true, discount_price: true } },
+        users: { select: { id: true, name: true, phone: true, email: true } }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    const grouped = {};
+    for (const c of carts) {
+      const key = c.user_id ? 'user_' + c.user_id : 'session_' + c.session_id;
+      if (!grouped[key]) {
+        const u = c.users;
+        grouped[key] = {
+          user_id: c.user_id,
+          session_id: c.session_id,
+          customer_name: u ? u.name : (c.session_id ? 'Guest' : 'Unknown'),
+          customer_phone: u ? u.phone : null,
+          customer_email: u ? u.email : null,
+          items: [],
+          total: 0,
+          last_active: c.created_at
+        };
+      }
+      const price = (c.products?.discount_price > 0 ? c.products.discount_price : c.products?.price) || 0;
+      grouped[key].items.push({
+        product_id: c.products?.id,
+        product_name: c.products?.name || 'Deleted',
+        quantity: c.quantity || 1,
+        price
+      });
+      grouped[key].total += price * (c.quantity || 1);
+      if (c.created_at > grouped[key].last_active) grouped[key].last_active = c.created_at;
+    }
+    const list = Object.values(grouped).sort((a, b) => new Date(b.last_active) - new Date(a.last_active));
+    res.json({ carts: list, total: list.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

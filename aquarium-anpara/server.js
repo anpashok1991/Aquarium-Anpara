@@ -77,6 +77,19 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.disable('view cache');
 
+// Visitor counter middleware
+let visitorWritePending = false;
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/images/')) return next();
+  if (!visitorWritePending) {
+    visitorWritePending = true;
+    prisma.$executeRawUnsafe(`UPDATE settings SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = 'visitor_count'`)
+      .catch(() => {})
+      .finally(() => { visitorWritePending = false; });
+  }
+  next();
+});
+
 // Auto-seed default settings on first run
 (async () => {
   try {
@@ -90,7 +103,8 @@ app.disable('view cache');
         { key: 'whatsapp_number', value: '919876543210' },
         { key: 'shop_logo', value: '/images/logo.png' },
         { key: 'min_order_free_delivery', value: '500' },
-        { key: 'delivery_charge', value: '50' }
+        { key: 'delivery_charge', value: '50' },
+        { key: 'visitor_count', value: '100000' }
       ];
       for (const s of defaults) {
         await prisma.settings.upsert({
@@ -268,6 +282,25 @@ app.disable('view cache');
     await prisma.$executeRawUnsafe(`ALTER TABLE order_items ADD COLUMN gst_amount REAL DEFAULT 0`);
     console.log('✅ gst_amount column added to order_items table');
   } catch (e) { /* column already exists */ }
+})();
+
+// Auto-migrate: create customer records for existing users who lack one
+(async () => {
+  try {
+    const usersWithoutCustomer = await prisma.$queryRawUnsafe(`
+      SELECT u.id, u.name, u.email, u.phone FROM users u
+      LEFT JOIN customers c ON c.user_id = u.id
+      WHERE c.id IS NULL AND u.role = 'customer'
+    `);
+    for (const u of usersWithoutCustomer) {
+      await prisma.customers.create({
+        data: { user_id: u.id, name: u.name, email: u.email, phone: u.phone }
+      });
+    }
+    if (usersWithoutCustomer.length > 0) {
+      console.log(`✅ Created customer records for ${usersWithoutCustomer.length} existing users`);
+    }
+  } catch (e) { /* migration skipped */ }
 })();
 
 app.use(async (req, res, next) => {
