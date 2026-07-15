@@ -36,7 +36,7 @@
     </div>
 
     <div class="col-lg-6 product-detail-info">
-      <% if (product.is_live) { %><% if (product.breed_name) { %><span class="text-muted"><i class="fas fa-paw me-1"></i><%= product.breed_name %></span><% } %><% } else if (product.brand_name) { %><span class="text-muted"><%= product.brand_name %></span><% } %>
+      <% if (product.is_live) { %><% if (product.breed_name) { %><span class="text-muted"><i class="fas <%= product.category_icon || 'fa-paw' %> me-1"></i><%= product.breed_name %></span><% } %><% } else if (product.brand_name) { %><span class="text-muted"><%= product.brand_name %></span><% } %>
       <h1 class="mt-2"><%= product.name %></h1>
       
       <div class="d-flex align-items-center gap-3 mb-3">

@@ -30,12 +30,13 @@ const IMAGES = {
   }
 };
 
-const catIcons = {
+const fallbackIcons = {
   aquarium: 'fa-fish', dogs: 'fa-dog', cats: 'fa-cat', birds: 'fa-dove',
   'fish-foods': 'fa-bowl-food', 'dog-foods': 'fa-bone', 'cat-foods': 'fa-paw',
   accessories: 'fa-tag', medicines: 'fa-pills', decorations: 'fa-star',
   plants: 'fa-leaf', 'aquarium-equipment': 'fa-gear', 'bird-foods': 'fa-seedling'
 };
+function catIcon(cat) { return cat.icon || fallbackIcons[cat.slug] || 'fa-box'; }
 %>
 
 <!-- Hero Carousel -->
@@ -182,14 +183,14 @@ const catIcons = {
             <div class="category-card">
               <div class="cat-img-wrapper" style="background-image:url('<%= cat.image || IMAGES.category[cat.slug] || '/images/no-image.png' %>');background-size:cover;background-position:center">
                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3.5rem;color:rgba(255,255,255,0.2)">
-                  <i class="fas <%= catIcons[cat.slug] || 'fa-box' %>"></i>
+                  <i class="fas <%= catIcon(cat) %>"></i>
                 </div>
                 <div class="cat-overlay">
                   <span>View All <i class="fas fa-arrow-right ms-1"></i></span>
                 </div>
               </div>
               <div class="cat-body">
-                <i class="fas <%= catIcons[cat.slug] || 'fa-box' %>"></i>
+                <i class="fas <%= catIcon(cat) %>"></i>
                 <h5><%= cat.name %></h5>
                 <span class="cat-count"><%= cat.product_count %> Products</span>
               </div>

@@ -16,6 +16,7 @@
 <% } %>
   <meta name="author" content="<%= shopName %>">
   <link rel="canonical" href="https://<%= shopDomain || 'aquarium-anpara.com' %><%= seo?.canonical || currentPath || '/' %>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐟%3C/text%3E%3C/svg%3E">
   <meta property="og:title" content="<%= seo?.title || title %> | <%= shopName %>">
   <meta property="og:description" content="<%= seo?.description || 'Premium pet and aquarium store - Quality pet food, accessories, medicines & more at your doorstep.' %>">
   <meta property="og:type" content="<%= seo?.og_type || 'website' %>">

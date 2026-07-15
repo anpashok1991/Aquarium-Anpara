@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
         skip: offset,
         take: Number(limit),
         include: {
-          categories: { select: { name: true, slug: true, is_live: true } },
+          categories: { select: { name: true, slug: true, is_live: true, icon: true } },
           brands: { select: { name: true, slug: true } },
           breeds: { select: { name: true, slug: true } },
           product_images: { where: { is_primary: 1 }, take: 1 }
@@ -58,6 +58,7 @@ router.get('/', async (req, res) => {
       ...p,
       category_name: p.categories?.name,
       category_slug: p.categories?.slug,
+      category_icon: p.categories?.icon,
       is_live: p.categories?.is_live ? true : false,
       brand_name: p.brands?.name,
       brand_slug: p.brands?.slug,
@@ -119,12 +120,12 @@ router.get('/featured', async (req, res) => {
       orderBy: { sold_count: 'desc' },
       take: 8,
       include: {
-        categories: { select: { name: true, is_live: true } },
+        categories: { select: { name: true, is_live: true, icon: true } },
         breeds: { select: { name: true } },
         product_images: { where: { is_primary: 1 }, take: 1 }
       }
     });
-    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
+    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, category_icon: p.categories?.icon, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -135,12 +136,12 @@ router.get('/best-sellers', async (req, res) => {
       orderBy: { sold_count: 'desc' },
       take: 8,
       include: {
-        categories: { select: { name: true, is_live: true } },
+        categories: { select: { name: true, is_live: true, icon: true } },
         breeds: { select: { name: true } },
         product_images: { where: { is_primary: 1 }, take: 1 }
       }
     });
-    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
+    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, category_icon: p.categories?.icon, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -151,12 +152,12 @@ router.get('/new-arrivals', async (req, res) => {
       orderBy: { created_at: 'desc' },
       take: 8,
       include: {
-        categories: { select: { name: true, is_live: true } },
+        categories: { select: { name: true, is_live: true, icon: true } },
         breeds: { select: { name: true } },
         product_images: { where: { is_primary: 1 }, take: 1 }
       }
     });
-    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
+    res.json({ products: products.map(p => ({ ...p, category_name: p.categories?.name, category_icon: p.categories?.icon, is_live: p.categories?.is_live ? true : false, breed_name: p.breeds?.name, categories: undefined, breeds: undefined, product_images: undefined })) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -186,6 +187,7 @@ router.get('/:slug', async (req, res) => {
       ...product,
       category_name: product.categories?.name,
       category_slug: product.categories?.slug,
+      category_icon: product.categories?.icon,
       is_live: product.categories?.is_live ? true : false,
       brand_name: product.brands?.name,
       breed_name: product.breeds?.name,

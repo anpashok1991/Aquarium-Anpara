@@ -311,6 +311,14 @@ app.use((req, res, next) => {
   } catch (e) { /* migration skipped */ }
 })();
 
+// Auto-migrate: add icon column to categories table
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE categories ADD COLUMN icon TEXT DEFAULT NULL`);
+    console.log('✅ icon column added to categories table');
+  } catch (e) { /* column already exists */ }
+})();
+
 app.use(async (req, res, next) => {
   try {
     const rows = await prisma.settings.findMany({ select: { key: true, value: true } });

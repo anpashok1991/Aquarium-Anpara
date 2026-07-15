@@ -34,7 +34,7 @@ router.get('/:slug', async (req, res) => {
 
 router.post('/', auth, staffOrAdmin, requireWritePermission('categories'), async (req, res) => {
   try {
-    const { name, description, image, parent_id, sort_order, is_live } = req.body;
+    const { name, description, image, icon, parent_id, sort_order, is_live } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     let finalSlug = slug;
     let counter = 1;
@@ -42,7 +42,7 @@ router.post('/', auth, staffOrAdmin, requireWritePermission('categories'), async
       finalSlug = `${slug}-${counter++}`;
     }
     const category = await prisma.categories.create({
-      data: { name, slug: finalSlug, description, image, parent_id: parent_id || null, sort_order: sort_order || 0, is_live: is_live !== undefined ? (is_live ? 1 : 0) : 0 }
+      data: { name, slug: finalSlug, description, image, icon: icon || null, parent_id: parent_id || null, sort_order: sort_order || 0, is_live: is_live !== undefined ? (is_live ? 1 : 0) : 0 }
     });
     res.status(201).json({ category });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -50,11 +50,12 @@ router.post('/', auth, staffOrAdmin, requireWritePermission('categories'), async
 
 router.put('/:id', auth, staffOrAdmin, requireWritePermission('categories'), async (req, res) => {
   try {
-    const { name, description, image, parent_id, sort_order, is_active, is_live } = req.body;
+    const { name, description, image, icon, parent_id, sort_order, is_active, is_live } = req.body;
     const data = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
     if (image !== undefined) data.image = image;
+    if (icon !== undefined) data.icon = icon;
     if (parent_id !== undefined) data.parent_id = parent_id;
     if (sort_order !== undefined) data.sort_order = sort_order;
     if (is_active !== undefined) data.is_active = is_active ? 1 : 0;

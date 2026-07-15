@@ -7,7 +7,7 @@
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#catModal" onclick="resetCatForm()"><i class="fas fa-plus me-1"></i>Add Category</button>
     </div>
     <div class="card border-0 shadow-sm"><div class="card-body">
-      <table class="table table-hover mb-0"><thead><tr><th>Image</th><th>Name</th><th>Slug</th><th>Parent</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+      <table class="table table-hover mb-0"><thead><tr><th>Image</th><th>Icon</th><th>Name</th><th>Slug</th><th>Parent</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="catTable"></tbody></table>
     </div></div>
   </div>
@@ -29,6 +29,31 @@
       <textarea class="form-control" id="catDesc" rows="2"></textarea>
     </div>
     <div class="mb-3">
+      <label class="form-label">Icon</label>
+      <select class="form-select" id="catIcon">
+        <option value="">None</option>
+        <option value="fa-fish">🐟 Fish</option>
+        <option value="fa-dog">🐕 Dog</option>
+        <option value="fa-cat">🐱 Cat</option>
+        <option value="fa-dove">🐦 Bird</option>
+        <option value="fa-bug">🐛 Insect</option>
+        <option value="fa-frog">🐸 Reptile</option>
+        <option value="fa-horse">🐴 Horse</option>
+        <option value="fa-paw">🐾 Pet</option>
+        <option value="fa-bone">🦴 Bone</option>
+        <option value="fa-leaf">🌿 Plant</option>
+        <option value="fa-seedling">🌱 Seedling</option>
+        <option value="fa-star">⭐ Decoration</option>
+        <option value="fa-pills">💊 Medicine</option>
+        <option value="fa-gear">⚙️ Equipment</option>
+        <option value="fa-tag">🏷️ Tag</option>
+        <option value="fa-bowl-food">🥣 Food</option>
+        <option value="fa-water">💧 Water</option>
+        <option value="fa-apple-alt">🍎 Organic</option>
+      </select>
+      <div id="iconPreview" class="mt-2 small text-muted" style="display:none">Selected: <i class="fas"></i></div>
+    </div>
+    <div class="mb-3">
       <label class="form-label">Image</label>
       <div class="d-flex align-items-center gap-3">
         <input type="file" class="form-control" id="catImageInput" accept="image/*">
@@ -47,18 +72,32 @@
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="saveCategory()">Save</button></div>
 </div></div></div>
 <script>
+const CAT_ICONS = ['fa-fish','fa-dog','fa-cat','fa-dove','fa-bug','fa-frog','fa-horse','fa-paw','fa-bone','fa-leaf','fa-seedling','fa-star','fa-pills','fa-gear','fa-tag','fa-bowl-food','fa-water','fa-apple-alt'];
+
 function resetCatForm() {
   document.getElementById('catId').value = '';
   document.getElementById('catName').value = '';
   document.getElementById('catDesc').value = '';
   document.getElementById('catActive').checked = true;
   document.getElementById('catLive').checked = false;
+  document.getElementById('catIcon').value = '';
   document.getElementById('catImageUrl').value = '';
   document.getElementById('catImageUrlDirect').value = '';
   document.getElementById('catImageInput').value = '';
   document.getElementById('catImagePreview').style.display = 'none';
   document.getElementById('catModalTitle').textContent = 'Add Category';
+  document.getElementById('iconPreview').style.display = 'none';
 }
+
+document.getElementById('catIcon').addEventListener('change', function() {
+  const preview = document.getElementById('iconPreview');
+  if (this.value) {
+    preview.querySelector('i').className = 'fas ' + this.value;
+    preview.style.display = '';
+  } else {
+    preview.style.display = 'none';
+  }
+});
 
 function previewDirectUrl(url) {
   const preview = document.getElementById('catImagePreview');
@@ -82,7 +121,8 @@ async function loadCategories() {
         ${c.image ? `<img src="${c.image}" alt="${c.name}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.parentElement.innerHTML='<span class=\\'text-muted\\' style=\\'font-size:0.8rem\\'>No img</span>'">`
           : '<span class="text-muted" style="font-size:0.8rem">No img</span>'}
       </td>
-      <td><strong>${c.name}</strong>${c.is_featured ? ' <span class="badge bg-warning text-dark">Featured</span>' : ''}${c.is_live ? ' <span class="badge bg-info"><i class="fas fa-paw"></i> Live</span>' : ''}</td>
+      <td class="text-center">${c.icon ? '<i class="fas ' + c.icon + ' fa-lg"></i>' : '<span class="text-muted">-</span>'}</td>
+      <td><strong>${c.name}</strong>${c.is_live ? ' <span class="badge bg-info"><i class="fas fa-paw"></i> Live</span>' : ''}</td>
       <td>${c.slug}</td>
       <td>${c.parent_id ? data.flat.find(x=>x.id===c.parent_id)?.name || '-' : '-'}</td>
       <td>${c.product_count || 0}</td>
@@ -102,6 +142,7 @@ function editCategory(id) {
     document.getElementById('catName').value = c.name;
     document.getElementById('catDesc').value = c.description || '';
     document.getElementById('catParent').value = c.parent_id || '';
+    document.getElementById('catIcon').value = c.icon || '';
     document.getElementById('catActive').checked = !!c.is_active;
     document.getElementById('catLive').checked = !!c.is_live;
     document.getElementById('catImageUrl').value = c.image || '';
@@ -112,6 +153,13 @@ function editCategory(id) {
       preview.style.display = 'block';
     } else {
       preview.style.display = 'none';
+    }
+    const iconPrev = document.getElementById('iconPreview');
+    if (c.icon) {
+      iconPrev.querySelector('i').className = 'fas ' + c.icon;
+      iconPrev.style.display = '';
+    } else {
+      iconPrev.style.display = 'none';
     }
     document.getElementById('catModalTitle').textContent = 'Edit Category';
     new bootstrap.Modal(document.getElementById('catModal')).show();
@@ -135,6 +183,7 @@ async function saveCategory() {
   const body = {
     name: document.getElementById('catName').value,
     description: document.getElementById('catDesc').value,
+    icon: document.getElementById('catIcon').value || null,
     image: imageUrl,
     parent_id: parseInt(document.getElementById('catParent').value) || null,
     is_active: document.getElementById('catActive').checked,
