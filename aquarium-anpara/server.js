@@ -77,15 +77,12 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.disable('view cache');
 
-// Visitor counter middleware
-let visitorWritePending = false;
+// Visitor counter middleware — counts unique devices once per day via cookie
 app.use((req, res, next) => {
-  if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/images/')) return next();
-  if (!visitorWritePending) {
-    visitorWritePending = true;
-    prisma.$executeRawUnsafe(`UPDATE settings SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = 'visitor_count'`)
-      .catch(() => {})
-      .finally(() => { visitorWritePending = false; });
+  if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/images/') || req.path.startsWith('/css/') || req.path.startsWith('/js/')) return next();
+  if (!req.cookies._v) {
+    res.cookie('_v', '1', { maxAge: 86400000, httpOnly: true, sameSite: 'lax' });
+    prisma.$executeRawUnsafe(`UPDATE settings SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = 'visitor_count'`).catch(() => {});
   }
   next();
 });
@@ -299,6 +296,17 @@ app.use((req, res, next) => {
     }
     if (usersWithoutCustomer.length > 0) {
       console.log(`✅ Created customer records for ${usersWithoutCustomer.length} existing users`);
+    }
+  } catch (e) { /* migration skipped */ }
+})();
+
+// Auto-migrate: ensure visitor_count setting exists
+(async () => {
+  try {
+    const existing = await prisma.settings.findUnique({ where: { key: 'visitor_count' } });
+    if (!existing) {
+      await prisma.settings.create({ data: { key: 'visitor_count', value: '100000' } });
+      console.log('✅ visitor_count setting created');
     }
   } catch (e) { /* migration skipped */ }
 })();
